@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import CodeMirror, { type ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { oneDark } from '@codemirror/theme-one-dark'
-import { EditorView } from '@codemirror/view'
+import { EditorView, keymap } from '@codemirror/view'
 import MarkdownIt from 'markdown-it'
 import DOMPurify from 'dompurify'
 import {
@@ -22,6 +22,7 @@ import './App.css'
 
 type ViewMode = 'write' | 'split' | 'preview'
 type ThemeMode = 'light' | 'dark'
+type InlineFormat = 'bold' | 'italic' | 'link'
 
 type OutlineItem = {
   level: number
@@ -190,6 +191,50 @@ function downloadFile(content: string, fileName: string, mimeType: string) {
   URL.revokeObjectURL(objectUrl)
 }
 
+function applyInlineFormat(view: EditorView, format: InlineFormat) {
+  const selection = view.state.selection.main
+  const selectedText = view.state.sliceDoc(selection.from, selection.to)
+  let insertText = ''
+  let anchor = selection.from
+  let head = selection.from
+
+  if (format === 'bold') {
+    insertText = `**${selectedText}**`
+    anchor = selection.from + 2
+    head = anchor + selectedText.length
+  }
+
+  if (format === 'italic') {
+    insertText = `*${selectedText}*`
+    anchor = selection.from + 1
+    head = anchor + selectedText.length
+  }
+
+  if (format === 'link') {
+    const linkText = selectedText || 'link text'
+    const url = 'https://'
+
+    insertText = `[${linkText}](${url})`
+
+    if (selectedText) {
+      anchor = selection.from + linkText.length + 3
+      head = anchor + url.length
+    } else {
+      anchor = selection.from + 1
+      head = anchor + linkText.length
+    }
+  }
+
+  view.dispatch({
+    changes: { from: selection.from, to: selection.to, insert: insertText },
+    selection: { anchor, head },
+    scrollIntoView: true,
+  })
+  view.focus()
+
+  return true
+}
+
 function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const editorRef = useRef<ReactCodeMirrorRef | null>(null)
@@ -213,7 +258,14 @@ function App() {
   const [activeOutlineLine, setActiveOutlineLine] = useState<number | null>(null)
 
   const editorExtensions = useMemo(
-    () => [markdown({ base: markdownLanguage })],
+    () => [
+      markdown({ base: markdownLanguage }),
+      keymap.of([
+        { key: 'Mod-b', run: (view) => applyInlineFormat(view, 'bold') },
+        { key: 'Mod-i', run: (view) => applyInlineFormat(view, 'italic') },
+        { key: 'Mod-k', run: (view) => applyInlineFormat(view, 'link') },
+      ]),
+    ],
     [],
   )
 

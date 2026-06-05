@@ -20,7 +20,7 @@ OpenMark is a local-first Markdown editor MVP for building toward a polished ope
 - Open local Markdown files through the browser file picker
 - Download Markdown and export standalone HTML
 - Light and dark themes
-- Document stats and heading outline
+- Document stats and clickable heading outline
 - Electron desktop shell with native open, save, Save As, and HTML export dialogs
 - Desktop menu shortcuts for file commands, view modes, and theme switching
 - Recent files list and unsaved-change indicator
@@ -51,6 +51,12 @@ Useful desktop shortcuts:
 - `Ctrl+E`: export HTML
 - `Ctrl+1`, `Ctrl+2`, `Ctrl+3`: write, split, and preview modes
 - `Ctrl+Shift+L`: toggle theme
+
+Useful editor shortcuts:
+
+- `Ctrl+B`: wrap selection in bold Markdown
+- `Ctrl+I`: wrap selection in italic Markdown
+- `Ctrl+K`: insert a Markdown link
 
 If Electron downloads slowly, set a mirror before the first desktop run:
 

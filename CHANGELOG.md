@@ -7,6 +7,7 @@ All notable changes to OpenMark will be documented in this file.
 ### Writing Experience
 
 - Clickable document outline entries that jump to the matching Markdown heading.
+- Markdown shortcuts for bold, italic, and link insertion in the editor.
 
 ## 0.1.0 - 2026-06-06
 
