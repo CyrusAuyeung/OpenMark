@@ -28,19 +28,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        shell: pwsh
-        run: |
-          $npmOutput = npm ci --ignore-scripts --no-audit --no-fund 2>&1
-          $exitCode = $LASTEXITCODE
-          $npmOutput | ForEach-Object { Write-Host $_ }
-          if ($exitCode -ne 0) {
-            $lines = $npmOutput | Select-String -Pattern 'npm ERR!|error|ERR_|not found|unsupported|ELOCKVERIFY|certificate|ECONNRESET|ETIMEDOUT|ENOENT|EACCES' -CaseSensitive:$false | Select-Object -Last 20
-            $message = (($lines | ForEach-Object { $_.Line.Trim() }) -join ' | ')
-            if (-not $message) { $message = (($npmOutput | Select-Object -Last 40) -join ' | ') }
-            $message = $message.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
-            Write-Host "::error title=npm ci failed::$message"
-            exit $exitCode
-          }
+        run: npm install --ignore-scripts --no-audit --no-fund
 
       - name: Lint
         run: npm run lint
