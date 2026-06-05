@@ -2,6 +2,12 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## Unreleased
+
+### Writing Experience
+
+- Clickable document outline entries that jump to the matching Markdown heading.
+
 ## 0.1.0 - 2026-06-06
 
 ### Added

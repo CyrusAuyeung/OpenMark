@@ -263,8 +263,52 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--ink);
   font-size: 13px;
+}
+
+.outline-list button {
+  width: 100%;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 7px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.outline-list button:hover {
+  border-color: var(--accent-border);
+  background: var(--button-hover);
+}
+
+.outline-list button.active {
+  border-color: var(--accent-border);
+  color: var(--ink);
+  background: var(--accent-soft);
+}
+
+.outline-list button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.outline-list span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.outline-list small {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .outline-level-2 {
@@ -273,6 +317,12 @@
 
 .outline-level-3 {
   padding-left: 24px;
+}
+
+.outline-level-3 button,
+.outline-level-4 button,
+.outline-level-5 button,
+.outline-level-6 button {
   color: var(--muted);
 }
 

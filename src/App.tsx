@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import CodeMirror from '@uiw/react-codemirror'
+import CodeMirror, { type ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { oneDark } from '@codemirror/theme-one-dark'
+import { EditorView } from '@codemirror/view'
 import MarkdownIt from 'markdown-it'
 import DOMPurify from 'dompurify'
 import {
@@ -25,6 +26,8 @@ type ThemeMode = 'light' | 'dark'
 type OutlineItem = {
   level: number
   title: string
+  lineNumber: number
+  lineStart: number
 }
 
 type DocumentStats = {
@@ -111,22 +114,33 @@ function persistRecentFiles(recentFiles: RecentFile[]) {
 }
 
 function getOutline(markdownValue: string): OutlineItem[] {
-  return markdownValue
-    .split(/\r?\n/)
-    .reduce<OutlineItem[]>((outlineItems, line) => {
-      const headingMatch = /^(#{1,6})\s+(.+)$/.exec(line.trim())
+  const outlineItems: OutlineItem[] = []
+  const linePattern = /.*(?:\r\n|\r|\n|$)/g
+  let lineNumber = 1
 
-      if (!headingMatch) {
-        return outlineItems
-      }
+  for (const match of markdownValue.matchAll(linePattern)) {
+    const rawLine = match[0]
 
+    if (!rawLine) {
+      continue
+    }
+
+    const lineText = rawLine.replace(/\r\n|\r|\n$/, '')
+    const headingMatch = /^(#{1,6})\s+(.+)$/.exec(lineText.trim())
+
+    if (headingMatch) {
       outlineItems.push({
         level: headingMatch[1].length,
         title: headingMatch[2].replace(/[#*_`~]/g, '').trim(),
+        lineNumber,
+        lineStart: match.index ?? 0,
       })
+    }
 
-      return outlineItems
-    }, [])
+    lineNumber += 1
+  }
+
+  return outlineItems
 }
 
 function getDocumentStats(markdownValue: string, outline: OutlineItem[]): DocumentStats {
@@ -178,6 +192,9 @@ function downloadFile(content: string, fileName: string, mimeType: string) {
 
 function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const editorRef = useRef<ReactCodeMirrorRef | null>(null)
+  const editorViewRef = useRef<EditorView | null>(null)
+  const pendingOutlineJumpRef = useRef<OutlineItem | null>(null)
   const [markdownValue, setMarkdownValue] = useState(() =>
     loadStoredValue(draftStorageKey, defaultMarkdown),
   )
@@ -193,6 +210,7 @@ function App() {
     return storedTheme === 'dark' ? 'dark' : 'light'
   })
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
+  const [activeOutlineLine, setActiveOutlineLine] = useState<number | null>(null)
 
   const editorExtensions = useMemo(
     () => [markdown({ base: markdownLanguage })],
@@ -237,6 +255,19 @@ function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme
   }, [theme])
+
+  useEffect(() => {
+    const pendingJump = pendingOutlineJumpRef.current
+
+    if (!pendingJump || mode === 'preview') {
+      return
+    }
+
+    window.requestAnimationFrame(() => {
+      jumpToEditorLine(pendingJump)
+      pendingOutlineJumpRef.current = null
+    })
+  }, [mode])
 
   useEffect(() => {
     if (!window.openmark) {
@@ -437,6 +468,43 @@ function App() {
     setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'))
   }
 
+  function jumpToEditorLine(item: OutlineItem) {
+    const editorView = editorViewRef.current ?? editorRef.current?.view
+
+    if (!editorView) {
+      return false
+    }
+
+    editorView.dispatch({
+      selection: { anchor: item.lineStart },
+      effects: EditorView.scrollIntoView(item.lineStart, { y: 'center' }),
+      scrollIntoView: true,
+    })
+
+    const editorLines = editorView.dom.querySelectorAll('.cm-line')
+
+    editorLines[item.lineNumber - 1]?.scrollIntoView({ block: 'center' })
+    editorView.focus()
+
+    return true
+  }
+
+  function handleOutlineJump(item: OutlineItem) {
+    setActiveOutlineLine(item.lineNumber)
+    pendingOutlineJumpRef.current = item
+
+    if (mode === 'preview') {
+      setMode('split')
+      return
+    }
+
+    window.requestAnimationFrame(() => {
+      if (jumpToEditorLine(item)) {
+        pendingOutlineJumpRef.current = null
+      }
+    })
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -584,7 +652,24 @@ function App() {
                     key={`${item.title}-${index}`}
                     className={`outline-level-${Math.min(item.level, 3)}`}
                   >
-                    {item.title}
+                    <button
+                      type="button"
+                      className={activeOutlineLine === item.lineNumber ? 'active' : ''}
+                      aria-current={activeOutlineLine === item.lineNumber ? 'location' : undefined}
+                      onPointerDown={(event) => {
+                        event.preventDefault()
+                        handleOutlineJump(item)
+                      }}
+                      onClick={(event) => {
+                        if (event.detail === 0) {
+                          handleOutlineJump(item)
+                        }
+                      }}
+                      title={`Go to line ${item.lineNumber}`}
+                    >
+                      <span>{item.title}</span>
+                      <small>:{item.lineNumber}</small>
+                    </button>
                   </li>
                 ))}
               </ol>
@@ -626,16 +711,20 @@ function App() {
               </div>
               <div className="editor-host">
                 <CodeMirror
+                  ref={editorRef}
                   value={markdownValue}
                   height="100%"
                   basicSetup={{
                     lineNumbers: false,
                     foldGutter: true,
-                    highlightActiveLine: false,
+                    highlightActiveLine: true,
                     autocompletion: true,
                   }}
                   extensions={editorExtensions}
                   theme={theme === 'dark' ? oneDark : 'light'}
+                  onCreateEditor={(view) => {
+                    editorViewRef.current = view
+                  }}
                   onChange={(value) => setMarkdownValue(value)}
                 />
               </div>
