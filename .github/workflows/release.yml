@@ -24,23 +24,21 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
         shell: pwsh
         run: |
-          npm ci --ignore-scripts --no-audit --no-fund
+          $npmOutput = npm ci --ignore-scripts --legacy-peer-deps --no-audit --no-fund 2>&1
           $exitCode = $LASTEXITCODE
+          $npmOutput | ForEach-Object { Write-Host $_ }
           if ($exitCode -ne 0) {
-            $log = Get-ChildItem "$env:LOCALAPPDATA\npm-cache\_logs" -Filter "*.log" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-            if ($log) {
-              $lines = Get-Content $log.FullName | Select-String -Pattern 'npm ERR!|error|ERR_|not found|unsupported|ELOCKVERIFY|certificate|ECONNRESET|ETIMEDOUT|ENOENT|EACCES' -CaseSensitive:$false | Select-Object -Last 20
-              $message = (($lines | ForEach-Object { $_.Line.Trim() }) -join ' | ')
-              if (-not $message) { $message = ((Get-Content $log.FullName -Tail 40) -join ' | ') }
-              $message = $message.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
-              Write-Host "::error title=npm ci failed::$message"
-            }
+            $lines = $npmOutput | Select-String -Pattern 'npm ERR!|error|ERR_|not found|unsupported|ELOCKVERIFY|certificate|ECONNRESET|ETIMEDOUT|ENOENT|EACCES' -CaseSensitive:$false | Select-Object -Last 20
+            $message = (($lines | ForEach-Object { $_.Line.Trim() }) -join ' | ')
+            if (-not $message) { $message = (($npmOutput | Select-Object -Last 40) -join ' | ') }
+            $message = $message.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+            Write-Host "::error title=npm ci failed::$message"
             exit $exitCode
           }
 
