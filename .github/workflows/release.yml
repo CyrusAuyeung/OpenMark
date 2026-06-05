@@ -30,7 +30,7 @@ jobs:
       - name: Install dependencies
         shell: pwsh
         run: |
-          $npmOutput = npm ci --ignore-scripts --legacy-peer-deps --no-audit --no-fund 2>&1
+          $npmOutput = npm ci --ignore-scripts --no-audit --no-fund 2>&1
           $exitCode = $LASTEXITCODE
           $npmOutput | ForEach-Object { Write-Host $_ }
           if ($exitCode -ne 0) {
