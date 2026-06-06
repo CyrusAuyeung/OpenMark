@@ -141,6 +141,8 @@ npm run dist:linux
 
 Release files are written to `release/`. Run platform distribution scripts on their matching operating systems.
 
+Packaged installer builds can check GitHub Releases for updates from **Help > Check for Updates...** or **Settings > Updates**.
+
 See [Release Guide](docs/release.md) for local packaging and GitHub release steps.
 
 ## Roadmap Direction

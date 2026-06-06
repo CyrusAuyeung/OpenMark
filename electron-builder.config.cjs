@@ -9,6 +9,13 @@ module.exports = {
   directories: {
     output: 'release',
   },
+  publish: [
+    {
+      provider: 'github',
+      owner: 'CyrusAuyeung',
+      repo: 'OpenMark',
+    },
+  ],
   files: [
     'dist/**/*',
     'electron/**/*',

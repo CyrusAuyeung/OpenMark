@@ -1262,6 +1262,11 @@ body.is-resizing-split * {
   outline-offset: 2px;
 }
 
+.theme-choice:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
+}
+
 .theme-choice span {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1291,6 +1296,42 @@ body.is-resizing-split * {
   color: var(--ink);
   font-size: 13px;
   text-align: right;
+}
+
+.update-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.update-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.update-copy strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.update-copy span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.update-copy .update-error {
+  color: #b54444;
+}
+
+.update-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.update-action {
+  min-width: 156px;
+  flex: 1 1 0;
 }
 
 @media (max-width: 1120px) {

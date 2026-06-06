@@ -72,6 +72,7 @@ jobs:
           path: |
             release/*.exe
             release/*.blockmap
+            release/*.yml
           if-no-files-found: error
           retention-days: 14
 
@@ -106,6 +107,7 @@ jobs:
             release/*.dmg
             release/*.zip
             release/*.blockmap
+            release/*.yml
           if-no-files-found: error
           retention-days: 14
 
@@ -139,6 +141,7 @@ jobs:
           path: |
             release/*.AppImage
             release/*.deb
+            release/*.yml
           if-no-files-found: error
           retention-days: 14
 

@@ -17,6 +17,28 @@ declare global {
     | 'replace-document'
     | 'open-command-palette'
     | 'insert-image'
+    | 'check-for-updates'
+
+  type OpenMarkUpdateState =
+    | 'idle'
+    | 'checking'
+    | 'available'
+    | 'downloading'
+    | 'downloaded'
+    | 'not-available'
+    | 'unsupported'
+    | 'error'
+
+  type OpenMarkUpdateStatus = {
+    state: OpenMarkUpdateState
+    message: string
+    version: string
+    updateVersion: string | null
+    progress: number | null
+    canCheck: boolean
+    canInstall: boolean
+    error: string | null
+  }
 
   interface Window {
     openmark?: {
@@ -66,6 +88,13 @@ declare global {
         fileName?: string
         error?: string
       }>
+      getUpdateStatus: () => Promise<OpenMarkUpdateStatus>
+      checkForUpdates: () => Promise<OpenMarkUpdateStatus>
+      installUpdate: () => Promise<{
+        accepted: boolean
+        error?: string
+      }>
+      onUpdateStatus: (callback: (status: OpenMarkUpdateStatus) => void) => () => void
       onCommand: (callback: (command: OpenMarkCommand) => void) => () => void
     }
   }

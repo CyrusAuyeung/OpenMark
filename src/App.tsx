@@ -47,8 +47,10 @@ import {
   ListOrdered,
   Moon,
   Quote,
+  RefreshCw,
   Replace,
   ReplaceAll as ReplaceAllIcon,
+  RotateCcw,
   Save,
   Search as SearchIcon,
   Settings2,
@@ -172,6 +174,17 @@ const localeOptions: Array<{
   { value: 'en', Icon: Languages },
   { value: 'zh-CN', Icon: Languages },
 ]
+
+const defaultUpdateStatus: OpenMarkUpdateStatus = {
+  state: 'unsupported',
+  message: '',
+  version: '0.3.0',
+  updateVersion: null,
+  progress: null,
+  canCheck: false,
+  canInstall: false,
+  error: null,
+}
 
 const markdownToolbarGroups: Array<
   Array<{
@@ -865,6 +878,7 @@ function App() {
   const [activeCommandIndex, setActiveCommandIndex] = useState(0)
   const [previewImageSources, setPreviewImageSources] = useState<PreviewImageSource[]>([])
   const [isThemeSettingsOpen, setIsThemeSettingsOpen] = useState(false)
+  const [updateStatus, setUpdateStatus] = useState<OpenMarkUpdateStatus>(defaultUpdateStatus)
   const theme = themePreference === 'system' ? systemTheme : themePreference
   const locale = localePreference === 'system' ? systemLocale : localePreference
   const t = translations[locale]
@@ -1079,6 +1093,14 @@ function App() {
       Icon: Settings2,
       keywords: ['theme', 'appearance', 'font', 'system'],
       action: openThemeSettings,
+    },
+    {
+      id: 'check-for-updates',
+      label: t.commands.checkForUpdates,
+      group: t.groups.help,
+      Icon: RefreshCw,
+      keywords: ['release', 'version', 'download'],
+      action: () => { void handleCheckForUpdates() },
     },
   ]
   const normalizedCommandQuery = commandQuery.trim().toLowerCase()
@@ -1320,9 +1342,41 @@ function App() {
         case 'insert-image':
           void handleInsertImage()
           break
+        case 'check-for-updates':
+          openThemeSettings()
+          void handleCheckForUpdates()
+          break
       }
     })
   })
+
+  useEffect(() => {
+    if (!window.openmark) {
+      return undefined
+    }
+
+    let isMounted = true
+
+    window.openmark.getUpdateStatus().then((status) => {
+      if (isMounted) {
+        setUpdateStatus(status)
+      }
+    }).catch(() => undefined)
+
+    const removeUpdateStatusListener = window.openmark.onUpdateStatus((status) => {
+      setUpdateStatus(status)
+    })
+
+    return () => {
+      isMounted = false
+      removeUpdateStatusListener()
+    }
+  }, [])
+
+  const updateMessage = t.updateStates[updateStatus.state]
+  const updateProgressLabel = typeof updateStatus.progress === 'number'
+    ? `${Math.round(updateStatus.progress)}%`
+    : null
 
   function clearPreviewImageSources() {
     previewImageSourcesRef.current.forEach((source) => {
@@ -1695,6 +1749,18 @@ function App() {
   function closeThemeSettings() {
     setIsThemeSettingsOpen(false)
     getEditorView()?.focus()
+  }
+
+  async function handleCheckForUpdates() {
+    const nextStatus = await window.openmark?.checkForUpdates()
+
+    if (nextStatus) {
+      setUpdateStatus(nextStatus)
+    }
+  }
+
+  async function handleInstallUpdate() {
+    await window.openmark?.installUpdate()
   }
 
   function handleMarkdownFormat(format: MarkdownFormat) {
@@ -2691,6 +2757,40 @@ function App() {
                 <strong>{editorFontSize}px</strong>
               </div>
             </label>
+
+            <div className="settings-section update-setting">
+              <span className="settings-label">{t.settings.updates}</span>
+              <div className="update-panel">
+                <div className="update-copy">
+                  <strong>{updateMessage}</strong>
+                  <span>
+                    {t.settings.currentVersion} {updateStatus.version}
+                    {updateStatus.updateVersion ? ` · ${t.settings.latestVersion} ${updateStatus.updateVersion}` : ''}
+                  </span>
+                  {updateProgressLabel && (
+                    <span>{t.settings.updateProgress} {updateProgressLabel}</span>
+                  )}
+                  {updateStatus.error && <span className="update-error">{updateStatus.error}</span>}
+                </div>
+                <div className="update-actions">
+                  {updateStatus.canInstall && (
+                    <button type="button" className="theme-choice update-action" onClick={handleInstallUpdate}>
+                      <RotateCcw size={16} />
+                      <span>{t.settings.restartToUpdate}</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="theme-choice update-action"
+                    onClick={handleCheckForUpdates}
+                    disabled={!updateStatus.canCheck}
+                  >
+                    <RefreshCw size={16} />
+                    <span>{updateStatus.state === 'checking' ? t.settings.checkingForUpdates : t.settings.checkForUpdates}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </section>
         </div>
       )}

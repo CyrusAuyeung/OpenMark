@@ -38,5 +38,5 @@
 
 - Windows code signing ✅
 - macOS and Linux package targets ✅
-- Auto-update channel
+- Auto-update channel ✅
 - Download page and release notes template

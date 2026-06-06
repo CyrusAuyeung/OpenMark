@@ -1,9 +1,142 @@
 const { app, BrowserWindow, Menu, dialog, ipcMain } = require('electron')
+const { autoUpdater } = require('electron-updater')
 const fs = require('node:fs/promises')
 const path = require('node:path')
 
 const isDev = !app.isPackaged
+const canUseAutoUpdater = !isDev && (process.platform !== 'linux' || Boolean(process.env.APPIMAGE))
 let mainWindow = null
+let hasScheduledInitialUpdateCheck = false
+
+const updateStatus = {
+  state: canUseAutoUpdater ? 'idle' : 'unsupported',
+  message: canUseAutoUpdater
+    ? 'Ready to check for updates.'
+    : 'Updates are available in packaged installer builds.',
+  version: app.getVersion(),
+  updateVersion: null,
+  progress: null,
+  canCheck: canUseAutoUpdater,
+  canInstall: false,
+  error: null,
+}
+
+autoUpdater.autoDownload = true
+autoUpdater.autoInstallOnAppQuit = true
+autoUpdater.allowPrerelease = app.getVersion().includes('-')
+
+function getUpdateStatus() {
+  return { ...updateStatus }
+}
+
+function sendUpdateStatus(targetWindow = mainWindow) {
+  if (!targetWindow || targetWindow.isDestroyed()) {
+    return
+  }
+
+  targetWindow.webContents.send('openmark:update-status', getUpdateStatus())
+}
+
+function setUpdateStatus(nextStatus) {
+  Object.assign(updateStatus, nextStatus)
+  updateStatus.version = app.getVersion()
+  updateStatus.canCheck = canUseAutoUpdater && !['checking', 'downloading'].includes(updateStatus.state)
+  updateStatus.canInstall = updateStatus.state === 'downloaded'
+
+  BrowserWindow.getAllWindows().forEach((targetWindow) => sendUpdateStatus(targetWindow))
+}
+
+function getUpdateVersion(updateInfo) {
+  return typeof updateInfo?.version === 'string' ? updateInfo.version : null
+}
+
+async function checkForUpdates() {
+  if (!canUseAutoUpdater) {
+    setUpdateStatus({
+      state: 'unsupported',
+      message: 'Updates are available in packaged installer builds.',
+      updateVersion: null,
+      progress: null,
+      error: null,
+    })
+
+    return getUpdateStatus()
+  }
+
+  if (updateStatus.state === 'checking' || updateStatus.state === 'downloading') {
+    return getUpdateStatus()
+  }
+
+  try {
+    await autoUpdater.checkForUpdates()
+  } catch (error) {
+    setUpdateStatus({
+      state: 'error',
+      message: 'Update check failed.',
+      progress: null,
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
+
+  return getUpdateStatus()
+}
+
+autoUpdater.on('checking-for-update', () => {
+  setUpdateStatus({
+    state: 'checking',
+    message: 'Checking for updates...',
+    progress: null,
+    error: null,
+  })
+})
+
+autoUpdater.on('update-available', (updateInfo) => {
+  setUpdateStatus({
+    state: 'available',
+    message: 'Update available. Downloading...',
+    updateVersion: getUpdateVersion(updateInfo),
+    progress: null,
+    error: null,
+  })
+})
+
+autoUpdater.on('update-not-available', () => {
+  setUpdateStatus({
+    state: 'not-available',
+    message: 'OpenMark is up to date.',
+    updateVersion: null,
+    progress: null,
+    error: null,
+  })
+})
+
+autoUpdater.on('download-progress', (progressInfo) => {
+  setUpdateStatus({
+    state: 'downloading',
+    message: 'Downloading update...',
+    progress: typeof progressInfo?.percent === 'number' ? progressInfo.percent : null,
+    error: null,
+  })
+})
+
+autoUpdater.on('update-downloaded', (updateInfo) => {
+  setUpdateStatus({
+    state: 'downloaded',
+    message: 'Update downloaded. Restart to install.',
+    updateVersion: getUpdateVersion(updateInfo) ?? updateStatus.updateVersion,
+    progress: 100,
+    error: null,
+  })
+})
+
+autoUpdater.on('error', (error) => {
+  setUpdateStatus({
+    state: 'error',
+    message: 'Update check failed.',
+    progress: null,
+    error: error instanceof Error ? error.message : String(error),
+  })
+})
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -23,6 +156,15 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null
+  })
+
+  mainWindow.webContents.once('did-finish-load', () => {
+    sendUpdateStatus(mainWindow)
+
+    if (!hasScheduledInitialUpdateCheck && canUseAutoUpdater) {
+      hasScheduledInitialUpdateCheck = true
+      setTimeout(() => { void checkForUpdates() }, 5000)
+    }
   })
 
   mainWindow.webContents.on('will-prevent-unload', (event) => {
@@ -101,6 +243,14 @@ function createApplicationMenu() {
         { label: 'Replace', accelerator: 'CmdOrCtrl+H', click: () => sendCommand('replace-document') },
         { type: 'separator' },
         { label: 'Command Palette', accelerator: 'CmdOrCtrl+Shift+P', click: () => sendCommand('open-command-palette') },
+      ],
+    },
+    {
+      label: 'Help',
+      submenu: [
+        { label: 'Check for Updates...', click: () => sendCommand('check-for-updates') },
+        { type: 'separator' },
+        { role: 'about' },
       ],
     },
   ]
@@ -247,6 +397,20 @@ ipcMain.handle('openmark:save-pdf-file', async (_event, payload) => {
     filePath: targetPath,
     fileName: getFileName(targetPath),
   }
+})
+
+ipcMain.handle('openmark:get-update-status', () => getUpdateStatus())
+
+ipcMain.handle('openmark:check-for-updates', async () => checkForUpdates())
+
+ipcMain.handle('openmark:install-update', () => {
+  if (!updateStatus.canInstall) {
+    return { accepted: false, error: 'No downloaded update is ready to install.' }
+  }
+
+  setImmediate(() => autoUpdater.quitAndInstall(false, true))
+
+  return { accepted: true }
 })
 
 async function renderHtmlToPdf(content) {

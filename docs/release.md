@@ -46,6 +46,8 @@ Repository: <https://github.com/CyrusAuyeung/OpenMark>
 
 The release workflow runs lint in the Windows job, builds the renderer on every platform, packages Windows/macOS/Linux artifacts, uploads workflow artifacts, and can attach all platform files to a GitHub release. If signing secrets are configured, Windows artifacts are signed during packaging.
 
+Release uploads include Electron auto-update metadata files such as `latest.yml`, `latest-mac.yml`, and Linux update metadata when generated. Keep those files attached to the GitHub release so installed apps can discover new versions.
+
 ### Tag-Based Release
 
 Push a version tag that starts with `v`:
@@ -78,6 +80,16 @@ Actions page: <https://github.com/CyrusAuyeung/OpenMark/actions/workflows/releas
 - Signed builds require `WINDOWS_CODESIGN_CERTIFICATE` and `WINDOWS_CODESIGN_PASSWORD` repository secrets.
 - Verify signed `.exe` files with `Get-AuthenticodeSignature` before publishing a non-draft release.
 - macOS artifacts are currently unsigned and not notarized.
+
+## Auto-Update Channel
+
+OpenMark uses `electron-updater` with GitHub Releases as the update provider.
+
+- Packaged installer builds check for updates shortly after startup.
+- Users can also run **Help > Check for Updates...** or open **Settings > Updates**.
+- Downloaded updates can be installed from the update section in settings.
+- The update channel follows the release version: stable builds use stable releases, prerelease builds can receive prereleases.
+- Auto-update is designed for installer/AppImage builds. Development builds and unsupported package formats show a disabled update state.
 
 ## Notes
 
