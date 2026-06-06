@@ -2,6 +2,14 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## Unreleased
+
+### File Workflow
+
+- Added a first-run welcome workspace with new/open actions.
+- Added recent-file removal and clearing controls.
+- Improved recent-file error handling and support for opening empty Markdown files.
+
 ## 0.2.1 - 2026-06-06
 
 ### Fixed

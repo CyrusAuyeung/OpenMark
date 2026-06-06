@@ -24,6 +24,7 @@ import {
   Save,
   Sun,
   Type,
+  X,
   type LucideIcon,
 } from 'lucide-react'
 import './App.css'
@@ -59,25 +60,6 @@ const fileNameStorageKey = 'openmark:file-name'
 const themeStorageKey = 'openmark:theme'
 const recentFilesStorageKey = 'openmark:recent-files'
 const maxRecentFiles = 6
-
-const defaultMarkdown = `# OpenMark draft
-
-OpenMark is a local-first Markdown editor prototype for focused writing.
-
-## What works today
-
-- Markdown source editing
-- Live preview
-- Write, split, and preview modes
-- Browser draft autosave
-- Markdown and HTML export
-
-## Release note
-
-This first milestone keeps the editor simple on purpose. The next step is a desktop shell with native file access and a cleaner WYSIWYG layer.
-
-> Ship the small reliable core first, then earn the fancy parts.
-`
 
 const markdownRenderer = new MarkdownIt({
   html: false,
@@ -351,14 +333,15 @@ function App() {
   const editorRef = useRef<ReactCodeMirrorRef | null>(null)
   const editorViewRef = useRef<EditorView | null>(null)
   const pendingOutlineJumpRef = useRef<OutlineItem | null>(null)
-  const initialMarkdownValue = useMemo(() => loadStoredValue(draftStorageKey, defaultMarkdown), [])
+  const initialMarkdownValue = useMemo(() => loadStoredValue(draftStorageKey, ''), [])
   const [markdownValue, setMarkdownValue] = useState(initialMarkdownValue)
   const [fileName, setFileName] = useState(() =>
-    loadStoredValue(fileNameStorageKey, 'openmark-draft.md'),
+    loadStoredValue(fileNameStorageKey, 'untitled.md'),
   )
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null)
   const [savedSnapshot, setSavedSnapshot] = useState(initialMarkdownValue)
   const [recentFiles, setRecentFiles] = useState(loadRecentFiles)
+  const [isWelcomeVisible, setIsWelcomeVisible] = useState(initialMarkdownValue.trim().length === 0)
   const [mode, setMode] = useState<ViewMode>('split')
   const [theme, setTheme] = useState<ThemeMode>(() => {
     const storedTheme = window.localStorage.getItem(themeStorageKey)
@@ -390,6 +373,7 @@ function App() {
     [markdownValue, outline],
   )
   const hasUnsavedChanges = markdownValue !== savedSnapshot
+  const showWelcome = isWelcomeVisible && markdownValue.trim().length === 0 && activeFilePath === null
 
   const lastSavedLabel = useMemo(() => {
     if (!lastSavedAt) {
@@ -495,6 +479,14 @@ function App() {
     ].slice(0, maxRecentFiles))
   }
 
+  function removeRecentFile(filePath: string) {
+    setRecentFiles((currentFiles) => currentFiles.filter((item) => item.filePath !== filePath))
+  }
+
+  function clearRecentFiles() {
+    setRecentFiles([])
+  }
+
   function confirmDiscardChanges(action: string) {
     if (!hasUnsavedChanges) {
       return true
@@ -514,6 +506,7 @@ function App() {
     setFileName('untitled.md')
     setActiveFilePath(null)
     setSavedSnapshot(nextMarkdown)
+    setIsWelcomeVisible(false)
   }
 
   function applyOpenedDocument(content: string, nextFileName: string, nextFilePath: string | null) {
@@ -523,6 +516,7 @@ function App() {
     setSavedSnapshot(content)
     rememberRecentFile(nextFilePath, nextFileName)
     setLastSavedAt(new Date())
+    setIsWelcomeVisible(false)
   }
 
   async function openDesktopFile() {
@@ -532,7 +526,7 @@ function App() {
 
     const result = await window.openmark?.openMarkdownFile()
 
-    if (!result || result.canceled || !result.content || !result.fileName) {
+    if (!result || result.canceled || typeof result.content !== 'string' || !result.fileName) {
       return
     }
 
@@ -544,11 +538,20 @@ function App() {
       return
     }
 
-    const result = await window.openmark?.openRecentFile(filePath)
+    let result
 
-    if (!result || result.canceled || !result.content || !result.fileName) {
+    try {
+      result = await window.openmark?.openRecentFile(filePath)
+    } catch {
+      window.alert('This recent file could not be opened.')
+      removeRecentFile(filePath)
+      return
+    }
+
+    if (!result || result.canceled || typeof result.content !== 'string' || !result.fileName) {
       if (result?.error) {
         window.alert(result.error)
+        removeRecentFile(filePath)
       }
       return
     }
@@ -583,6 +586,7 @@ function App() {
     setActiveFilePath(null)
     setSavedSnapshot(fileText)
     setLastSavedAt(new Date())
+    setIsWelcomeVisible(false)
     event.target.value = ''
   }
 
@@ -710,6 +714,35 @@ function App() {
     })
   }
 
+  function renderRecentFiles() {
+    return (
+      <div className="recent-list">
+        {recentFiles.map((item) => (
+          <div className="recent-file-row" key={item.filePath}>
+            <button
+              type="button"
+              className="recent-open-button"
+              onClick={() => handleOpenRecentFile(item.filePath)}
+              title={item.filePath}
+            >
+              <span>{item.fileName}</span>
+              <small>{new Date(item.openedAt).toLocaleDateString()}</small>
+            </button>
+            <button
+              type="button"
+              className="recent-remove-button"
+              onClick={() => removeRecentFile(item.filePath)}
+              title="Remove from recent"
+              aria-label={`Remove ${item.fileName} from recent`}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -811,7 +844,8 @@ function App() {
         />
       </header>
 
-      <main className={`workspace mode-${mode}`}>
+      <main className={`workspace mode-${mode}${showWelcome ? ' is-welcome' : ''}`}>
+        {!showWelcome && (
         <aside className="inspector" aria-label="Document inspector">
           <section className="inspector-section">
             <h2>Document</h2>
@@ -885,75 +919,103 @@ function App() {
 
           {window.openmark && (
             <section className="inspector-section recent-section">
-              <h2>Recent</h2>
+              <div className="section-heading-row">
+                <h2>Recent</h2>
+                {recentFiles.length > 0 && (
+                  <button type="button" className="text-action" onClick={clearRecentFiles}>
+                    Clear
+                  </button>
+                )}
+              </div>
               {recentFiles.length > 0 ? (
-                <div className="recent-list">
-                  {recentFiles.map((item) => (
-                    <button
-                      key={item.filePath}
-                      type="button"
-                      onClick={() => handleOpenRecentFile(item.filePath)}
-                      title={item.filePath}
-                    >
-                      <span>{item.fileName}</span>
-                      <small>{new Date(item.openedAt).toLocaleDateString()}</small>
-                    </button>
-                  ))}
-                </div>
+                renderRecentFiles()
               ) : (
                 <p className="muted">No recent files</p>
               )}
             </section>
           )}
         </aside>
+        )}
 
         <section className="editor-workbench" aria-label="Editor workspace">
-          {(mode === 'write' || mode === 'split') && (
-            <section className="editor-panel panel" aria-label="Markdown editor">
-              <div className="panel-header editor-panel-header">
-                <span>Markdown</span>
-                <div className="format-toolbar" role="toolbar" aria-label="Markdown formatting">
-                  {markdownToolbarGroups.map((group, groupIndex) => (
-                    <div className="format-group" key={`format-group-${groupIndex}`}>
-                      {group.map(({ format, label, title, Icon }) => (
-                        <button
-                          key={format}
-                          type="button"
-                          className="format-button"
-                          onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => handleMarkdownFormat(format)}
-                          title={title}
-                          aria-label={label}
-                        >
-                          <Icon size={15} />
-                        </button>
-                      ))}
-                    </div>
-                  ))}
+          {showWelcome ? (
+            <section className="welcome-panel" aria-label="Welcome">
+              <div className="welcome-inner">
+                <div className="welcome-mark" aria-hidden="true">
+                  <FileText size={28} />
                 </div>
-                <span className="panel-file-name">{withMarkdownExtension(fileName)}</span>
-              </div>
-              <div className="editor-host">
-                <CodeMirror
-                  ref={editorRef}
-                  value={markdownValue}
-                  height="100%"
-                  basicSetup={{
-                    lineNumbers: false,
-                    foldGutter: true,
-                    highlightActiveLine: true,
-                    autocompletion: true,
-                  }}
-                  extensions={editorExtensions}
-                  theme={theme === 'dark' ? oneDark : 'light'}
-                  onCreateEditor={(view) => {
-                    editorViewRef.current = view
-                  }}
-                  onChange={(value) => setMarkdownValue(value)}
-                />
+                <h1>OpenMark</h1>
+                <div className="welcome-actions">
+                  <button type="button" className="welcome-action" onClick={handleNewDocument}>
+                    <FilePlus2 size={20} />
+                    <span>New document</span>
+                  </button>
+                  <button type="button" className="welcome-action" onClick={handleOpenDocument}>
+                    <FolderOpen size={20} />
+                    <span>Open file</span>
+                  </button>
+                </div>
+                {window.openmark && recentFiles.length > 0 && (
+                  <section className="welcome-recent" aria-label="Recent files">
+                    <div className="section-heading-row">
+                      <h2>Recent</h2>
+                      <button type="button" className="text-action" onClick={clearRecentFiles}>
+                        Clear
+                      </button>
+                    </div>
+                    {renderRecentFiles()}
+                  </section>
+                )}
               </div>
             </section>
-          )}
+          ) : (
+            <>
+              {(mode === 'write' || mode === 'split') && (
+                <section className="editor-panel panel" aria-label="Markdown editor">
+                  <div className="panel-header editor-panel-header">
+                    <span>Markdown</span>
+                    <div className="format-toolbar" role="toolbar" aria-label="Markdown formatting">
+                      {markdownToolbarGroups.map((group, groupIndex) => (
+                        <div className="format-group" key={`format-group-${groupIndex}`}>
+                          {group.map(({ format, label, title, Icon }) => (
+                            <button
+                              key={format}
+                              type="button"
+                              className="format-button"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => handleMarkdownFormat(format)}
+                              title={title}
+                              aria-label={label}
+                            >
+                              <Icon size={15} />
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                    <span className="panel-file-name">{withMarkdownExtension(fileName)}</span>
+                  </div>
+                  <div className="editor-host">
+                    <CodeMirror
+                      ref={editorRef}
+                      value={markdownValue}
+                      height="100%"
+                      basicSetup={{
+                        lineNumbers: false,
+                        foldGutter: true,
+                        highlightActiveLine: true,
+                        autocompletion: true,
+                      }}
+                      extensions={editorExtensions}
+                      theme={theme === 'dark' ? oneDark : 'light'}
+                      onCreateEditor={(view) => {
+                        editorViewRef.current = view
+                      }}
+                      onChange={(value) => setMarkdownValue(value)}
+                    />
+                  </div>
+                </section>
+              )}
 
           {(mode === 'preview' || mode === 'split') && (
             <section className="preview-panel panel" aria-label="Markdown preview">
@@ -972,6 +1034,8 @@ function App() {
                 )}
               </div>
             </section>
+          )}
+            </>
           )}
         </section>
       </main>

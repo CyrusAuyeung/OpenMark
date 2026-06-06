@@ -337,42 +337,171 @@
   gap: 7px;
 }
 
-.recent-list button {
+.section-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.section-heading-row h2 {
+  margin: 0;
+}
+
+.text-action {
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.text-action:hover {
+  color: var(--ink);
+}
+
+.recent-file-row {
   min-width: 0;
   display: grid;
-  gap: 2px;
-  padding: 9px 10px;
+  grid-template-columns: minmax(0, 1fr) 30px;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.recent-open-button,
+.recent-remove-button {
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--ink);
   background: var(--surface-0);
-  text-align: left;
   cursor: pointer;
 }
 
-.recent-list button:hover {
+.recent-open-button {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: 9px 10px;
+  text-align: left;
+}
+
+.recent-remove-button {
+  width: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.recent-open-button:hover,
+.recent-remove-button:hover {
   border-color: var(--accent-border);
   background: var(--button-hover);
 }
 
-.recent-list button:focus-visible {
+.recent-open-button:focus-visible,
+.recent-remove-button:focus-visible,
+.text-action:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
-.recent-list span,
-.recent-list small {
+.recent-open-button span,
+.recent-open-button small {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.recent-list span {
+.recent-open-button span {
   font-weight: 650;
 }
 
-.recent-list small {
+.recent-open-button small {
   color: var(--muted);
+}
+
+.workspace.is-welcome {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.welcome-panel {
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 24px;
+  background: var(--surface-1);
+}
+
+.welcome-inner {
+  width: min(560px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+}
+
+.welcome-mark {
+  width: 58px;
+  height: 58px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.welcome-inner h1 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.welcome-actions {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.welcome-action {
+  min-height: 58px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 16px;
+  border: 1px solid var(--button-border);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--button-bg);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.welcome-action:hover {
+  border-color: var(--accent-border);
+  background: var(--button-hover);
+}
+
+.welcome-action:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.welcome-recent {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.welcome-recent .recent-list {
+  max-height: 260px;
+  overflow: auto;
 }
 
 .editor-workbench {

@@ -112,7 +112,13 @@ async function readMarkdownFile(filePath) {
     return { canceled: true, error: 'Unsupported file type' }
   }
 
-  const content = await fs.readFile(filePath, 'utf8')
+  let content
+
+  try {
+    content = await fs.readFile(filePath, 'utf8')
+  } catch {
+    return { canceled: true, error: 'This file could not be opened.' }
+  }
 
   return {
     canceled: false,
