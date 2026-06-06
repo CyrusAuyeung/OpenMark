@@ -66,7 +66,7 @@ jobs:
         run: npx electron-builder --win --publish never --config electron-builder.config.cjs
 
       - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: openmark-windows-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           path: |
@@ -100,7 +100,7 @@ jobs:
         run: npx electron-builder --mac --publish never --config electron-builder.config.cjs
 
       - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: openmark-macos-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           path: |
@@ -144,7 +144,7 @@ jobs:
         run: find release -maxdepth 1 -type f -printf '%f\n' | sort
 
       - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: openmark-linux-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           path: |
