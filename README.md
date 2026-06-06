@@ -17,6 +17,7 @@ OpenMark is a local-first Markdown editor MVP for building toward a polished ope
 - Safe Markdown preview with markdown-it and DOMPurify
 - Write, split, and preview modes
 - Resizable split view for balancing the editor and preview panes
+- Restored view mode, split balance, and workspace sidebar tab between sessions
 - Local browser draft autosave
 - Open local Markdown files through the browser file picker
 - Download Markdown and export standalone HTML

@@ -69,6 +69,8 @@ const fileNameStorageKey = 'openmark:file-name'
 const themeStorageKey = 'openmark:theme'
 const recentFilesStorageKey = 'openmark:recent-files'
 const splitPaneRatioStorageKey = 'openmark:split-pane-ratio'
+const viewModeStorageKey = 'openmark:view-mode'
+const sidebarTabStorageKey = 'openmark:sidebar-tab'
 const maxRecentFiles = 6
 const defaultSplitPaneRatio = 50
 const minSplitPaneRatio = 30
@@ -90,6 +92,9 @@ const modeOptions: Array<{
   { value: 'split', label: 'Split', Icon: Columns2 },
   { value: 'preview', label: 'Preview', Icon: Eye },
 ]
+
+const validViewModes = new Set<ViewMode>(['write', 'split', 'preview'])
+const validSidebarTabs = new Set<SidebarTab>(['document', 'outline', 'recent'])
 
 const markdownToolbarGroups: Array<
   Array<{
@@ -154,6 +159,16 @@ function loadSplitPaneRatio() {
   return Number.isFinite(storedRatio)
     ? clampSplitPaneRatio(storedRatio)
     : defaultSplitPaneRatio
+}
+
+function loadViewMode() {
+  const storedMode = window.localStorage.getItem(viewModeStorageKey)
+  return validViewModes.has(storedMode as ViewMode) ? storedMode as ViewMode : 'split'
+}
+
+function loadSidebarTab() {
+  const storedTab = window.localStorage.getItem(sidebarTabStorageKey)
+  return validSidebarTabs.has(storedTab as SidebarTab) ? storedTab as SidebarTab : 'document'
 }
 
 function getOutline(markdownValue: string): OutlineItem[] {
@@ -389,9 +404,9 @@ function App() {
   const [savedSnapshot, setSavedSnapshot] = useState(initialMarkdownValue)
   const [recentFiles, setRecentFiles] = useState(loadRecentFiles)
   const [isWelcomeVisible, setIsWelcomeVisible] = useState(initialMarkdownValue.trim().length === 0)
-  const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>('document')
+  const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>(loadSidebarTab)
   const [splitPaneRatio, setSplitPaneRatio] = useState(loadSplitPaneRatio)
-  const [mode, setMode] = useState<ViewMode>('split')
+  const [mode, setMode] = useState<ViewMode>(loadViewMode)
   const [theme, setTheme] = useState<ThemeMode>(() => {
     const storedTheme = window.localStorage.getItem(themeStorageKey)
     return storedTheme === 'dark' ? 'dark' : 'light'
@@ -466,6 +481,14 @@ function App() {
   useEffect(() => {
     window.localStorage.setItem(splitPaneRatioStorageKey, splitPaneRatio.toFixed(2))
   }, [splitPaneRatio])
+
+  useEffect(() => {
+    window.localStorage.setItem(viewModeStorageKey, mode)
+  }, [mode])
+
+  useEffect(() => {
+    window.localStorage.setItem(sidebarTabStorageKey, activeSidebarTab)
+  }, [activeSidebarTab])
 
   useEffect(() => {
     editorWorkbenchRef.current?.style.setProperty('--editor-pane-size', `${splitPaneRatio}%`)

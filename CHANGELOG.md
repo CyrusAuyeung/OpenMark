@@ -7,6 +7,7 @@ All notable changes to OpenMark will be documented in this file.
 ### Editor Layout
 
 - Added a draggable split-view divider that remembers the editor and preview pane balance.
+- Remembered the last selected view mode and sidebar tab between launches.
 
 ### Document Status
 
