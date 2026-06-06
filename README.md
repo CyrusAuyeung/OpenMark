@@ -23,6 +23,7 @@ Windows builds are currently unsigned, so the first launch may show operating-sy
 
 - Local-first Markdown editing with native desktop open/save dialogs
 - Source editor, safe preview, and resizable split view
+- Command palette for quickly running editor, file, view, and workspace actions
 - In-document find and replace with match navigation
 - Welcome workspace, recent files, saved state, and unsaved-change protection
 - Document outline that jumps to headings in the editor
@@ -36,6 +37,7 @@ Windows builds are currently unsigned, so the first launch may show operating-sy
 - Safe Markdown preview with markdown-it and DOMPurify
 - Write, split, and preview modes
 - Resizable split view for balancing the editor and preview panes
+- Command palette for keyboard-first access to file, edit, view, and workspace commands
 - In-document find and replace with match case and whole-word options
 - Restored view mode, split balance, and workspace sidebar tab between sessions
 - Local browser draft autosave
@@ -87,6 +89,7 @@ Useful desktop shortcuts:
 - `Ctrl+E`: export HTML
 - `Ctrl+F`: find in the current document
 - `Ctrl+H`: replace in the current document
+- `Ctrl+Shift+P`: open the command palette
 - `Ctrl+1`, `Ctrl+2`, `Ctrl+3`: write, split, and preview modes
 - `Ctrl+Shift+L`: toggle theme
 

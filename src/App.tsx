@@ -1,4 +1,5 @@
 import {
+  type FormEvent as ReactFormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
@@ -29,6 +30,7 @@ import {
   ChevronUp,
   Code2,
   Columns2,
+  Command as CommandIcon,
   Download,
   Eye,
   FilePlus2,
@@ -83,6 +85,16 @@ type RecentFile = {
 type SearchMatch = {
   from: number
   to: number
+}
+
+type CommandPaletteItem = {
+  id: string
+  label: string
+  group: string
+  shortcut?: string
+  keywords?: string[]
+  Icon: LucideIcon
+  action: () => void
 }
 
 const draftStorageKey = 'openmark:draft'
@@ -298,6 +310,43 @@ function getSearchMatches(
   return matches
 }
 
+function getCommandPaletteSearchScore(item: CommandPaletteItem, query: string) {
+  const label = item.label.toLowerCase()
+  const group = item.group.toLowerCase()
+  const shortcut = item.shortcut?.toLowerCase() ?? ''
+  const keywords = item.keywords ?? []
+
+  if (label === query) {
+    return 0
+  }
+
+  if (label.startsWith(query)) {
+    return 1
+  }
+
+  if (label.includes(query)) {
+    return 2
+  }
+
+  if (group.includes(query)) {
+    return 3
+  }
+
+  if (shortcut.includes(query)) {
+    return 4
+  }
+
+  if (keywords.some((keyword) => keyword.toLowerCase().startsWith(query))) {
+    return 5
+  }
+
+  if (keywords.some((keyword) => keyword.toLowerCase().includes(query))) {
+    return 6
+  }
+
+  return Number.POSITIVE_INFINITY
+}
+
 function escapeHtml(value: string) {
   const entities: Record<string, string> = {
     '&': '&amp;',
@@ -450,6 +499,7 @@ function App() {
   const editorViewRef = useRef<EditorView | null>(null)
   const pendingOutlineJumpRef = useRef<OutlineItem | null>(null)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
+  const commandInputRef = useRef<HTMLInputElement | null>(null)
   const initialMarkdownValue = useMemo(() => loadStoredValue(draftStorageKey, ''), [])
   const [markdownValue, setMarkdownValue] = useState(initialMarkdownValue)
   const [fileName, setFileName] = useState(() =>
@@ -475,6 +525,9 @@ function App() {
   const [isSearchCaseSensitive, setIsSearchCaseSensitive] = useState(false)
   const [isSearchWholeWord, setIsSearchWholeWord] = useState(false)
   const [activeSearchRange, setActiveSearchRange] = useState<SearchMatch | null>(null)
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
+  const [commandQuery, setCommandQuery] = useState('')
+  const [activeCommandIndex, setActiveCommandIndex] = useState(0)
 
   const editorExtensions = useMemo(
     () => [
@@ -522,6 +575,144 @@ function App() {
     { value: 'outline', label: 'Outline', detail: String(outline.length) },
     { value: 'recent', label: 'Recent', detail: String(recentFiles.length) },
   ]
+  const commandPaletteItems: CommandPaletteItem[] = [
+    {
+      id: 'new-document',
+      label: 'New document',
+      group: 'File',
+      shortcut: 'Ctrl+N',
+      Icon: FilePlus2,
+      keywords: ['create', 'blank', 'file'],
+      action: handleNewDocument,
+    },
+    {
+      id: 'open-document',
+      label: 'Open Markdown file',
+      group: 'File',
+      shortcut: 'Ctrl+O',
+      Icon: FolderOpen,
+      keywords: ['load', 'file'],
+      action: () => { void handleOpenDocument() },
+    },
+    {
+      id: 'save-document',
+      label: 'Save document',
+      group: 'File',
+      shortcut: 'Ctrl+S',
+      Icon: Save,
+      keywords: ['write', 'file'],
+      action: () => { void handleSaveMarkdown() },
+    },
+    {
+      id: 'save-document-as',
+      label: 'Save document as',
+      group: 'File',
+      shortcut: 'Ctrl+Shift+S',
+      Icon: Save,
+      keywords: ['rename', 'copy'],
+      action: () => { void handleSaveMarkdown({ forceDialog: true }) },
+    },
+    {
+      id: 'export-html',
+      label: 'Export HTML',
+      group: 'File',
+      shortcut: 'Ctrl+E',
+      Icon: Download,
+      keywords: ['publish', 'html'],
+      action: () => { void handleExportHtml() },
+    },
+    {
+      id: 'find-document',
+      label: 'Find in document',
+      group: 'Edit',
+      shortcut: 'Ctrl+F',
+      Icon: SearchIcon,
+      keywords: ['search'],
+      action: () => openSearchBar('find'),
+    },
+    {
+      id: 'replace-document',
+      label: 'Replace in document',
+      group: 'Edit',
+      shortcut: 'Ctrl+H',
+      Icon: Replace,
+      keywords: ['search'],
+      action: () => openSearchBar('replace'),
+    },
+    {
+      id: 'write-mode',
+      label: 'Switch to write mode',
+      group: 'View',
+      shortcut: 'Ctrl+1',
+      Icon: Type,
+      keywords: ['editor', 'source'],
+      action: () => setMode('write'),
+    },
+    {
+      id: 'split-mode',
+      label: 'Switch to split mode',
+      group: 'View',
+      shortcut: 'Ctrl+2',
+      Icon: Columns2,
+      keywords: ['preview', 'editor'],
+      action: () => setMode('split'),
+    },
+    {
+      id: 'preview-mode',
+      label: 'Switch to preview mode',
+      group: 'View',
+      shortcut: 'Ctrl+3',
+      Icon: Eye,
+      keywords: ['rendered'],
+      action: () => setMode('preview'),
+    },
+    {
+      id: 'document-panel',
+      label: 'Show document panel',
+      group: 'Workspace',
+      Icon: FileText,
+      keywords: ['sidebar', 'stats'],
+      action: () => setActiveSidebarTab('document'),
+    },
+    {
+      id: 'outline-panel',
+      label: 'Show outline panel',
+      group: 'Workspace',
+      Icon: List,
+      keywords: ['headings', 'sidebar'],
+      action: () => setActiveSidebarTab('outline'),
+    },
+    {
+      id: 'recent-panel',
+      label: 'Show recent files panel',
+      group: 'Workspace',
+      Icon: FolderOpen,
+      keywords: ['history', 'sidebar'],
+      action: () => setActiveSidebarTab('recent'),
+    },
+    {
+      id: 'toggle-theme',
+      label: 'Toggle theme',
+      group: 'View',
+      shortcut: 'Ctrl+Shift+L',
+      Icon: theme === 'dark' ? Sun : Moon,
+      keywords: ['dark', 'light'],
+      action: toggleTheme,
+    },
+  ]
+  const normalizedCommandQuery = commandQuery.trim().toLowerCase()
+  const filteredCommandPaletteItems = normalizedCommandQuery.length === 0
+    ? commandPaletteItems
+    : commandPaletteItems
+      .map((item, index) => ({
+        item,
+        index,
+        score: getCommandPaletteSearchScore(item, normalizedCommandQuery),
+      }))
+      .filter(({ score }) => Number.isFinite(score))
+      .sort((left, right) => left.score - right.score || left.index - right.index)
+      .map(({ item }) => item)
+  const safeActiveCommandIndex = Math.min(activeCommandIndex, Math.max(filteredCommandPaletteItems.length - 1, 0))
 
   const lastSavedLabel = useMemo(() => {
     if (!lastSavedAt) {
@@ -594,6 +785,11 @@ function App() {
 
       if (!usesCommandKey || event.altKey) {
         return
+      }
+
+      if (event.shiftKey && event.key.toLowerCase() === 'p') {
+        event.preventDefault()
+        openCommandPalette()
       }
 
       if (event.key.toLowerCase() === 'f') {
@@ -679,6 +875,9 @@ function App() {
           break
         case 'replace-document':
           openSearchBar('replace')
+          break
+        case 'open-command-palette':
+          openCommandPalette()
           break
       }
     })
@@ -899,6 +1098,68 @@ function App() {
     }
 
     applyMarkdownFormat(editorView, format)
+  }
+
+  function focusCommandInput() {
+    window.requestAnimationFrame(() => {
+      commandInputRef.current?.focus()
+      commandInputRef.current?.select()
+    })
+  }
+
+  function openCommandPalette() {
+    setCommandQuery('')
+    setActiveCommandIndex(0)
+    setIsCommandPaletteOpen(true)
+    focusCommandInput()
+  }
+
+  function closeCommandPalette() {
+    setIsCommandPaletteOpen(false)
+    setCommandQuery('')
+    setActiveCommandIndex(0)
+    getEditorView()?.focus()
+  }
+
+  function runCommandPaletteItem(item: CommandPaletteItem | undefined) {
+    if (!item) {
+      return
+    }
+
+    setIsCommandPaletteOpen(false)
+    setCommandQuery('')
+    setActiveCommandIndex(0)
+    item.action()
+  }
+
+  function handleCommandPaletteKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setActiveCommandIndex((currentIndex) => (
+        filteredCommandPaletteItems.length === 0
+          ? 0
+          : (currentIndex + 1) % filteredCommandPaletteItems.length
+      ))
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setActiveCommandIndex((currentIndex) => (
+        filteredCommandPaletteItems.length === 0
+          ? 0
+          : (currentIndex - 1 + filteredCommandPaletteItems.length) % filteredCommandPaletteItems.length
+      ))
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      closeCommandPalette()
+    }
+  }
+
+  function handleCommandPaletteSubmit(event: ReactFormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    runCommandPaletteItem(filteredCommandPaletteItems[safeActiveCommandIndex])
   }
 
   function getEditorView() {
@@ -1243,6 +1504,16 @@ function App() {
             aria-label="Toggle theme"
           >
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
+          <button
+            type="button"
+            className="icon-button"
+            onClick={openCommandPalette}
+            title="Command palette"
+            aria-label="Command palette"
+          >
+            <CommandIcon size={18} />
           </button>
         </div>
 
@@ -1627,6 +1898,62 @@ function App() {
         <span>{hasUnsavedChanges ? 'Unsaved' : 'Saved'}</span>
         <span>Draft saved {lastSavedLabel}</span>
       </footer>
+
+      {isCommandPaletteOpen && (
+        <div className="command-palette-backdrop" role="presentation" onMouseDown={closeCommandPalette}>
+          <form
+            className="command-palette"
+            role="dialog"
+            aria-label="Command palette"
+            onSubmit={handleCommandPaletteSubmit}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <label className="command-search-field">
+              <CommandIcon size={17} aria-hidden="true" />
+              <input
+                ref={commandInputRef}
+                type="search"
+                value={commandQuery}
+                placeholder="Type a command"
+                aria-label="Command search"
+                spellCheck={false}
+                onChange={(event) => {
+                  setCommandQuery(event.target.value)
+                  setActiveCommandIndex(0)
+                }}
+                onKeyDown={handleCommandPaletteKeyDown}
+              />
+            </label>
+
+            <div className="command-list" aria-label="Available commands">
+              {filteredCommandPaletteItems.length > 0 ? (
+                filteredCommandPaletteItems.slice(0, 8).map((item, index) => {
+                  const Icon = item.Icon
+
+                  return (
+                    <button
+                      type="button"
+                      key={item.id}
+                      className={index === safeActiveCommandIndex ? 'command-item active' : 'command-item'}
+                      onMouseEnter={() => setActiveCommandIndex(index)}
+                      onClick={() => runCommandPaletteItem(item)}
+                    >
+                      <Icon size={16} aria-hidden="true" />
+                      <span className="command-copy">
+                        <strong>{item.label}</strong>
+                        <small>{item.group}</small>
+                      </span>
+                      {item.shortcut && <kbd>{item.shortcut}</kbd>}
+                    </button>
+                  )
+                })
+              ) : (
+                <div className="command-empty">No commands found</div>
+              )}
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   )
 }

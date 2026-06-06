@@ -4,6 +4,11 @@ All notable changes to OpenMark will be documented in this file.
 
 ## Unreleased
 
+### Command Palette
+
+- Added a keyboard-first command palette for file, edit, view, workspace, search, and theme actions.
+- Added desktop and browser shortcuts for opening the command palette (`Ctrl+Shift+P`).
+
 ### Search and Replace
 
 - Added in-document find and replace with match navigation, match case, and whole-word options.

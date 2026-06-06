@@ -1044,6 +1044,122 @@ body.is-resizing-split * {
   white-space: nowrap;
 }
 
+.command-palette-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 92px 20px 20px;
+  background: rgba(18, 24, 19, 0.32);
+}
+
+.command-palette {
+  width: min(620px, 100%);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-1);
+  box-shadow: 0 22px 70px rgba(10, 16, 12, 0.28);
+}
+
+.command-search-field {
+  min-width: 0;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  background: var(--surface-0);
+}
+
+.command-search-field:focus-within {
+  box-shadow: inset 0 0 0 2px var(--focus);
+}
+
+.command-search-field input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  color: var(--ink);
+  background: transparent;
+  font-size: 16px;
+}
+
+.command-search-field input:focus {
+  outline: none;
+}
+
+.command-list {
+  max-height: min(430px, 62vh);
+  overflow: auto;
+  padding: 8px;
+}
+
+.command-item {
+  width: 100%;
+  min-height: 50px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.command-item:hover,
+.command-item.active {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+
+.command-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.command-copy strong,
+.command-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-copy strong {
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.command-copy small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.command-item kbd {
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  background: var(--surface-0);
+  font: 11px/1.2 var(--mono);
+}
+
+.command-empty {
+  padding: 20px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
 @media (max-width: 1120px) {
   .topbar {
     align-items: flex-start;
@@ -1128,5 +1244,17 @@ body.is-resizing-split * {
   .markdown-preview,
   .empty-preview {
     padding: 28px 20px 48px;
+  }
+
+  .command-palette-backdrop {
+    padding: 70px 12px 12px;
+  }
+
+  .command-item {
+    grid-template-columns: 24px minmax(0, 1fr);
+  }
+
+  .command-item kbd {
+    display: none;
   }
 }

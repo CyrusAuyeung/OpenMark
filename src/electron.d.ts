@@ -13,6 +13,7 @@ declare global {
     | 'toggle-theme'
     | 'find-document'
     | 'replace-document'
+    | 'open-command-palette'
 
   interface Window {
     openmark?: {

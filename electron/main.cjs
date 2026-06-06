@@ -95,6 +95,8 @@ function createApplicationMenu() {
         { type: 'separator' },
         { label: 'Find', accelerator: 'CmdOrCtrl+F', click: () => sendCommand('find-document') },
         { label: 'Replace', accelerator: 'CmdOrCtrl+H', click: () => sendCommand('replace-document') },
+        { type: 'separator' },
+        { label: 'Command Palette', accelerator: 'CmdOrCtrl+Shift+P', click: () => sendCommand('open-command-palette') },
       ],
     },
   ]
