@@ -14,6 +14,9 @@ Editor Core
 Markdown Pipeline
   markdown-it parsing, DOMPurify sanitization, HTML export
 
+Extension Layer
+  Future plugin host, contribution registry, sandboxed commands and transforms
+
 Persistence Layer
   Browser draft storage, native file IO, recent file metadata
 
@@ -52,7 +55,10 @@ Recommended future package split:
 ```text
 packages/editor-core
 packages/markdown-pipeline
+packages/plugin-api
 packages/export-engine
 packages/theme-system
 apps/desktop
 ```
+
+The plugin layer should remain separate from the editor core. See [Plugin API Design](plugin-api.md) for the proposed manifest, permission model, lifecycle, and initial extension points.

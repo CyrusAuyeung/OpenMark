@@ -31,7 +31,7 @@
 - Issue templates ✅
 - Automated release workflow ✅
 - Demo screenshots and short video ✅
-- Plugin API design
+- Plugin API design ✅
 - Localization foundation
 
 ## Milestone 5: Distribution Polish

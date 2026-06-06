@@ -145,6 +145,7 @@ OpenMark should stay simple before it becomes powerful. The near-term goal is a 
 - [Architecture](docs/architecture.md)
 - [Roadmap](docs/roadmap.md)
 - [Demo Assets](docs/demo.md)
+- [Plugin API Design](docs/plugin-api.md)
 - [Contributing](docs/contributing.md)
 - [Release Guide](docs/release.md)
 - [Changelog](CHANGELOG.md)
