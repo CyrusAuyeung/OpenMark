@@ -113,7 +113,7 @@ jobs:
 
   linux:
     name: Build Linux release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout
@@ -131,8 +131,7 @@ jobs:
       - name: Install Linux packaging dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libarchive-tools fakeroot dpkg
-          sudo apt-get install -y --no-install-recommends libfuse2 || sudo apt-get install -y --no-install-recommends libfuse2t64
+          sudo apt-get install -y --no-install-recommends libarchive-tools fakeroot dpkg libfuse2
 
       - name: Build renderer
         run: npm run build
