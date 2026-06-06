@@ -27,6 +27,8 @@ The latest Windows release is available on the [GitHub Releases page](https://gi
 
 Windows builds are currently unsigned, so the first launch may show operating-system warnings.
 
+Signed Windows releases are supported when code-signing secrets are configured in GitHub Actions. See [Windows Code Signing](docs/windows-signing.md) for setup and verification.
+
 ## Highlights
 
 - Local-first Markdown editing with native desktop open/save dialogs
@@ -147,6 +149,7 @@ OpenMark should stay simple before it becomes powerful. The near-term goal is a 
 - [Demo Assets](docs/demo.md)
 - [Plugin API Design](docs/plugin-api.md)
 - [Localization](docs/localization.md)
+- [Windows Code Signing](docs/windows-signing.md)
 - [Contributing](docs/contributing.md)
 - [Release Guide](docs/release.md)
 - [Changelog](CHANGELOG.md)
