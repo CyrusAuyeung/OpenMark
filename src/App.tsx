@@ -240,14 +240,13 @@ function App() {
   const editorRef = useRef<ReactCodeMirrorRef | null>(null)
   const editorViewRef = useRef<EditorView | null>(null)
   const pendingOutlineJumpRef = useRef<OutlineItem | null>(null)
-  const [markdownValue, setMarkdownValue] = useState(() =>
-    loadStoredValue(draftStorageKey, defaultMarkdown),
-  )
+  const initialMarkdownValue = useMemo(() => loadStoredValue(draftStorageKey, defaultMarkdown), [])
+  const [markdownValue, setMarkdownValue] = useState(initialMarkdownValue)
   const [fileName, setFileName] = useState(() =>
     loadStoredValue(fileNameStorageKey, 'openmark-draft.md'),
   )
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null)
-  const [savedSnapshot, setSavedSnapshot] = useState<string | null>(null)
+  const [savedSnapshot, setSavedSnapshot] = useState(initialMarkdownValue)
   const [recentFiles, setRecentFiles] = useState(loadRecentFiles)
   const [mode, setMode] = useState<ViewMode>('split')
   const [theme, setTheme] = useState<ThemeMode>(() => {
@@ -279,7 +278,7 @@ function App() {
     () => getDocumentStats(markdownValue, outline),
     [markdownValue, outline],
   )
-  const hasUnsavedChanges = savedSnapshot !== null && markdownValue !== savedSnapshot
+  const hasUnsavedChanges = markdownValue !== savedSnapshot
 
   const lastSavedLabel = useMemo(() => {
     if (!lastSavedAt) {
@@ -307,6 +306,21 @@ function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme
   }, [theme])
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedChanges) {
+        return
+      }
+
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
 
   useEffect(() => {
     const pendingJump = pendingOutlineJumpRef.current
@@ -370,19 +384,25 @@ function App() {
     ].slice(0, maxRecentFiles))
   }
 
-  function handleNewDocument() {
-    const shouldReset = window.confirm(
-      'Start a new document? The current browser draft will be replaced.',
-    )
+  function confirmDiscardChanges(action: string) {
+    if (!hasUnsavedChanges) {
+      return true
+    }
 
-    if (!shouldReset) {
+    return window.confirm(`You have unsaved changes. ${action}?`)
+  }
+
+  function handleNewDocument() {
+    if (!confirmDiscardChanges('Start a new document and discard them')) {
       return
     }
 
-    setMarkdownValue('# Untitled\n\n')
+    const nextMarkdown = '# Untitled\n\n'
+
+    setMarkdownValue(nextMarkdown)
     setFileName('untitled.md')
     setActiveFilePath(null)
-    setSavedSnapshot(null)
+    setSavedSnapshot(nextMarkdown)
   }
 
   function applyOpenedDocument(content: string, nextFileName: string, nextFilePath: string | null) {
@@ -395,6 +415,10 @@ function App() {
   }
 
   async function openDesktopFile() {
+    if (!confirmDiscardChanges('Open another document and discard them')) {
+      return
+    }
+
     const result = await window.openmark?.openMarkdownFile()
 
     if (!result || result.canceled || !result.content || !result.fileName) {
@@ -405,6 +429,10 @@ function App() {
   }
 
   async function handleOpenRecentFile(filePath: string) {
+    if (!confirmDiscardChanges('Open another document and discard them')) {
+      return
+    }
+
     const result = await window.openmark?.openRecentFile(filePath)
 
     if (!result || result.canceled || !result.content || !result.fileName) {
@@ -420,6 +448,10 @@ function App() {
   async function handleOpenDocument() {
     if (window.openmark) {
       await openDesktopFile()
+      return
+    }
+
+    if (!confirmDiscardChanges('Open another document and discard them')) {
       return
     }
 

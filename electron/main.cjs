@@ -25,6 +25,22 @@ function createWindow() {
     mainWindow = null
   })
 
+  mainWindow.webContents.on('will-prevent-unload', (event) => {
+    const choice = dialog.showMessageBoxSync(mainWindow, {
+      type: 'question',
+      buttons: ['Discard changes', 'Keep editing'],
+      defaultId: 1,
+      cancelId: 1,
+      title: 'Unsaved changes',
+      message: 'This document has unsaved changes.',
+      detail: 'Close OpenMark and discard the current changes?',
+    })
+
+    if (choice === 0) {
+      event.preventDefault()
+    }
+  })
+
   if (isDev) {
     mainWindow.loadURL('http://127.0.0.1:5173')
     return

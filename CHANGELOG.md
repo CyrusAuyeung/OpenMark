@@ -8,6 +8,7 @@ All notable changes to OpenMark will be documented in this file.
 
 - Clickable document outline entries that jump to the matching Markdown heading.
 - Markdown shortcuts for bold, italic, and link insertion in the editor.
+- Unsaved-change prompts before replacing or closing the current document.
 
 ## 0.1.0 - 2026-06-06
 
