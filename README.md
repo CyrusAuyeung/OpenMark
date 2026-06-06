@@ -36,7 +36,7 @@ Windows builds are currently unsigned, so the first launch may show operating-sy
 - Markdown table insertion and text-to-table conversion
 - Image insertion with local preview and desktop relative-path handling
 - PDF export for sharing polished rendered documents
-- Appearance settings for light, dark, system theme, and editor font size
+- Appearance settings for light, dark, system theme, editor font size, and language preference
 - Welcome workspace, recent files, saved state, and unsaved-change protection
 - Document outline that jumps to headings in the editor
 - Editable document file names for new files, downloads, Save As defaults, and HTML exports
@@ -58,7 +58,7 @@ Windows builds are currently unsigned, so the first launch may show operating-sy
 - Local browser draft autosave
 - Open local Markdown files through the browser file picker
 - Download Markdown and export standalone HTML or PDF
-- Light, dark, and system theme preferences with adjustable editor font size
+- Light, dark, and system theme preferences with adjustable editor font size and language preference
 - Document stats and clickable heading outline
 - Browser and desktop window title sync with the active document and unsaved state
 - Markdown formatting toolbar and editor shortcuts
@@ -146,6 +146,7 @@ OpenMark should stay simple before it becomes powerful. The near-term goal is a 
 - [Roadmap](docs/roadmap.md)
 - [Demo Assets](docs/demo.md)
 - [Plugin API Design](docs/plugin-api.md)
+- [Localization](docs/localization.md)
 - [Contributing](docs/contributing.md)
 - [Release Guide](docs/release.md)
 - [Changelog](CHANGELOG.md)

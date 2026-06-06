@@ -14,6 +14,9 @@ Editor Core
 Markdown Pipeline
   markdown-it parsing, DOMPurify sanitization, HTML export
 
+Localization Layer
+  Typed UI dictionaries, locale preference storage, export language metadata
+
 Extension Layer
   Future plugin host, contribution registry, sandboxed commands and transforms
 
@@ -30,6 +33,7 @@ Distribution Layer
 src/App.tsx       Main editor workflow and UI state
 src/App.css       App-specific layout and editor styling
 src/index.css     Global design tokens and reset
+src/i18n.ts       Typed translation catalogs and locale preference helpers
 docs/             Architecture, roadmap, contribution notes
 ```
 
@@ -62,3 +66,5 @@ apps/desktop
 ```
 
 The plugin layer should remain separate from the editor core. See [Plugin API Design](plugin-api.md) for the proposed manifest, permission model, lifecycle, and initial extension points.
+
+The localization layer starts with typed dictionaries in the renderer and should stay independent from Markdown parsing. See [Localization](localization.md) for supported locales, contribution rules, and next targets.

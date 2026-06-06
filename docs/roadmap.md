@@ -32,7 +32,7 @@
 - Automated release workflow ✅
 - Demo screenshots and short video ✅
 - Plugin API design ✅
-- Localization foundation
+- Localization foundation ✅
 
 ## Milestone 5: Distribution Polish
 

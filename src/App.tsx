@@ -40,6 +40,7 @@ import {
   Heading2,
   ImagePlus,
   Italic,
+  Languages,
   Laptop,
   Link as LinkIcon,
   List,
@@ -59,6 +60,13 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import './App.css'
+import {
+  type AppLocale,
+  type LocalePreference,
+  getPreferredLocale,
+  isLocalePreference,
+  translations,
+} from './i18n'
 
 type ViewMode = 'write' | 'split' | 'preview'
 type ThemeMode = 'light' | 'dark'
@@ -112,6 +120,7 @@ type CommandPaletteItem = {
 const draftStorageKey = 'openmark:draft'
 const fileNameStorageKey = 'openmark:file-name'
 const themeStorageKey = 'openmark:theme'
+const localeStorageKey = 'openmark:locale'
 const editorFontSizeStorageKey = 'openmark:editor-font-size'
 const recentFilesStorageKey = 'openmark:recent-files'
 const splitPaneRatioStorageKey = 'openmark:split-pane-ratio'
@@ -135,12 +144,11 @@ const markdownRenderer = new MarkdownIt({
 
 const modeOptions: Array<{
   value: ViewMode
-  label: string
   Icon: LucideIcon
 }> = [
-  { value: 'write', label: 'Write', Icon: Type },
-  { value: 'split', label: 'Split', Icon: Columns2 },
-  { value: 'preview', label: 'Preview', Icon: Eye },
+  { value: 'write', Icon: Type },
+  { value: 'split', Icon: Columns2 },
+  { value: 'preview', Icon: Eye },
 ]
 
 const validViewModes = new Set<ViewMode>(['write', 'split', 'preview'])
@@ -149,12 +157,20 @@ const validThemePreferences = new Set<ThemePreference>(['light', 'dark', 'system
 
 const themeOptions: Array<{
   value: ThemePreference
-  label: string
   Icon: LucideIcon
 }> = [
-  { value: 'light', label: 'Light', Icon: Sun },
-  { value: 'dark', label: 'Dark', Icon: Moon },
-  { value: 'system', label: 'System', Icon: Laptop },
+  { value: 'light', Icon: Sun },
+  { value: 'dark', Icon: Moon },
+  { value: 'system', Icon: Laptop },
+]
+
+const localeOptions: Array<{
+  value: LocalePreference
+  Icon: LucideIcon
+}> = [
+  { value: 'system', Icon: Laptop },
+  { value: 'en', Icon: Languages },
+  { value: 'zh-CN', Icon: Languages },
 ]
 
 const markdownToolbarGroups: Array<
@@ -236,6 +252,15 @@ function loadSidebarTab() {
 function loadThemePreference() {
   const storedTheme = window.localStorage.getItem(themeStorageKey)
   return validThemePreferences.has(storedTheme as ThemePreference) ? storedTheme as ThemePreference : 'system'
+}
+
+function loadLocalePreference() {
+  const storedLocale = window.localStorage.getItem(localeStorageKey)
+  return isLocalePreference(storedLocale) ? storedLocale : 'system'
+}
+
+function getSystemLocale(): AppLocale {
+  return getPreferredLocale(navigator.languages?.length ? navigator.languages : [navigator.language])
 }
 
 function getSystemTheme(): ThemeMode {
@@ -823,6 +848,8 @@ function App() {
   const [mode, setMode] = useState<ViewMode>(loadViewMode)
   const [themePreference, setThemePreference] = useState<ThemePreference>(loadThemePreference)
   const [systemTheme, setSystemTheme] = useState<ThemeMode>(getSystemTheme)
+  const [localePreference, setLocalePreference] = useState<LocalePreference>(loadLocalePreference)
+  const [systemLocale, setSystemLocale] = useState<AppLocale>(getSystemLocale)
   const [editorFontSize, setEditorFontSize] = useState(loadEditorFontSize)
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const [activeOutlineLine, setActiveOutlineLine] = useState<number | null>(null)
@@ -839,6 +866,8 @@ function App() {
   const [previewImageSources, setPreviewImageSources] = useState<PreviewImageSource[]>([])
   const [isThemeSettingsOpen, setIsThemeSettingsOpen] = useState(false)
   const theme = themePreference === 'system' ? systemTheme : themePreference
+  const locale = localePreference === 'system' ? systemLocale : localePreference
+  const t = translations[locale]
 
   const editorExtensions = useMemo(
     () => [
@@ -882,23 +911,23 @@ function App() {
     ? searchMatches.findIndex((match) => match.from === activeSearchRange.from && match.to === activeSearchRange.to)
     : -1
   const searchStatusLabel = searchTerm.length === 0
-    ? 'No query'
-    : `${activeSearchMatchIndex >= 0 ? activeSearchMatchIndex + 1 : 0} of ${searchMatches.length}`
+    ? t.search.noQuery
+    : `${activeSearchMatchIndex >= 0 ? activeSearchMatchIndex + 1 : 0} ${t.search.of} ${searchMatches.length}`
   const hasUnsavedChanges = markdownValue !== savedSnapshot
   const showWelcome = isWelcomeVisible && markdownValue.trim().length === 0 && activeFilePath === null
   const appTitle = showWelcome
     ? 'OpenMark'
     : `${hasUnsavedChanges ? '* ' : ''}${withMarkdownExtension(fileName)} - OpenMark`
   const sidebarTabs: Array<{ value: SidebarTab; label: string; detail: string }> = [
-    { value: 'document', label: 'Document', detail: hasUnsavedChanges ? 'Unsaved' : 'Saved' },
-    { value: 'outline', label: 'Outline', detail: String(outline.length) },
-    { value: 'recent', label: 'Recent', detail: String(recentFiles.length) },
+    { value: 'document', label: t.sidebar.document, detail: hasUnsavedChanges ? t.document.unsaved : t.document.saved },
+    { value: 'outline', label: t.sidebar.outline, detail: String(outline.length) },
+    { value: 'recent', label: t.sidebar.recent, detail: String(recentFiles.length) },
   ]
   const commandPaletteItems: CommandPaletteItem[] = [
     {
       id: 'new-document',
-      label: 'New document',
-      group: 'File',
+      label: t.commands.newDocument,
+      group: t.groups.file,
       shortcut: 'Ctrl+N',
       Icon: FilePlus2,
       keywords: ['create', 'blank', 'file'],
@@ -906,8 +935,8 @@ function App() {
     },
     {
       id: 'open-document',
-      label: 'Open Markdown file',
-      group: 'File',
+      label: t.commands.openMarkdownFile,
+      group: t.groups.file,
       shortcut: 'Ctrl+O',
       Icon: FolderOpen,
       keywords: ['load', 'file'],
@@ -915,8 +944,8 @@ function App() {
     },
     {
       id: 'save-document',
-      label: 'Save document',
-      group: 'File',
+      label: t.commands.saveDocument,
+      group: t.groups.file,
       shortcut: 'Ctrl+S',
       Icon: Save,
       keywords: ['write', 'file'],
@@ -924,8 +953,8 @@ function App() {
     },
     {
       id: 'save-document-as',
-      label: 'Save document as',
-      group: 'File',
+      label: t.commands.saveDocumentAs,
+      group: t.groups.file,
       shortcut: 'Ctrl+Shift+S',
       Icon: Save,
       keywords: ['rename', 'copy'],
@@ -933,8 +962,8 @@ function App() {
     },
     {
       id: 'export-html',
-      label: 'Export HTML',
-      group: 'File',
+      label: t.commands.exportHtml,
+      group: t.groups.file,
       shortcut: 'Ctrl+E',
       Icon: Download,
       keywords: ['publish', 'html'],
@@ -942,8 +971,8 @@ function App() {
     },
     {
       id: 'export-pdf',
-      label: 'Export PDF',
-      group: 'File',
+      label: t.commands.exportPdf,
+      group: t.groups.file,
       shortcut: 'Ctrl+Shift+E',
       Icon: FileDown,
       keywords: ['print', 'publish'],
@@ -951,8 +980,8 @@ function App() {
     },
     {
       id: 'find-document',
-      label: 'Find in document',
-      group: 'Edit',
+      label: t.commands.findInDocument,
+      group: t.groups.edit,
       shortcut: 'Ctrl+F',
       Icon: SearchIcon,
       keywords: ['search'],
@@ -960,8 +989,8 @@ function App() {
     },
     {
       id: 'replace-document',
-      label: 'Replace in document',
-      group: 'Edit',
+      label: t.commands.replaceInDocument,
+      group: t.groups.edit,
       shortcut: 'Ctrl+H',
       Icon: Replace,
       keywords: ['search'],
@@ -969,24 +998,24 @@ function App() {
     },
     {
       id: 'insert-image',
-      label: 'Insert image',
-      group: 'Edit',
+      label: t.commands.insertImage,
+      group: t.groups.edit,
       Icon: ImagePlus,
       keywords: ['markdown', 'photo', 'picture', 'local'],
       action: () => { void handleInsertImage() },
     },
     {
       id: 'insert-table',
-      label: 'Insert or convert table',
-      group: 'Edit',
+      label: t.commands.insertTable,
+      group: t.groups.edit,
       Icon: Table,
       keywords: ['markdown', 'columns', 'rows'],
       action: () => handleMarkdownFormat('table'),
     },
     {
       id: 'write-mode',
-      label: 'Switch to write mode',
-      group: 'View',
+      label: t.commands.switchToWriteMode,
+      group: t.groups.view,
       shortcut: 'Ctrl+1',
       Icon: Type,
       keywords: ['editor', 'source'],
@@ -994,8 +1023,8 @@ function App() {
     },
     {
       id: 'split-mode',
-      label: 'Switch to split mode',
-      group: 'View',
+      label: t.commands.switchToSplitMode,
+      group: t.groups.view,
       shortcut: 'Ctrl+2',
       Icon: Columns2,
       keywords: ['preview', 'editor'],
@@ -1003,8 +1032,8 @@ function App() {
     },
     {
       id: 'preview-mode',
-      label: 'Switch to preview mode',
-      group: 'View',
+      label: t.commands.switchToPreviewMode,
+      group: t.groups.view,
       shortcut: 'Ctrl+3',
       Icon: Eye,
       keywords: ['rendered'],
@@ -1012,32 +1041,32 @@ function App() {
     },
     {
       id: 'document-panel',
-      label: 'Show document panel',
-      group: 'Workspace',
+      label: t.commands.showDocumentPanel,
+      group: t.groups.workspace,
       Icon: FileText,
       keywords: ['sidebar', 'stats'],
       action: () => setActiveSidebarTab('document'),
     },
     {
       id: 'outline-panel',
-      label: 'Show outline panel',
-      group: 'Workspace',
+      label: t.commands.showOutlinePanel,
+      group: t.groups.workspace,
       Icon: List,
       keywords: ['headings', 'sidebar'],
       action: () => setActiveSidebarTab('outline'),
     },
     {
       id: 'recent-panel',
-      label: 'Show recent files panel',
-      group: 'Workspace',
+      label: t.commands.showRecentFilesPanel,
+      group: t.groups.workspace,
       Icon: FolderOpen,
       keywords: ['history', 'sidebar'],
       action: () => setActiveSidebarTab('recent'),
     },
     {
       id: 'toggle-theme',
-      label: 'Toggle theme',
-      group: 'View',
+      label: t.commands.toggleTheme,
+      group: t.groups.view,
       shortcut: 'Ctrl+Shift+L',
       Icon: theme === 'dark' ? Sun : Moon,
       keywords: ['dark', 'light'],
@@ -1045,8 +1074,8 @@ function App() {
     },
     {
       id: 'theme-settings',
-      label: 'Open appearance settings',
-      group: 'View',
+      label: t.commands.openAppearanceSettings,
+      group: t.groups.view,
       Icon: Settings2,
       keywords: ['theme', 'appearance', 'font', 'system'],
       action: openThemeSettings,
@@ -1068,14 +1097,17 @@ function App() {
 
   const lastSavedLabel = useMemo(() => {
     if (!lastSavedAt) {
-      return 'Waiting for draft save'
+      return t.status.waitingForDraftSave
     }
 
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat(locale, {
       hour: '2-digit',
       minute: '2-digit',
     }).format(lastSavedAt)
-  }, [lastSavedAt])
+  }, [lastSavedAt, locale, t.status.waitingForDraftSave])
+  const draftStatusLabel = lastSavedAt
+    ? `${t.status.draftSaved} ${lastSavedLabel}`
+    : lastSavedLabel
 
   useEffect(() => {
     const saveTimer = window.setTimeout(() => {
@@ -1093,13 +1125,18 @@ function App() {
   }, [themePreference])
 
   useEffect(() => {
+    window.localStorage.setItem(localeStorageKey, localePreference)
+  }, [localePreference])
+
+  useEffect(() => {
     window.localStorage.setItem(editorFontSizeStorageKey, editorFontSize.toFixed(0))
   }, [editorFontSize])
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
+    document.documentElement.lang = locale
     document.documentElement.style.setProperty('--editor-font-size', `${editorFontSize}px`)
-  }, [editorFontSize, theme])
+  }, [editorFontSize, locale, theme])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
@@ -1109,6 +1146,14 @@ function App() {
     mediaQuery.addEventListener('change', handleSystemThemeChange)
 
     return () => mediaQuery.removeEventListener('change', handleSystemThemeChange)
+  }, [])
+
+  useEffect(() => {
+    const handleLanguageChange = () => setSystemLocale(getSystemLocale())
+
+    window.addEventListener('languagechange', handleLanguageChange)
+
+    return () => window.removeEventListener('languagechange', handleLanguageChange)
   }, [])
 
   useEffect(() => {
@@ -1331,11 +1376,11 @@ function App() {
       return true
     }
 
-    return window.confirm(`You have unsaved changes. ${action}?`)
+    return window.confirm(`${t.alerts.unsavedChanges} ${action}`)
   }
 
   function handleNewDocument() {
-    if (!confirmDiscardChanges('Start a new document and discard them')) {
+    if (!confirmDiscardChanges(t.alerts.startNewDocument)) {
       return
     }
 
@@ -1361,7 +1406,7 @@ function App() {
   }
 
   async function openDesktopFile() {
-    if (!confirmDiscardChanges('Open another document and discard them')) {
+    if (!confirmDiscardChanges(t.alerts.openAnotherDocument)) {
       return
     }
 
@@ -1375,7 +1420,7 @@ function App() {
   }
 
   async function handleOpenRecentFile(filePath: string) {
-    if (!confirmDiscardChanges('Open another document and discard them')) {
+    if (!confirmDiscardChanges(t.alerts.openAnotherDocument)) {
       return
     }
 
@@ -1384,7 +1429,7 @@ function App() {
     try {
       result = await window.openmark?.openRecentFile(filePath)
     } catch {
-      window.alert('This recent file could not be opened.')
+      window.alert(t.alerts.recentFileOpenFailed)
       removeRecentFile(filePath)
       return
     }
@@ -1406,7 +1451,7 @@ function App() {
       return
     }
 
-    if (!confirmDiscardChanges('Open another document and discard them')) {
+    if (!confirmDiscardChanges(t.alerts.openAnotherDocument)) {
       return
     }
 
@@ -1500,7 +1545,7 @@ function App() {
     }
 
     if (!isSupportedImageFile(selectedFile.name)) {
-      window.alert('Choose a PNG, JPG, GIF, WebP, or SVG image.')
+      window.alert(t.alerts.unsupportedImage)
       event.target.value = ''
       return
     }
@@ -1553,7 +1598,7 @@ function App() {
     const title = escapeHtml(getBaseName(fileName))
 
     return `<!doctype html>
-<html lang="en">
+  <html lang="${locale}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -1621,7 +1666,7 @@ function App() {
     const printWindow = window.open('', '_blank', 'noopener,noreferrer')
 
     if (!printWindow) {
-      window.alert('Allow pop-ups to open the print view, then choose Save as PDF.')
+      window.alert(t.alerts.allowPopupsForPdf)
       return
     }
 
@@ -1949,7 +1994,7 @@ function App() {
               className="recent-remove-button"
               onClick={() => removeRecentFile(item.filePath)}
               title="Remove from recent"
-              aria-label={`Remove ${item.fileName} from recent`}
+              aria-label={`${t.document.removeFromRecent}: ${item.fileName}`}
             >
               <X size={14} />
             </button>
@@ -1968,18 +2013,18 @@ function App() {
           </div>
           <div>
             <span className="brand-title">OpenMark</span>
-            <span className="brand-subtitle">Local-first Markdown editor</span>
+            <span className="brand-subtitle">{t.brand.subtitle}</span>
           </div>
         </div>
 
-        <div className="toolbar" role="toolbar" aria-label="Editor toolbar">
+        <div className="toolbar" role="toolbar" aria-label={t.toolbar.editorToolbar}>
           <div className="tool-group">
             <button
               type="button"
               className="icon-button"
               onClick={handleNewDocument}
-              title="New document"
-              aria-label="New document"
+              title={t.toolbar.newDocument}
+              aria-label={t.toolbar.newDocument}
             >
               <FilePlus2 size={18} />
             </button>
@@ -1987,8 +2032,8 @@ function App() {
               type="button"
               className="icon-button"
               onClick={handleOpenDocument}
-              title="Open Markdown file"
-              aria-label="Open Markdown file"
+              title={t.toolbar.openMarkdownFile}
+              aria-label={t.toolbar.openMarkdownFile}
             >
               <FolderOpen size={18} />
             </button>
@@ -1996,25 +2041,25 @@ function App() {
               type="button"
               className="tool-button"
               onClick={() => handleSaveMarkdown()}
-              title="Save Markdown"
+              title={t.toolbar.saveMarkdown}
             >
               <Save size={17} />
-              <span>Save</span>
+              <span>{t.toolbar.save}</span>
             </button>
             <button
               type="button"
               className="tool-button compact-tool"
               onClick={() => handleSaveMarkdown({ forceDialog: true })}
-              title="Save Markdown as a new file"
+              title={t.toolbar.saveMarkdownAs}
             >
               <Save size={17} />
-              <span>As</span>
+              <span>{t.toolbar.saveAs}</span>
             </button>
             <button
               type="button"
               className="tool-button"
               onClick={handleExportHtml}
-              title="Export HTML"
+              title={t.toolbar.exportHtml}
             >
               <Download size={17} />
               <span>HTML</span>
@@ -2023,7 +2068,7 @@ function App() {
               type="button"
               className="tool-button"
               onClick={() => { void handleExportPdf() }}
-              title="Export PDF"
+              title={t.toolbar.exportPdf}
             >
               <FileDown size={17} />
               <span>PDF</span>
@@ -2035,8 +2080,8 @@ function App() {
               type="button"
               className="icon-button"
               onClick={() => openSearchBar('find')}
-              title="Find in document"
-              aria-label="Find in document"
+              title={t.toolbar.findInDocument}
+              aria-label={t.toolbar.findInDocument}
             >
               <SearchIcon size={18} />
             </button>
@@ -2044,35 +2089,39 @@ function App() {
               type="button"
               className="icon-button"
               onClick={() => openSearchBar('replace')}
-              title="Replace in document"
-              aria-label="Replace in document"
+              title={t.toolbar.replaceInDocument}
+              aria-label={t.toolbar.replaceInDocument}
             >
               <Replace size={18} />
             </button>
           </div>
 
-          <div className="segmented-control" aria-label="View mode">
-            {modeOptions.map(({ value, label, Icon }) => (
+          <div className="segmented-control" aria-label={t.toolbar.viewMode}>
+            {modeOptions.map(({ value, Icon }) => {
+              const label = t.viewModes[value]
+
+              return (
               <button
                 type="button"
                 key={value}
                 className={mode === value ? 'active' : ''}
                 onClick={() => setMode(value)}
-                aria-label={`${label} mode`}
-                title={`${label} mode`}
+                aria-label={`${label} ${t.toolbar.modeSuffix}`}
+                title={`${label} ${t.toolbar.modeSuffix}`}
               >
                 <Icon size={16} />
                 <span>{label}</span>
               </button>
-            ))}
+              )
+            })}
           </div>
 
           <button
             type="button"
             className="icon-button"
             onClick={toggleTheme}
-            title="Toggle theme"
-            aria-label="Toggle theme"
+            title={t.toolbar.toggleTheme}
+            aria-label={t.toolbar.toggleTheme}
           >
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
@@ -2081,8 +2130,8 @@ function App() {
             type="button"
             className="icon-button"
             onClick={openThemeSettings}
-            title="Appearance settings"
-            aria-label="Appearance settings"
+            title={t.toolbar.appearanceSettings}
+            aria-label={t.toolbar.appearanceSettings}
           >
             <Settings2 size={18} />
           </button>
@@ -2091,8 +2140,8 @@ function App() {
             type="button"
             className="icon-button"
             onClick={openCommandPalette}
-            title="Command palette"
-            aria-label="Command palette"
+            title={t.toolbar.commandPalette}
+            aria-label={t.toolbar.commandPalette}
           >
             <CommandIcon size={18} />
           </button>
@@ -2101,7 +2150,7 @@ function App() {
         <input
           ref={fileInputRef}
           type="file"
-          title="Open Markdown file"
+          title={t.toolbar.openMarkdownFile}
           hidden
           tabIndex={-1}
           aria-hidden="true"
@@ -2111,7 +2160,7 @@ function App() {
         <input
           ref={imageInputRef}
           type="file"
-          title="Insert image"
+          title={t.toolbar.insertImage}
           hidden
           tabIndex={-1}
           aria-hidden="true"
@@ -2122,8 +2171,8 @@ function App() {
 
       <main className={`workspace mode-${mode}${showWelcome ? ' is-welcome' : ''}`}>
         {!showWelcome && (
-        <aside className="inspector" aria-label="Document inspector">
-          <div className="sidebar-tabs" role="navigation" aria-label="Workspace panels">
+        <aside className="inspector" aria-label={t.sidebar.documentInspector}>
+          <div className="sidebar-tabs" role="navigation" aria-label={t.sidebar.workspacePanels}>
             {sidebarTabs.map((tab) => (
               <button
                 key={tab.value}
@@ -2140,16 +2189,16 @@ function App() {
           <div className="sidebar-panel">
           {activeSidebarTab === 'document' && (
           <section className="inspector-section">
-            <h2>Document</h2>
+            <h2>{t.sidebar.document}</h2>
             <label className="file-name-field">
-              <span>File name</span>
+              <span>{t.document.fileName}</span>
               <div className="file-name-input-wrap">
                 <FileText size={16} aria-hidden="true" />
                 <input
                   type="text"
                   value={fileName}
                   spellCheck={false}
-                  aria-label="Document file name"
+                  aria-label={t.document.documentFileName}
                   onChange={(event) => setFileName(sanitizeFileNameInput(event.target.value))}
                   onBlur={() => setFileName(withMarkdownExtension(fileName))}
                 />
@@ -2157,28 +2206,28 @@ function App() {
             </label>
             <div className="document-state" aria-live="polite">
               <span className={hasUnsavedChanges ? 'state-dot dirty' : 'state-dot saved'}></span>
-              <span>{hasUnsavedChanges ? 'Unsaved changes' : 'Saved'}</span>
+              <span>{hasUnsavedChanges ? t.document.unsavedChanges : t.document.saved}</span>
             </div>
             {window.openmark && (
-              <p className="file-path" title={activeFilePath ?? 'Unsaved desktop document'}>
-                {activeFilePath ?? 'Unsaved desktop document'}
+              <p className="file-path" title={activeFilePath ?? t.document.unsavedDesktopDocument}>
+                {activeFilePath ?? t.document.unsavedDesktopDocument}
               </p>
             )}
             <div className="metric-list">
               <div>
-                <span>Words</span>
+                <span>{t.document.words}</span>
                 <strong>{stats.words}</strong>
               </div>
               <div>
-                <span>Characters</span>
+                <span>{t.document.characters}</span>
                 <strong>{stats.characters}</strong>
               </div>
               <div>
-                <span>Lines</span>
+                <span>{t.document.lines}</span>
                 <strong>{stats.lines}</strong>
               </div>
               <div>
-                <span>Headings</span>
+                <span>{t.document.headings}</span>
                 <strong>{stats.headings}</strong>
               </div>
             </div>
@@ -2187,7 +2236,7 @@ function App() {
 
           {activeSidebarTab === 'outline' && (
           <section className="inspector-section outline-section">
-            <h2>Outline</h2>
+            <h2>{t.sidebar.outline}</h2>
             {outline.length > 0 ? (
               <ol className="outline-list">
                 {outline.slice(0, 12).map((item, index) => (
@@ -2208,7 +2257,7 @@ function App() {
                           handleOutlineJump(item)
                         }
                       }}
-                      title={`Go to line ${item.lineNumber}`}
+                      title={`${t.document.goToLine} ${item.lineNumber}`}
                     >
                       <span>{item.title}</span>
                       <small>:{item.lineNumber}</small>
@@ -2217,7 +2266,7 @@ function App() {
                 ))}
               </ol>
             ) : (
-              <p className="muted">No headings yet</p>
+              <p className="muted">{t.document.noHeadingsYet}</p>
             )}
           </section>
           )}
@@ -2225,17 +2274,17 @@ function App() {
           {activeSidebarTab === 'recent' && (
             <section className="inspector-section recent-section">
               <div className="section-heading-row">
-                <h2>Recent</h2>
+                <h2>{t.sidebar.recent}</h2>
                 {recentFiles.length > 0 && (
                   <button type="button" className="text-action" onClick={clearRecentFiles}>
-                    Clear
+                    {t.document.clear}
                   </button>
                 )}
               </div>
               {window.openmark && recentFiles.length > 0 ? (
                 renderRecentFiles()
               ) : (
-                <p className="muted">No recent files</p>
+                <p className="muted">{t.document.noRecentFiles}</p>
               )}
             </section>
           )}
@@ -2246,10 +2295,10 @@ function App() {
         <section
           ref={editorWorkbenchRef}
           className="editor-workbench"
-          aria-label="Editor workspace"
+          aria-label={t.editor.workspace}
         >
           {showWelcome ? (
-            <section className="welcome-panel" aria-label="Welcome">
+            <section className="welcome-panel" aria-label={t.welcome.welcome}>
               <div className="welcome-inner">
                 <div className="welcome-mark" aria-hidden="true">
                   <FileText size={28} />
@@ -2258,19 +2307,19 @@ function App() {
                 <div className="welcome-actions">
                   <button type="button" className="welcome-action" onClick={handleNewDocument}>
                     <FilePlus2 size={20} />
-                    <span>New document</span>
+                    <span>{t.welcome.newDocument}</span>
                   </button>
                   <button type="button" className="welcome-action" onClick={handleOpenDocument}>
                     <FolderOpen size={20} />
-                    <span>Open file</span>
+                    <span>{t.welcome.openFile}</span>
                   </button>
                 </div>
                 {window.openmark && recentFiles.length > 0 && (
-                  <section className="welcome-recent" aria-label="Recent files">
+                  <section className="welcome-recent" aria-label={t.welcome.recentFiles}>
                     <div className="section-heading-row">
-                      <h2>Recent</h2>
+                      <h2>{t.sidebar.recent}</h2>
                       <button type="button" className="text-action" onClick={clearRecentFiles}>
-                        Clear
+                        {t.document.clear}
                       </button>
                     </div>
                     {renderRecentFiles()}
@@ -2281,10 +2330,10 @@ function App() {
           ) : (
             <>
               {(mode === 'write' || mode === 'split') && (
-                <section className="editor-panel panel" aria-label="Markdown editor">
+                <section className="editor-panel panel" aria-label={t.editor.markdownEditor}>
                   <div className="panel-header editor-panel-header">
-                    <span>Markdown</span>
-                    <div className="format-toolbar" role="toolbar" aria-label="Markdown formatting">
+                    <span>{t.editor.markdown}</span>
+                    <div className="format-toolbar" role="toolbar" aria-label={t.toolbar.markdownFormatting}>
                       {markdownToolbarGroups.map((group, groupIndex) => (
                         <div className="format-group" key={`format-group-${groupIndex}`}>
                           {group.map(({ format, label, title, Icon }) => (
@@ -2308,8 +2357,8 @@ function App() {
                           className="format-button"
                           onMouseDown={(event) => event.preventDefault()}
                           onClick={() => { void handleInsertImage() }}
-                          title="Insert image"
-                          aria-label="Insert image"
+                          title={t.toolbar.insertImage}
+                          aria-label={t.toolbar.insertImage}
                         >
                           <ImagePlus size={15} />
                         </button>
@@ -2318,7 +2367,7 @@ function App() {
                     <span className="panel-file-name">{withMarkdownExtension(fileName)}</span>
                   </div>
                   {isSearchVisible && (
-                    <div className="search-bar" role="search" aria-label="Find and replace">
+                    <div className="search-bar" role="search" aria-label={t.search.findAndReplace}>
                       <div className="search-row">
                         <label className="search-field">
                           <SearchIcon size={15} aria-hidden="true" />
@@ -2326,8 +2375,8 @@ function App() {
                             ref={searchInputRef}
                             type="search"
                             value={searchTerm}
-                            placeholder="Find"
-                            aria-label="Find text"
+                            placeholder={t.search.find}
+                            aria-label={t.search.findText}
                             spellCheck={false}
                             onChange={(event) => {
                               setSearchTerm(event.target.value)
@@ -2342,8 +2391,8 @@ function App() {
                           className="search-icon-button"
                           onMouseDown={(event) => event.preventDefault()}
                           onClick={() => moveSearchMatch('previous')}
-                          title="Previous match"
-                          aria-label="Previous match"
+                          title={t.search.previousMatch}
+                          aria-label={t.search.previousMatch}
                         >
                           <ChevronUp size={15} />
                         </button>
@@ -2352,8 +2401,8 @@ function App() {
                           className="search-icon-button"
                           onMouseDown={(event) => event.preventDefault()}
                           onClick={() => moveSearchMatch('next')}
-                          title="Next match"
-                          aria-label="Next match"
+                          title={t.search.nextMatch}
+                          aria-label={t.search.nextMatch}
                         >
                           <ChevronDown size={15} />
                         </button>
@@ -2362,8 +2411,8 @@ function App() {
                           className={isSearchCaseSensitive ? 'search-toggle active' : 'search-toggle'}
                           onMouseDown={(event) => event.preventDefault()}
                           onClick={() => setIsSearchCaseSensitive((isEnabled) => !isEnabled)}
-                          title="Match case"
-                          aria-label="Match case"
+                          title={t.search.matchCase}
+                          aria-label={t.search.matchCase}
                         >
                           <CaseSensitive size={16} />
                         </button>
@@ -2372,8 +2421,8 @@ function App() {
                           className={isSearchWholeWord ? 'search-toggle active' : 'search-toggle'}
                           onMouseDown={(event) => event.preventDefault()}
                           onClick={() => setIsSearchWholeWord((isEnabled) => !isEnabled)}
-                          title="Match whole word"
-                          aria-label="Match whole word"
+                          title={t.search.matchWholeWord}
+                          aria-label={t.search.matchWholeWord}
                         >
                           <WholeWord size={16} />
                         </button>
@@ -2382,8 +2431,8 @@ function App() {
                           className="search-icon-button"
                           onMouseDown={(event) => event.preventDefault()}
                           onClick={() => setIsReplaceVisible((isVisible) => !isVisible)}
-                          title="Toggle replace"
-                          aria-label="Toggle replace"
+                          title={t.search.toggleReplace}
+                          aria-label={t.search.toggleReplace}
                         >
                           <Replace size={15} />
                         </button>
@@ -2392,8 +2441,8 @@ function App() {
                           className="search-icon-button"
                           onMouseDown={(event) => event.preventDefault()}
                           onClick={closeSearchBar}
-                          title="Close find"
-                          aria-label="Close find"
+                          title={t.search.closeFind}
+                          aria-label={t.search.closeFind}
                         >
                           <X size={15} />
                         </button>
@@ -2405,8 +2454,8 @@ function App() {
                             <input
                               type="text"
                               value={replaceTerm}
-                              placeholder="Replace"
-                              aria-label="Replace text"
+                              placeholder={t.search.replace}
+                              aria-label={t.search.replaceText}
                               spellCheck={false}
                               onChange={(event) => setReplaceTerm(event.target.value)}
                               onKeyDown={handleSearchKeyDown}
@@ -2417,20 +2466,20 @@ function App() {
                             className="search-action-button"
                             onMouseDown={(event) => event.preventDefault()}
                             onClick={replaceCurrentSearchMatch}
-                            title="Replace current match"
+                            title={t.search.replaceCurrentMatch}
                           >
                             <Replace size={14} />
-                            <span>Replace</span>
+                            <span>{t.search.replace}</span>
                           </button>
                           <button
                             type="button"
                             className="search-action-button"
                             onMouseDown={(event) => event.preventDefault()}
                             onClick={replaceAllSearchMatches}
-                            title="Replace all matches"
+                            title={t.search.replaceAllMatches}
                           >
                             <ReplaceAllIcon size={14} />
-                            <span>All</span>
+                            <span>{t.search.all}</span>
                           </button>
                         </div>
                       )}
@@ -2462,8 +2511,8 @@ function App() {
                 <button
                   type="button"
                   className="split-resizer"
-                  title="Resize split view"
-                  aria-label="Resize split view"
+                  title={t.editor.resizeSplitView}
+                  aria-label={t.editor.resizeSplitView}
                   onPointerDown={handleSplitPointerResizeStart}
                   onMouseDown={handleSplitMouseResizeStart}
                   onKeyDown={handleSplitResizeKeyDown}
@@ -2473,10 +2522,10 @@ function App() {
               )}
 
               {(mode === 'preview' || mode === 'split') && (
-            <section className="preview-panel panel" aria-label="Markdown preview">
+            <section className="preview-panel panel" aria-label={t.editor.markdownPreview}>
               <div className="panel-header">
-                <span>Preview</span>
-                <span>{stats.words} words</span>
+                <span>{t.editor.preview}</span>
+                <span>{stats.words} {t.editor.wordCountSuffix}</span>
               </div>
               <div className="preview-scroll">
                 {markdownValue.trim().length > 0 ? (
@@ -2485,7 +2534,7 @@ function App() {
                     dangerouslySetInnerHTML={{ __html: renderedHtml }}
                   />
                 ) : (
-                  <div className="empty-preview">Empty document</div>
+                  <div className="empty-preview">{t.editor.emptyDocument}</div>
                 )}
               </div>
             </section>
@@ -2497,9 +2546,9 @@ function App() {
 
       <footer className="status-bar">
         <span>{fileName}</span>
-        <span>{mode}</span>
-        <span>{hasUnsavedChanges ? 'Unsaved' : 'Saved'}</span>
-        <span>Draft saved {lastSavedLabel}</span>
+        <span>{t.viewModes[mode]}</span>
+        <span>{hasUnsavedChanges ? t.document.unsaved : t.document.saved}</span>
+        <span>{draftStatusLabel}</span>
       </footer>
 
       {isCommandPaletteOpen && (
@@ -2507,7 +2556,7 @@ function App() {
           <form
             className="command-palette"
             role="dialog"
-            aria-label="Command palette"
+            aria-label={t.toolbar.commandPalette}
             onSubmit={handleCommandPaletteSubmit}
             onMouseDown={(event) => event.stopPropagation()}
           >
@@ -2517,8 +2566,8 @@ function App() {
                 ref={commandInputRef}
                 type="search"
                 value={commandQuery}
-                placeholder="Type a command"
-                aria-label="Command search"
+                placeholder={t.commandPalette.typeCommand}
+                aria-label={t.commandPalette.commandSearch}
                 spellCheck={false}
                 onChange={(event) => {
                   setCommandQuery(event.target.value)
@@ -2528,7 +2577,7 @@ function App() {
               />
             </label>
 
-            <div className="command-list" aria-label="Available commands">
+            <div className="command-list" aria-label={t.commandPalette.availableCommands}>
               {filteredCommandPaletteItems.length > 0 ? (
                 filteredCommandPaletteItems.slice(0, 8).map((item, index) => {
                   const Icon = item.Icon
@@ -2551,7 +2600,7 @@ function App() {
                   )
                 })
               ) : (
-                <div className="command-empty">No commands found</div>
+                <div className="command-empty">{t.commandPalette.noCommandsFound}</div>
               )}
             </div>
           </form>
@@ -2563,45 +2612,71 @@ function App() {
           <section
             className="settings-dialog"
             role="dialog"
-            aria-label="Appearance settings"
+            aria-label={t.toolbar.appearanceSettings}
             onMouseDown={(event) => event.stopPropagation()}
           >
             <div className="settings-header">
               <div>
-                <h2>Appearance</h2>
-                <span>{themePreference === 'system' ? `System ${systemTheme}` : themePreference}</span>
+                <h2>{t.settings.appearance}</h2>
+                <span>{themePreference === 'system' ? `${t.themes.system} ${t.themes[systemTheme]}` : t.themes[themePreference]}</span>
               </div>
               <button
                 type="button"
                 className="icon-button"
                 onClick={closeThemeSettings}
-                title="Close appearance settings"
-                aria-label="Close appearance settings"
+                title={t.settings.closeAppearanceSettings}
+                aria-label={t.settings.closeAppearanceSettings}
               >
                 <X size={16} />
               </button>
             </div>
 
             <div className="settings-section">
-              <span className="settings-label">Theme</span>
-              <div className="theme-choice-group" aria-label="Theme preference">
-                {themeOptions.map(({ value, label, Icon }) => (
+              <span className="settings-label">{t.settings.theme}</span>
+              <div className="theme-choice-group" aria-label={t.settings.themePreference}>
+                {themeOptions.map(({ value, Icon }) => {
+                  const label = t.themes[value]
+
+                  return (
                   <button
                     type="button"
                     key={value}
                     className={themePreference === value ? 'theme-choice active' : 'theme-choice'}
                     onClick={() => setThemePreference(value)}
-                    aria-label={`${label} theme`}
+                    aria-label={`${label} ${t.settings.themeSuffix}`}
                   >
                     <Icon size={16} />
                     <span>{label}</span>
                   </button>
-                ))}
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <span className="settings-label">{t.settings.language}</span>
+              <div className="theme-choice-group" aria-label={t.settings.languagePreference}>
+                {localeOptions.map(({ value, Icon }) => {
+                  const label = t.locales[value]
+
+                  return (
+                    <button
+                      type="button"
+                      key={value}
+                      className={localePreference === value ? 'theme-choice active' : 'theme-choice'}
+                      onClick={() => setLocalePreference(value)}
+                      aria-label={label}
+                    >
+                      <Icon size={16} />
+                      <span>{label}</span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
             <label className="settings-section font-size-setting">
-              <span className="settings-label">Editor font size</span>
+              <span className="settings-label">{t.settings.editorFontSize}</span>
               <div className="range-row">
                 <Type size={16} aria-hidden="true" />
                 <input
@@ -2611,7 +2686,7 @@ function App() {
                   step="1"
                   value={editorFontSize}
                   onChange={(event) => setEditorFontSize(clampEditorFontSize(Number(event.target.value)))}
-                  aria-label="Editor font size"
+                  aria-label={t.settings.editorFontSize}
                 />
                 <strong>{editorFontSize}px</strong>
               </div>
