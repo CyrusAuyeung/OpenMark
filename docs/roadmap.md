@@ -37,6 +37,6 @@
 ## Milestone 5: Distribution Polish
 
 - Windows code signing ✅
-- macOS and Linux package targets
+- macOS and Linux package targets ✅
 - Auto-update channel
 - Download page and release notes template

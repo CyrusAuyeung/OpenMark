@@ -31,6 +31,33 @@ module.exports = {
       },
     ],
   },
+  mac: {
+    category: 'public.app-category.productivity',
+    identity: null,
+    target: [
+      {
+        target: 'dmg',
+        arch: ['x64', 'arm64'],
+      },
+      {
+        target: 'zip',
+        arch: ['x64', 'arm64'],
+      },
+    ],
+  },
+  linux: {
+    category: 'Office',
+    target: [
+      {
+        target: 'AppImage',
+        arch: ['x64'],
+      },
+      {
+        target: 'deb',
+        arch: ['x64'],
+      },
+    ],
+  },
   nsis: {
     oneClick: false,
     allowToChangeInstallationDirectory: true,

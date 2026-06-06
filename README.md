@@ -20,12 +20,15 @@ See [Demo Assets](docs/demo.md) for the screenshot gallery, short video script, 
 
 ## Download
 
-The latest Windows release is available on the [GitHub Releases page](https://github.com/CyrusAuyeung/OpenMark/releases/latest).
+The latest desktop release is available on the [GitHub Releases page](https://github.com/CyrusAuyeung/OpenMark/releases/latest).
 
 - Windows installer: `OpenMark.Setup.0.3.0.exe`
 - Windows portable app: `OpenMark.0.3.0.exe`
+- macOS disk image: `OpenMark-0.3.0.dmg`
+- Linux AppImage: `OpenMark-0.3.0.AppImage`
+- Linux Debian package: `openmark-editor_0.3.0_amd64.deb`
 
-Windows builds are currently unsigned, so the first launch may show operating-system warnings.
+Windows and macOS builds are currently unsigned, so the first launch may show operating-system warnings.
 
 Signed Windows releases are supported when code-signing secrets are configured in GitHub Actions. See [Windows Code Signing](docs/windows-signing.md) for setup and verification.
 
@@ -132,9 +135,11 @@ npm run build
 ```bash
 npm run package
 npm run dist:win
+npm run dist:mac
+npm run dist:linux
 ```
 
-Windows release files are written to `release/`, including `OpenMark Setup 0.3.0.exe` and `OpenMark 0.3.0.exe`.
+Release files are written to `release/`. Run platform distribution scripts on their matching operating systems.
 
 See [Release Guide](docs/release.md) for local packaging and GitHub release steps.
 
