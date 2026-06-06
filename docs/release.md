@@ -4,6 +4,8 @@ OpenMark uses Electron Builder for desktop packaging. Release targets are Window
 
 Packaging scripts use `electron-builder.config.cjs` so local builds and GitHub Actions share the same artifact and signing configuration.
 
+Use the [Download Guide](download.md) as the public package-selection reference for each release.
+
 ## Local Packaging
 
 ```bash
@@ -68,7 +70,7 @@ Use the **Release** workflow from the Actions page when you need a manual build 
 - Manual releases default to draft mode so artifacts and notes can be reviewed before publishing.
 - Enable `prerelease` for preview builds such as `v0.4.0-beta.1`.
 
-Draft notes can start from [.github/RELEASE_TEMPLATE/release-notes.md](../.github/RELEASE_TEMPLATE/release-notes.md).
+Draft notes should start from [.github/RELEASE_TEMPLATE/release-notes.md](../.github/RELEASE_TEMPLATE/release-notes.md), then link to the [Download Guide](download.md) for package-selection details.
 
 Release page: <https://github.com/CyrusAuyeung/OpenMark/releases>
 

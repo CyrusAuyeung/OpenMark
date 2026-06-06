@@ -39,4 +39,4 @@
 - Windows code signing ✅
 - macOS and Linux package targets ✅
 - Auto-update channel ✅
-- Download page and release notes template
+- Download page and release notes template ✅

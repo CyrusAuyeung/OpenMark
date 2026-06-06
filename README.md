@@ -4,7 +4,7 @@
 [![Release](https://github.com/CyrusAuyeung/OpenMark/actions/workflows/release.yml/badge.svg)](https://github.com/CyrusAuyeung/OpenMark/actions/workflows/release.yml)
 [![GitHub release](https://img.shields.io/github/v/release/CyrusAuyeung/OpenMark?display_name=tag&sort=semver)](https://github.com/CyrusAuyeung/OpenMark/releases)
 [![License](https://img.shields.io/github/license/CyrusAuyeung/OpenMark)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)](docs/release.md)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](docs/download.md)
 
 OpenMark is a local-first Markdown editor for people who want a calm desktop writing tool without turning their notes into a full knowledge-management system. It focuses on the core loop first: write Markdown, preview safely, save locally, reopen recent files, and keep the workspace exactly where you left it.
 
@@ -20,10 +20,10 @@ See [Demo Assets](docs/demo.md) for the screenshot gallery, short video script, 
 
 ## Download
 
-The latest desktop release is available on the [GitHub Releases page](https://github.com/CyrusAuyeung/OpenMark/releases/latest).
+The latest desktop release is available on the [GitHub Releases page](https://github.com/CyrusAuyeung/OpenMark/releases/latest). See the [Download Guide](docs/download.md) for platform-specific package guidance.
 
-- Windows installer: `OpenMark.Setup.0.3.0.exe`
-- Windows portable app: `OpenMark.0.3.0.exe`
+- Windows installer: `OpenMark Setup 0.3.0.exe`
+- Windows portable app: `OpenMark 0.3.0.exe`
 - macOS disk image: `OpenMark-0.3.0.dmg`
 - Linux AppImage: `OpenMark-0.3.0.AppImage`
 - Linux Debian package: `openmark-editor_0.3.0_amd64.deb`
@@ -153,6 +153,7 @@ OpenMark should stay simple before it becomes powerful. The near-term goal is a 
 
 - [Architecture](docs/architecture.md)
 - [Roadmap](docs/roadmap.md)
+- [Download Guide](docs/download.md)
 - [Demo Assets](docs/demo.md)
 - [Plugin API Design](docs/plugin-api.md)
 - [Localization](docs/localization.md)
