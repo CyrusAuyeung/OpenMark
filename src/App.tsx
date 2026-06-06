@@ -48,6 +48,7 @@ import {
   Save,
   Search as SearchIcon,
   Sun,
+  Table,
   Type,
   WholeWord,
   X,
@@ -59,7 +60,7 @@ type ViewMode = 'write' | 'split' | 'preview'
 type ThemeMode = 'light' | 'dark'
 type SidebarTab = 'document' | 'outline' | 'recent'
 type InlineFormat = 'bold' | 'italic' | 'link'
-type BlockFormat = 'heading-2' | 'bullet-list' | 'ordered-list' | 'quote' | 'code-block'
+type BlockFormat = 'heading-2' | 'bullet-list' | 'ordered-list' | 'quote' | 'code-block' | 'table'
 type MarkdownFormat = InlineFormat | BlockFormat
 
 type OutlineItem = {
@@ -150,6 +151,7 @@ const markdownToolbarGroups: Array<
   [
     { format: 'quote', label: 'Quote', title: 'Format as quote', Icon: Quote },
     { format: 'code-block', label: 'Code block', title: 'Insert code block', Icon: Code2 },
+    { format: 'table', label: 'Table', title: 'Insert or convert table', Icon: Table },
   ],
 ]
 
@@ -437,7 +439,77 @@ function applyCodeBlockFormat(view: EditorView) {
   return true
 }
 
-function formatBlockLine(line: string, index: number, format: Exclude<BlockFormat, 'code-block'>) {
+function splitTableCells(line: string) {
+  const trimmedLine = line.trim()
+
+  if (trimmedLine.includes('|')) {
+    return trimmedLine
+      .replace(/^\|/, '')
+      .replace(/\|$/, '')
+      .split('|')
+      .map((cell) => cell.trim())
+  }
+
+  if (trimmedLine.includes('\t')) {
+    return trimmedLine.split('\t').map((cell) => cell.trim())
+  }
+
+  if (trimmedLine.includes(',')) {
+    return trimmedLine.split(',').map((cell) => cell.trim())
+  }
+
+  return [trimmedLine]
+}
+
+function renderTableRow(cells: string[], columnCount: number) {
+  const normalizedCells = Array.from({ length: columnCount }, (_item, index) => cells[index]?.trim() || ' ')
+  return `| ${normalizedCells.join(' | ')} |`
+}
+
+function createMarkdownTable(selectedText: string) {
+  const selectedLines = selectedText
+    .split(/\r\n|\r|\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  if (selectedLines.length > 0) {
+    const rows = selectedLines.map(splitTableCells)
+    const columnCount = Math.max(2, ...rows.map((row) => row.length))
+    const separator = renderTableRow(Array.from({ length: columnCount }, () => '---'), columnCount)
+
+    return [
+      renderTableRow(rows[0], columnCount),
+      separator,
+      ...rows.slice(1).map((row) => renderTableRow(row, columnCount)),
+    ].join('\n')
+  }
+
+  return [
+    '| Column 1 | Column 2 | Column 3 |',
+    '| --- | --- | --- |',
+    '| Value 1 | Value 2 | Value 3 |',
+    '| Value 4 | Value 5 | Value 6 |',
+  ].join('\n')
+}
+
+function applyTableFormat(view: EditorView) {
+  const selection = view.state.selection.main
+  const selectedText = view.state.sliceDoc(selection.from, selection.to)
+  const insertText = createMarkdownTable(selectedText)
+  const anchor = selection.from
+  const head = anchor + insertText.length
+
+  view.dispatch({
+    changes: { from: selection.from, to: selection.to, insert: insertText },
+    selection: { anchor, head },
+    scrollIntoView: true,
+  })
+  view.focus()
+
+  return true
+}
+
+function formatBlockLine(line: string, index: number, format: Exclude<BlockFormat, 'code-block' | 'table'>) {
   const trimmedLine = line.trimStart()
   const indent = line.slice(0, line.length - trimmedLine.length)
 
@@ -463,6 +535,10 @@ function formatBlockLine(line: string, index: number, format: Exclude<BlockForma
 function applyBlockFormat(view: EditorView, format: BlockFormat) {
   if (format === 'code-block') {
     return applyCodeBlockFormat(view)
+  }
+
+  if (format === 'table') {
+    return applyTableFormat(view)
   }
 
   const selection = view.state.selection.main
@@ -638,6 +714,14 @@ function App() {
       Icon: Replace,
       keywords: ['search'],
       action: () => openSearchBar('replace'),
+    },
+    {
+      id: 'insert-table',
+      label: 'Insert or convert table',
+      group: 'Edit',
+      Icon: Table,
+      keywords: ['markdown', 'columns', 'rows'],
+      action: () => handleMarkdownFormat('table'),
     },
     {
       id: 'write-mode',

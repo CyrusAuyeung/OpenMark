@@ -25,6 +25,7 @@ Windows builds are currently unsigned, so the first launch may show operating-sy
 - Source editor, safe preview, and resizable split view
 - Command palette for quickly running editor, file, view, and workspace actions
 - In-document find and replace with match navigation
+- Markdown table insertion and text-to-table conversion
 - Welcome workspace, recent files, saved state, and unsaved-change protection
 - Document outline that jumps to headings in the editor
 - Editable document file names for new files, downloads, Save As defaults, and HTML exports
@@ -39,6 +40,7 @@ Windows builds are currently unsigned, so the first launch may show operating-sy
 - Resizable split view for balancing the editor and preview panes
 - Command palette for keyboard-first access to file, edit, view, and workspace commands
 - In-document find and replace with match case and whole-word options
+- Insert Markdown tables or convert selected comma, tab, or pipe-separated lines into tables
 - Restored view mode, split balance, and workspace sidebar tab between sessions
 - Local browser draft autosave
 - Open local Markdown files through the browser file picker
@@ -99,7 +101,7 @@ Useful editor shortcuts:
 - `Ctrl+I`: wrap selection in italic Markdown
 - `Ctrl+K`: insert a Markdown link
 
-The editor toolbar also exposes common Markdown formatting actions for bold, italic, links, headings, lists, quotes, and code blocks.
+The editor toolbar also exposes common Markdown formatting actions for bold, italic, links, headings, lists, quotes, code blocks, and tables.
 
 ## Quality Checks
 

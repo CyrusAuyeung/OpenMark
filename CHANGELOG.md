@@ -4,6 +4,11 @@ All notable changes to OpenMark will be documented in this file.
 
 ## Unreleased
 
+### Table Editing
+
+- Added a Markdown table toolbar action and command palette command.
+- Added selected text conversion for comma, tab, and pipe-separated rows into Markdown tables.
+
 ### Command Palette
 
 - Added a keyboard-first command palette for file, edit, view, workspace, search, and theme actions.
