@@ -128,11 +128,20 @@ jobs:
       - name: Install dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
 
+      - name: Install Linux packaging dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libarchive-tools fakeroot dpkg
+          sudo apt-get install -y --no-install-recommends libfuse2 || sudo apt-get install -y --no-install-recommends libfuse2t64
+
       - name: Build renderer
         run: npm run build
 
       - name: Build Linux artifacts
         run: npx electron-builder --linux --publish never --config electron-builder.config.cjs
+
+      - name: List Linux artifacts
+        run: find release -maxdepth 1 -type f -printf '%f\n' | sort
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
