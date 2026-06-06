@@ -386,6 +386,14 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
+.workspace.mode-split .editor-panel-header {
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+
+.workspace.mode-split .panel-file-name {
+  display: none;
+}
+
 .panel {
   min-width: 0;
   min-height: 0;
@@ -420,6 +428,70 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.editor-panel-header {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) minmax(80px, 150px);
+  gap: 10px;
+}
+
+.editor-panel-header > span:first-child {
+  min-width: 0;
+}
+
+.panel-file-name {
+  text-align: right;
+}
+
+.format-toolbar {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 3px 0;
+}
+
+.format-group {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.format-group + .format-group {
+  padding-left: 6px;
+  border-left: 1px solid var(--border);
+}
+
+.format-button {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.format-button:hover {
+  border-color: var(--accent-border);
+  color: var(--ink);
+  background: var(--button-hover);
+}
+
+.format-button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .editor-host {
@@ -615,6 +687,28 @@
   .workspace.mode-split .editor-workbench {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(320px, 1fr) minmax(320px, 1fr);
+  }
+
+  .editor-panel-header {
+    min-height: 42px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    flex-wrap: wrap;
+    padding: 8px 14px;
+  }
+
+  .editor-panel-header > span:first-child {
+    min-width: 0;
+  }
+
+  .format-toolbar {
+    grid-column: 1 / -1;
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .panel-file-name {
+    max-width: 58%;
   }
 
   .editor-panel {

@@ -6,13 +6,21 @@ import { EditorView, keymap } from '@codemirror/view'
 import MarkdownIt from 'markdown-it'
 import DOMPurify from 'dompurify'
 import {
+  Bold,
+  Code2,
   Columns2,
   Download,
   Eye,
   FilePlus2,
   FileText,
   FolderOpen,
+  Heading2,
+  Italic,
+  Link as LinkIcon,
+  List,
+  ListOrdered,
   Moon,
+  Quote,
   Save,
   Sun,
   Type,
@@ -23,6 +31,8 @@ import './App.css'
 type ViewMode = 'write' | 'split' | 'preview'
 type ThemeMode = 'light' | 'dark'
 type InlineFormat = 'bold' | 'italic' | 'link'
+type BlockFormat = 'heading-2' | 'bullet-list' | 'ordered-list' | 'quote' | 'code-block'
+type MarkdownFormat = InlineFormat | BlockFormat
 
 type OutlineItem = {
   level: number
@@ -83,6 +93,30 @@ const modeOptions: Array<{
   { value: 'write', label: 'Write', Icon: Type },
   { value: 'split', label: 'Split', Icon: Columns2 },
   { value: 'preview', label: 'Preview', Icon: Eye },
+]
+
+const markdownToolbarGroups: Array<
+  Array<{
+    format: MarkdownFormat
+    label: string
+    title: string
+    Icon: LucideIcon
+  }>
+> = [
+  [
+    { format: 'bold', label: 'Bold', title: 'Bold (Ctrl+B)', Icon: Bold },
+    { format: 'italic', label: 'Italic', title: 'Italic (Ctrl+I)', Icon: Italic },
+    { format: 'link', label: 'Link', title: 'Insert link (Ctrl+K)', Icon: LinkIcon },
+  ],
+  [
+    { format: 'heading-2', label: 'Heading', title: 'Format as heading', Icon: Heading2 },
+    { format: 'bullet-list', label: 'Bullet list', title: 'Format as bullet list', Icon: List },
+    { format: 'ordered-list', label: 'Numbered list', title: 'Format as numbered list', Icon: ListOrdered },
+  ],
+  [
+    { format: 'quote', label: 'Quote', title: 'Format as quote', Icon: Quote },
+    { format: 'code-block', label: 'Code block', title: 'Insert code block', Icon: Code2 },
+  ],
 ]
 
 function loadStoredValue(key: string, fallback: string) {
@@ -233,6 +267,83 @@ function applyInlineFormat(view: EditorView, format: InlineFormat) {
   view.focus()
 
   return true
+}
+
+function isInlineFormat(format: MarkdownFormat): format is InlineFormat {
+  return format === 'bold' || format === 'italic' || format === 'link'
+}
+
+function applyCodeBlockFormat(view: EditorView) {
+  const selection = view.state.selection.main
+  const selectedText = view.state.sliceDoc(selection.from, selection.to)
+  const codeText = selectedText || 'code'
+  const insertText = `\`\`\`\n${codeText}\n\`\`\``
+  const anchor = selection.from + 4
+  const head = anchor + codeText.length
+
+  view.dispatch({
+    changes: { from: selection.from, to: selection.to, insert: insertText },
+    selection: { anchor, head },
+    scrollIntoView: true,
+  })
+  view.focus()
+
+  return true
+}
+
+function formatBlockLine(line: string, index: number, format: Exclude<BlockFormat, 'code-block'>) {
+  const trimmedLine = line.trimStart()
+  const indent = line.slice(0, line.length - trimmedLine.length)
+
+  if (format === 'heading-2') {
+    const body = trimmedLine.replace(/^#{1,6}\s*/, '')
+    return `${indent}## ${body || 'Heading'}`
+  }
+
+  if (format === 'bullet-list') {
+    const body = trimmedLine.replace(/^([-*+]\s+|\d+\.\s+)/, '')
+    return `${indent}- ${body || 'List item'}`
+  }
+
+  if (format === 'ordered-list') {
+    const body = trimmedLine.replace(/^([-*+]\s+|\d+\.\s+)/, '')
+    return `${indent}${index + 1}. ${body || 'List item'}`
+  }
+
+  const body = trimmedLine.replace(/^>\s?/, '')
+  return `${indent}> ${body || 'Quote'}`
+}
+
+function applyBlockFormat(view: EditorView, format: BlockFormat) {
+  if (format === 'code-block') {
+    return applyCodeBlockFormat(view)
+  }
+
+  const selection = view.state.selection.main
+  const lineEndPosition = selection.empty ? selection.to : Math.max(selection.from, selection.to - 1)
+  const fromLine = view.state.doc.lineAt(selection.from)
+  const toLine = view.state.doc.lineAt(lineEndPosition)
+  const selectedLines = view.state.sliceDoc(fromLine.from, toLine.to).split('\n')
+  const insertText = selectedLines
+    .map((line, index) => formatBlockLine(line, index, format))
+    .join('\n')
+  const anchor = fromLine.from
+  const head = selection.empty ? fromLine.from + insertText.length : anchor + insertText.length
+
+  view.dispatch({
+    changes: { from: fromLine.from, to: toLine.to, insert: insertText },
+    selection: { anchor, head },
+    scrollIntoView: true,
+  })
+  view.focus()
+
+  return true
+}
+
+function applyMarkdownFormat(view: EditorView, format: MarkdownFormat) {
+  return isInlineFormat(format)
+    ? applyInlineFormat(view, format)
+    : applyBlockFormat(view, format)
 }
 
 function App() {
@@ -552,6 +663,16 @@ function App() {
     setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'))
   }
 
+  function handleMarkdownFormat(format: MarkdownFormat) {
+    const editorView = editorViewRef.current ?? editorRef.current?.view
+
+    if (!editorView) {
+      return
+    }
+
+    applyMarkdownFormat(editorView, format)
+  }
+
   function jumpToEditorLine(item: OutlineItem) {
     const editorView = editorViewRef.current ?? editorRef.current?.view
 
@@ -789,9 +910,28 @@ function App() {
         <section className="editor-workbench" aria-label="Editor workspace">
           {(mode === 'write' || mode === 'split') && (
             <section className="editor-panel panel" aria-label="Markdown editor">
-              <div className="panel-header">
+              <div className="panel-header editor-panel-header">
                 <span>Markdown</span>
-                <span>{withMarkdownExtension(fileName)}</span>
+                <div className="format-toolbar" role="toolbar" aria-label="Markdown formatting">
+                  {markdownToolbarGroups.map((group, groupIndex) => (
+                    <div className="format-group" key={`format-group-${groupIndex}`}>
+                      {group.map(({ format, label, title, Icon }) => (
+                        <button
+                          key={format}
+                          type="button"
+                          className="format-button"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => handleMarkdownFormat(format)}
+                          title={title}
+                          aria-label={label}
+                        >
+                          <Icon size={15} />
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <span className="panel-file-name">{withMarkdownExtension(fileName)}</span>
               </div>
               <div className="editor-host">
                 <CodeMirror
