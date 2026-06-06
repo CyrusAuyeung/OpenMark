@@ -22,18 +22,31 @@ Expected Windows artifacts:
 - `OpenMark 0.3.0.exe`
 - `OpenMark Setup 0.3.0.exe.blockmap`
 
-## GitHub Release
+## Automated GitHub Release
 
 Repository: <https://github.com/CyrusAuyeung/OpenMark>
 
-The release workflow runs on tags that start with `v`.
+The release workflow runs lint, builds the renderer, packages Windows artifacts, uploads workflow artifacts, and can attach the files to a GitHub release.
+
+### Tag-Based Release
+
+Push a version tag that starts with `v`:
 
 ```bash
 git tag v0.3.0
 git push origin v0.3.0
 ```
 
-The workflow runs lint, builds the renderer, packages Windows artifacts, uploads workflow artifacts, and attaches the files to the GitHub release.
+The workflow publishes the GitHub release automatically and asks GitHub to generate release notes.
+
+### Manual Release Run
+
+Use the **Release** workflow from the Actions page when you need a manual build or draft release.
+
+- Leave `tag` empty to build and upload Windows artifacts only.
+- Enter a tag like `v0.4.0` to publish a GitHub release from the workflow run. The tag is validated as semantic version style and points at the workflow commit.
+- Manual releases default to draft mode so artifacts and notes can be reviewed before publishing.
+- Enable `prerelease` for preview builds such as `v0.4.0-beta.1`.
 
 Draft notes can start from [.github/RELEASE_TEMPLATE/release-notes.md](../.github/RELEASE_TEMPLATE/release-notes.md).
 

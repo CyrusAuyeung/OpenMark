@@ -29,7 +29,7 @@
 ## Milestone 4: Open Source Growth
 
 - Issue templates ✅
-- Automated release workflow
+- Automated release workflow ✅
 - Demo screenshots and short video
 - Plugin API design
 - Localization foundation

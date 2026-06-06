@@ -6,8 +6,8 @@
 
 ## Downloads
 
-- Windows installer: `OpenMark Setup 0.3.0.exe`
-- Windows portable: `OpenMark 0.3.0.exe`
+- Windows installer: `OpenMark Setup <version>.exe`
+- Windows portable: `OpenMark <version>.exe`
 
 ## Verification
 
