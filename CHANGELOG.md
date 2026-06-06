@@ -2,6 +2,12 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.2.1 - 2026-06-06
+
+### Fixed
+
+- Fixed the packaged Windows app opening to a blank window by using relative Vite asset paths for Electron's `file://` renderer load.
+
 ## 0.2.0 - 2026-06-06
 
 ### Writing Experience
