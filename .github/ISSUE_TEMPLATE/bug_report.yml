@@ -54,7 +54,7 @@ body:
     attributes:
       label: OpenMark version
       description: Use the release version, or say `main` with a commit if running from source.
-      placeholder: 0.3.0 or main@abcdef0
+      placeholder: 0.4.0 or main@abcdef0
     validations:
       required: true
   - type: dropdown

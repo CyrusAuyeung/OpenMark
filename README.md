@@ -22,11 +22,11 @@ See [Demo Assets](docs/demo.md) for the screenshot gallery, short video script, 
 
 The latest desktop release is available on the [GitHub Releases page](https://github.com/CyrusAuyeung/OpenMark/releases/latest). See the [Download Guide](docs/download.md) for platform-specific package guidance.
 
-- Windows installer: `OpenMark Setup 0.3.0.exe`
-- Windows portable app: `OpenMark 0.3.0.exe`
-- macOS disk image: `OpenMark-0.3.0.dmg`
-- Linux AppImage: `OpenMark-0.3.0.AppImage`
-- Linux Debian package: `openmark-editor_0.3.0_amd64.deb`
+- Windows installer: `OpenMark Setup 0.4.0.exe`
+- Windows portable app: `OpenMark 0.4.0.exe`
+- macOS disk image: `OpenMark-0.4.0.dmg`
+- Linux AppImage: `OpenMark-0.4.0.AppImage`
+- Linux Debian package: `openmark-editor_0.4.0_amd64.deb`
 
 Windows and macOS builds are currently unsigned, so the first launch may show operating-system warnings.
 

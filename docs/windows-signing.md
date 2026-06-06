@@ -30,8 +30,8 @@ Do not commit certificates, passwords, or generated private-key material.
 After a signed build, verify each `.exe` artifact on Windows:
 
 ```powershell
-Get-AuthenticodeSignature "release\OpenMark Setup 0.3.0.exe" | Format-List
-Get-AuthenticodeSignature "release\OpenMark 0.3.0.exe" | Format-List
+Get-AuthenticodeSignature "release\OpenMark Setup 0.4.0.exe" | Format-List
+Get-AuthenticodeSignature "release\OpenMark 0.4.0.exe" | Format-List
 ```
 
 Expected result for a valid signed build:

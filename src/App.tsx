@@ -178,7 +178,7 @@ const localeOptions: Array<{
 const defaultUpdateStatus: OpenMarkUpdateStatus = {
   state: 'unsupported',
   message: '',
-  version: '0.3.0',
+  version: '0.4.0',
   updateVersion: null,
   progress: null,
   canCheck: false,

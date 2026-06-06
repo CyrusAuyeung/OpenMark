@@ -26,21 +26,21 @@ Windows artifacts are unsigned unless a signing certificate is provided through 
 
 Expected Windows artifacts:
 
-- `OpenMark Setup 0.3.0.exe`
-- `OpenMark 0.3.0.exe`
-- `OpenMark Setup 0.3.0.exe.blockmap`
+- `OpenMark Setup 0.4.0.exe`
+- `OpenMark 0.4.0.exe`
+- `OpenMark Setup 0.4.0.exe.blockmap`
 
 Expected macOS artifacts:
 
-- `OpenMark-0.3.0.dmg`
-- `OpenMark-0.3.0-arm64.dmg`
-- `OpenMark-0.3.0-mac.zip`
-- `OpenMark-0.3.0-arm64-mac.zip`
+- `OpenMark-0.4.0.dmg`
+- `OpenMark-0.4.0-arm64.dmg`
+- `OpenMark-0.4.0-mac.zip`
+- `OpenMark-0.4.0-arm64-mac.zip`
 
 Expected Linux artifacts:
 
-- `OpenMark-0.3.0.AppImage`
-- `openmark-editor_0.3.0_amd64.deb`
+- `OpenMark-0.4.0.AppImage`
+- `openmark-editor_0.4.0_amd64.deb`
 
 ## Automated GitHub Release
 
@@ -55,8 +55,8 @@ Release uploads include Electron auto-update metadata files such as `latest.yml`
 Push a version tag that starts with `v`:
 
 ```bash
-git tag v0.3.0
-git push origin v0.3.0
+git tag v0.4.0
+git push origin v0.4.0
 ```
 
 The workflow publishes the GitHub release automatically and asks GitHub to generate release notes.
