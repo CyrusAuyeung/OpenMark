@@ -30,7 +30,7 @@
 
 - Issue templates ✅
 - Automated release workflow ✅
-- Demo screenshots and short video
+- Demo screenshots and short video ✅
 - Plugin API design
 - Localization foundation
 

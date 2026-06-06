@@ -10,6 +10,14 @@ OpenMark is a local-first Markdown editor for people who want a calm desktop wri
 
 ![OpenMark v0.3 workspace with document sidebar, Markdown editor, split preview, and status bar](docs/assets/openmark-screenshot.png)
 
+## Demo
+
+See [Demo Assets](docs/demo.md) for the screenshot gallery, short video script, and capture checklist.
+
+| Command palette | Appearance settings |
+| --- | --- |
+| ![OpenMark command palette with export actions](docs/assets/openmark-demo-command-palette.png) | ![OpenMark appearance settings in dark theme](docs/assets/openmark-demo-appearance-settings.png) |
+
 ## Download
 
 The latest Windows release is available on the [GitHub Releases page](https://github.com/CyrusAuyeung/OpenMark/releases/latest).
@@ -136,6 +144,7 @@ OpenMark should stay simple before it becomes powerful. The near-term goal is a 
 
 - [Architecture](docs/architecture.md)
 - [Roadmap](docs/roadmap.md)
+- [Demo Assets](docs/demo.md)
 - [Contributing](docs/contributing.md)
 - [Release Guide](docs/release.md)
 - [Changelog](CHANGELOG.md)
