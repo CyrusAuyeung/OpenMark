@@ -4,6 +4,12 @@ All notable changes to OpenMark will be documented in this file.
 
 ## Unreleased
 
+### Image Handling
+
+- Added local image insertion from the toolbar, command palette, and desktop Edit menu.
+- Added desktop relative-path insertion for saved Markdown files and local image preview path resolution.
+- Added browser image insertion with current-session preview support.
+
 ### Table Editing
 
 - Added a Markdown table toolbar action and command palette command.

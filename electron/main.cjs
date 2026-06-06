@@ -93,6 +93,8 @@ function createApplicationMenu() {
         { role: 'paste' },
         { role: 'selectAll' },
         { type: 'separator' },
+        { label: 'Insert Image...', click: () => sendCommand('insert-image') },
+        { type: 'separator' },
         { label: 'Find', accelerator: 'CmdOrCtrl+F', click: () => sendCommand('find-document') },
         { label: 'Replace', accelerator: 'CmdOrCtrl+H', click: () => sendCommand('replace-document') },
         { type: 'separator' },
@@ -157,6 +159,29 @@ ipcMain.handle('openmark:open-recent-file', async (_event, filePath) => {
   }
 
   return readMarkdownFile(filePath)
+})
+
+ipcMain.handle('openmark:select-image-file', async () => {
+  const result = await dialog.showOpenDialog({
+    title: 'Insert image',
+    properties: ['openFile'],
+    filters: [
+      { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'] },
+      { name: 'All Files', extensions: ['*'] },
+    ],
+  })
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return { canceled: true }
+  }
+
+  const filePath = result.filePaths[0]
+
+  return {
+    canceled: false,
+    filePath,
+    fileName: getFileName(filePath),
+  }
 })
 
 ipcMain.handle('openmark:save-markdown-file', async (_event, payload) => {

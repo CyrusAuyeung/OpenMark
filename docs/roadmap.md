@@ -21,7 +21,7 @@
 
 - Command palette
 - Better table editing
-- Image insert and path handling
+- Image insert and path handling ✅
 - Search and replace
 - PDF export
 - Theme settings

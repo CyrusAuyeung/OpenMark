@@ -37,6 +37,7 @@ import {
   FileText,
   FolderOpen,
   Heading2,
+  ImagePlus,
   Italic,
   Link as LinkIcon,
   List,
@@ -83,6 +84,12 @@ type RecentFile = {
   openedAt: number
 }
 
+type PreviewImageSource = {
+  markdownPath: string
+  previewSrc: string
+  objectUrl?: string
+}
+
 type SearchMatch = {
   from: number
   to: number
@@ -110,6 +117,7 @@ const defaultSplitPaneRatio = 50
 const minSplitPaneRatio = 30
 const maxSplitPaneRatio = 70
 const invalidFileNameCharacters = new Set(['<', '>', ':', '"', '/', '\\', '|', '?', '*'])
+const imageFileExtensions = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'])
 
 const markdownRenderer = new MarkdownIt({
   html: false,
@@ -279,6 +287,186 @@ function getPathFileName(filePath: string) {
   return filePath.split(/[\\/]/).pop() ?? filePath
 }
 
+function getPathDirectory(filePath: string) {
+  const separatorIndex = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'))
+  return separatorIndex === -1 ? '' : filePath.slice(0, separatorIndex)
+}
+
+function normalizePathSeparators(value: string) {
+  return value.replace(/\\/g, '/')
+}
+
+function isAbsoluteLocalPath(value: string) {
+  return /^[A-Za-z]:[\\/]/.test(value) || value.startsWith('/') || value.startsWith('\\\\')
+}
+
+function isExternalImageSource(value: string) {
+  return /^(https?:|data:|blob:|file:)/i.test(value)
+}
+
+function hasUrlScheme(value: string) {
+  return /^[A-Za-z][A-Za-z0-9+.-]*:/.test(value)
+}
+
+function encodePathSegments(value: string) {
+  return value
+    .split('/')
+    .map((segment, index) => (index === 1 && /^[A-Za-z]:$/.test(segment) ? segment : encodeURIComponent(segment)))
+    .join('/')
+}
+
+function toFileUrl(filePath: string) {
+  const normalizedPath = normalizePathSeparators(filePath)
+  const pathForUrl = /^[A-Za-z]:\//.test(normalizedPath)
+    ? `/${normalizedPath}`
+    : normalizedPath.startsWith('/')
+      ? normalizedPath
+      : `/${normalizedPath}`
+
+  return `file://${encodePathSegments(pathForUrl)}`
+}
+
+function getRelativePath(fromDirectory: string, toPath: string) {
+  if (!fromDirectory) {
+    return normalizePathSeparators(toPath)
+  }
+
+  const fromParts = normalizePathSeparators(fromDirectory).split('/').filter(Boolean)
+  const toParts = normalizePathSeparators(toPath).split('/').filter(Boolean)
+  const fromRoot = fromParts[0]?.toLowerCase()
+  const toRoot = toParts[0]?.toLowerCase()
+
+  if (fromRoot && toRoot && /^[a-z]:$/i.test(fromRoot) && fromRoot !== toRoot) {
+    return normalizePathSeparators(toPath)
+  }
+
+  let sharedCount = 0
+
+  while (
+    sharedCount < fromParts.length &&
+    sharedCount < toParts.length &&
+    fromParts[sharedCount].toLowerCase() === toParts[sharedCount].toLowerCase()
+  ) {
+    sharedCount += 1
+  }
+
+  const upSegments = fromParts.slice(sharedCount).map(() => '..')
+  const downSegments = toParts.slice(sharedCount)
+  const relativePath = [...upSegments, ...downSegments].join('/')
+
+  return relativePath || getPathFileName(toPath)
+}
+
+function getImageAltText(fileName: string) {
+  return getBaseName(fileName).replace(/[-_]+/g, ' ').trim() || 'image'
+}
+
+function safeDecodeUri(value: string) {
+  try {
+    return decodeURI(value)
+  } catch {
+    return value
+  }
+}
+
+function escapeMarkdownImageAlt(value: string) {
+  return value.replace(/[\r\n[\]]/g, ' ').trim() || 'image'
+}
+
+function formatMarkdownImagePath(value: string) {
+  const normalizedPath = normalizePathSeparators(value).replace(/[<>]/g, '')
+
+  return /[\s()]/.test(normalizedPath) ? `<${normalizedPath}>` : normalizedPath
+}
+
+function createMarkdownImage(markdownPath: string, altText: string) {
+  return `![${escapeMarkdownImageAlt(altText)}](${formatMarkdownImagePath(markdownPath)})`
+}
+
+function createBlockInsertion(markdownValue: string, from: number, to: number, blockText: string) {
+  const before = markdownValue.slice(0, from)
+  const after = markdownValue.slice(to)
+  const prefix = before.length === 0 || before.endsWith('\n\n')
+    ? ''
+    : before.endsWith('\n')
+      ? '\n'
+      : '\n\n'
+  const suffix = after.length === 0 || after.startsWith('\n\n')
+    ? ''
+    : after.startsWith('\n')
+      ? '\n'
+      : '\n\n'
+
+  return `${prefix}${blockText}${suffix}`
+}
+
+function isSupportedImageFile(fileName: string) {
+  const extension = fileName.split('.').pop()?.toLowerCase() ?? ''
+  return imageFileExtensions.has(extension)
+}
+
+function resolvePreviewImageSource(src: string, activeFilePath: string | null, previewImageSources: PreviewImageSource[]) {
+  if (src.startsWith('blob:') || src.startsWith('data:') || /^https?:/i.test(src)) {
+    return src
+  }
+
+  const decodedSrc = safeDecodeUri(src)
+  const rememberedSource = previewImageSources.find((item) => (
+    item.markdownPath === src || item.markdownPath === decodedSrc
+  ))
+
+  if (rememberedSource) {
+    return rememberedSource.previewSrc
+  }
+
+  if (src.startsWith('file:')) {
+    return src
+  }
+
+  if (isAbsoluteLocalPath(decodedSrc)) {
+    return toFileUrl(decodedSrc)
+  }
+
+  if (activeFilePath) {
+    return toFileUrl(`${getPathDirectory(activeFilePath)}/${decodedSrc}`)
+  }
+
+  return src
+}
+
+function rewritePreviewImageSources(
+  html: string,
+  activeFilePath: string | null,
+  previewImageSources: PreviewImageSource[],
+) {
+  if (!html.includes('<img')) {
+    return html
+  }
+
+  const template = document.createElement('template')
+  template.innerHTML = html
+
+  template.content.querySelectorAll('img').forEach((image) => {
+    const src = image.getAttribute('src')
+
+    if (!src || isExternalImageSource(src)) {
+      return
+    }
+
+    const decodedSrc = safeDecodeUri(src)
+
+    if (hasUrlScheme(decodedSrc) && !isAbsoluteLocalPath(decodedSrc)) {
+      return
+    }
+
+    image.setAttribute('src', resolvePreviewImageSource(src, activeFilePath, previewImageSources))
+    image.setAttribute('loading', 'lazy')
+    image.setAttribute('decoding', 'async')
+  })
+
+  return template.innerHTML
+}
+
 function isSearchWordCharacter(character: string) {
   return /^[A-Za-z0-9_]$/.test(character)
 }
@@ -371,6 +559,12 @@ function downloadFile(content: string, fileName: string, mimeType: string) {
   anchor.click()
 
   URL.revokeObjectURL(objectUrl)
+}
+
+function sanitizeMarkdownHtml(html: string) {
+  return DOMPurify.sanitize(html, {
+    ALLOWED_URI_REGEXP: /^(?:(?:(?:https?|mailto|tel|file|blob):)|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i,
+  })
 }
 
 function applyInlineFormat(view: EditorView, format: InlineFormat) {
@@ -570,12 +764,14 @@ function applyMarkdownFormat(view: EditorView, format: MarkdownFormat) {
 
 function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const imageInputRef = useRef<HTMLInputElement | null>(null)
   const editorWorkbenchRef = useRef<HTMLElement | null>(null)
   const editorRef = useRef<ReactCodeMirrorRef | null>(null)
   const editorViewRef = useRef<EditorView | null>(null)
   const pendingOutlineJumpRef = useRef<OutlineItem | null>(null)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const commandInputRef = useRef<HTMLInputElement | null>(null)
+  const previewImageSourcesRef = useRef<PreviewImageSource[]>([])
   const initialMarkdownValue = useMemo(() => loadStoredValue(draftStorageKey, ''), [])
   const [markdownValue, setMarkdownValue] = useState(initialMarkdownValue)
   const [fileName, setFileName] = useState(() =>
@@ -604,6 +800,7 @@ function App() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [commandQuery, setCommandQuery] = useState('')
   const [activeCommandIndex, setActiveCommandIndex] = useState(0)
+  const [previewImageSources, setPreviewImageSources] = useState<PreviewImageSource[]>([])
 
   const editorExtensions = useMemo(
     () => [
@@ -618,9 +815,17 @@ function App() {
     [],
   )
 
-  const renderedHtml = useMemo(
-    () => DOMPurify.sanitize(markdownRenderer.render(markdownValue)),
+  const rawRenderedHtml = useMemo(
+    () => markdownRenderer.render(markdownValue),
     [markdownValue],
+  )
+  const exportHtml = useMemo(
+    () => sanitizeMarkdownHtml(rawRenderedHtml),
+    [rawRenderedHtml],
+  )
+  const renderedHtml = useMemo(
+    () => sanitizeMarkdownHtml(rewritePreviewImageSources(rawRenderedHtml, activeFilePath, previewImageSources)),
+    [activeFilePath, previewImageSources, rawRenderedHtml],
   )
 
   const outline = useMemo(() => getOutline(markdownValue), [markdownValue])
@@ -714,6 +919,14 @@ function App() {
       Icon: Replace,
       keywords: ['search'],
       action: () => openSearchBar('replace'),
+    },
+    {
+      id: 'insert-image',
+      label: 'Insert image',
+      group: 'Edit',
+      Icon: ImagePlus,
+      keywords: ['markdown', 'photo', 'picture', 'local'],
+      action: () => { void handleInsertImage() },
     },
     {
       id: 'insert-table',
@@ -842,6 +1055,18 @@ function App() {
   }, [activeSidebarTab])
 
   useEffect(() => {
+    previewImageSourcesRef.current = previewImageSources
+  }, [previewImageSources])
+
+  useEffect(() => () => {
+    previewImageSourcesRef.current.forEach((source) => {
+      if (source.objectUrl) {
+        URL.revokeObjectURL(source.objectUrl)
+      }
+    })
+  }, [])
+
+  useEffect(() => {
     editorWorkbenchRef.current?.style.setProperty('--editor-pane-size', `${splitPaneRatio}%`)
   }, [splitPaneRatio])
 
@@ -963,9 +1188,40 @@ function App() {
         case 'open-command-palette':
           openCommandPalette()
           break
+        case 'insert-image':
+          void handleInsertImage()
+          break
       }
     })
   })
+
+  function clearPreviewImageSources() {
+    previewImageSourcesRef.current.forEach((source) => {
+      if (source.objectUrl) {
+        URL.revokeObjectURL(source.objectUrl)
+      }
+    })
+
+    previewImageSourcesRef.current = []
+    setPreviewImageSources([])
+  }
+
+  function rememberPreviewImageSource(source: PreviewImageSource) {
+    setPreviewImageSources((currentSources) => {
+      const replacedSources = currentSources.filter((currentSource) => currentSource.markdownPath === source.markdownPath)
+
+      replacedSources.forEach((currentSource) => {
+        if (currentSource.objectUrl) {
+          URL.revokeObjectURL(currentSource.objectUrl)
+        }
+      })
+
+      return [
+        source,
+        ...currentSources.filter((currentSource) => currentSource.markdownPath !== source.markdownPath),
+      ].slice(0, 24)
+    })
+  }
 
   function rememberRecentFile(filePath: string | null | undefined, nextFileName: string | null | undefined) {
     if (!filePath || !nextFileName) {
@@ -1006,6 +1262,7 @@ function App() {
     setActiveFilePath(null)
     setSavedSnapshot(nextMarkdown)
     setIsWelcomeVisible(false)
+    clearPreviewImageSources()
   }
 
   function applyOpenedDocument(content: string, nextFileName: string, nextFilePath: string | null) {
@@ -1016,6 +1273,7 @@ function App() {
     rememberRecentFile(nextFilePath, nextFileName)
     setLastSavedAt(new Date())
     setIsWelcomeVisible(false)
+    clearPreviewImageSources()
   }
 
   async function openDesktopFile() {
@@ -1086,6 +1344,88 @@ function App() {
     setSavedSnapshot(fileText)
     setLastSavedAt(new Date())
     setIsWelcomeVisible(false)
+    clearPreviewImageSources()
+    event.target.value = ''
+  }
+
+  function insertMarkdownImage(markdownPath: string, fallbackFileName: string) {
+    const editorView = mode === 'preview' ? null : getEditorView()
+    const selectedText = editorView
+      ? editorView.state.sliceDoc(editorView.state.selection.main.from, editorView.state.selection.main.to).trim()
+      : ''
+    const altText = selectedText || getImageAltText(fallbackFileName)
+    const imageText = createMarkdownImage(markdownPath, altText)
+
+    setIsWelcomeVisible(false)
+
+    if (mode === 'preview') {
+      setMode('split')
+    }
+
+    if (!editorView) {
+      setMarkdownValue((currentValue) => {
+        return `${currentValue}${createBlockInsertion(currentValue, currentValue.length, currentValue.length, imageText)}`
+      })
+      return
+    }
+
+    const selection = editorView.state.selection.main
+    const insertText = createBlockInsertion(
+      editorView.state.doc.toString(),
+      selection.from,
+      selection.to,
+      imageText,
+    )
+    const sanitizedAltText = escapeMarkdownImageAlt(altText)
+    const altStart = insertText.indexOf(sanitizedAltText)
+    const anchor = altStart >= 0 ? selection.from + altStart : selection.from + insertText.length
+    const head = altStart >= 0 ? anchor + sanitizedAltText.length : anchor
+
+    editorView.dispatch({
+      changes: { from: selection.from, to: selection.to, insert: insertText },
+      selection: { anchor, head },
+      scrollIntoView: true,
+    })
+    editorView.focus()
+  }
+
+  async function handleInsertImage() {
+    if (window.openmark) {
+      const result = await window.openmark.selectImageFile()
+
+      if (!result || result.canceled || !result.filePath) {
+        return
+      }
+
+      const markdownPath = activeFilePath
+        ? getRelativePath(getPathDirectory(activeFilePath), result.filePath)
+        : toFileUrl(result.filePath)
+
+      insertMarkdownImage(markdownPath, result.fileName ?? getPathFileName(result.filePath))
+      return
+    }
+
+    imageInputRef.current?.click()
+  }
+
+  function handleImageFileOpen(event: React.ChangeEvent<HTMLInputElement>) {
+    const selectedFile = event.target.files?.[0]
+
+    if (!selectedFile) {
+      return
+    }
+
+    if (!isSupportedImageFile(selectedFile.name)) {
+      window.alert('Choose a PNG, JPG, GIF, WebP, or SVG image.')
+      event.target.value = ''
+      return
+    }
+
+    const previewSrc = URL.createObjectURL(selectedFile)
+    const markdownPath = selectedFile.name
+
+    rememberPreviewImageSource({ markdownPath, previewSrc, objectUrl: previewSrc })
+    insertMarkdownImage(markdownPath, selectedFile.name)
     event.target.value = ''
   }
 
@@ -1147,7 +1487,7 @@ function App() {
   </style>
 </head>
 <body>
-  <main>${renderedHtml}</main>
+  <main>${exportHtml}</main>
 </body>
 </html>`
   }
@@ -1611,6 +1951,16 @@ function App() {
           accept=".md,.markdown,.txt,text/markdown,text/plain"
           onChange={handleFileOpen}
         />
+        <input
+          ref={imageInputRef}
+          type="file"
+          title="Insert image"
+          hidden
+          tabIndex={-1}
+          aria-hidden="true"
+          accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+          onChange={handleImageFileOpen}
+        />
       </header>
 
       <main className={`workspace mode-${mode}${showWelcome ? ' is-welcome' : ''}`}>
@@ -1795,6 +2145,18 @@ function App() {
                           ))}
                         </div>
                       ))}
+                      <div className="format-group">
+                        <button
+                          type="button"
+                          className="format-button"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => { void handleInsertImage() }}
+                          title="Insert image"
+                          aria-label="Insert image"
+                        >
+                          <ImagePlus size={15} />
+                        </button>
+                      </div>
                     </div>
                     <span className="panel-file-name">{withMarkdownExtension(fileName)}</span>
                   </div>

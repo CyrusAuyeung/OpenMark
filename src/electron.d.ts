@@ -14,6 +14,7 @@ declare global {
     | 'find-document'
     | 'replace-document'
     | 'open-command-palette'
+    | 'insert-image'
 
   interface Window {
     openmark?: {
@@ -30,6 +31,11 @@ declare global {
         fileName?: string
         filePath?: string
         error?: string
+      }>
+      selectImageFile: () => Promise<{
+        canceled: boolean
+        fileName?: string
+        filePath?: string
       }>
       saveMarkdownFile: (payload: {
         content: string
