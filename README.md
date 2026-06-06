@@ -82,7 +82,7 @@ npm run package
 npm run dist:win
 ```
 
-Windows release files are written to `release/`, including `OpenMark Setup 0.1.0.exe` and `OpenMark 0.1.0.exe`.
+Windows release files are written to `release/`, including `OpenMark Setup 0.2.0.exe` and `OpenMark 0.2.0.exe`.
 
 See [Release Guide](docs/release.md) for local packaging and GitHub release steps.
 
