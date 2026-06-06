@@ -7,6 +7,7 @@ declare global {
     | 'save-document'
     | 'save-document-as'
     | 'export-html'
+    | 'export-pdf'
     | 'set-write-mode'
     | 'set-split-mode'
     | 'set-preview-mode'
@@ -54,6 +55,15 @@ declare global {
         canceled: boolean
         filePath?: string
         fileName?: string
+      }>
+      savePdfFile: (payload: {
+        content: string
+        fileName: string
+      }) => Promise<{
+        canceled: boolean
+        filePath?: string
+        fileName?: string
+        error?: string
       }>
       onCommand: (callback: (command: OpenMarkCommand) => void) => () => void
     }

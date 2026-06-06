@@ -65,6 +65,7 @@ function createApplicationMenu() {
         { label: 'Save', accelerator: 'CmdOrCtrl+S', click: () => sendCommand('save-document') },
         { label: 'Save As...', accelerator: 'CmdOrCtrl+Shift+S', click: () => sendCommand('save-document-as') },
         { label: 'Export HTML...', accelerator: 'CmdOrCtrl+E', click: () => sendCommand('export-html') },
+        { label: 'Export PDF...', accelerator: 'CmdOrCtrl+Shift+E', click: () => sendCommand('export-pdf') },
         { type: 'separator' },
         { role: process.platform === 'darwin' ? 'close' : 'quit' },
       ],
@@ -223,6 +224,68 @@ ipcMain.handle('openmark:save-html-file', async (_event, payload) => {
     fileName: getFileName(targetPath),
   }
 })
+
+ipcMain.handle('openmark:save-pdf-file', async (_event, payload) => {
+  const content = typeof payload?.content === 'string' ? payload.content : ''
+  const defaultPath = typeof payload?.fileName === 'string' ? payload.fileName : 'document.pdf'
+  const targetPath = await showSaveDialog(defaultPath, 'PDF', ['pdf'])
+
+  if (!targetPath) {
+    return { canceled: true }
+  }
+
+  try {
+    const pdfBuffer = await renderHtmlToPdf(content)
+    await fs.writeFile(targetPath, pdfBuffer)
+  } catch {
+    return { canceled: true, error: 'This document could not be exported as PDF.' }
+  }
+
+  return {
+    canceled: false,
+    filePath: targetPath,
+    fileName: getFileName(targetPath),
+  }
+})
+
+async function renderHtmlToPdf(content) {
+  const printWindow = new BrowserWindow({
+    show: false,
+    backgroundColor: '#ffffff',
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  })
+
+  try {
+    await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(content)}`)
+    await printWindow.webContents.executeJavaScript(`
+      Promise.all([
+        document.fonts?.ready ?? Promise.resolve(),
+        Promise.all(Array.from(document.images).map((image) => (
+          image.complete
+            ? Promise.resolve()
+            : new Promise((resolve) => {
+              image.onload = resolve
+              image.onerror = resolve
+            })
+        ))),
+      ]).then(() => true)
+    `)
+
+    return printWindow.webContents.printToPDF({
+      printBackground: true,
+      pageSize: 'A4',
+      margins: { marginType: 'default' },
+    })
+  } finally {
+    if (!printWindow.isDestroyed()) {
+      printWindow.close()
+    }
+  }
+}
 
 async function showSaveDialog(defaultPath, name, extensions) {
   const result = await dialog.showSaveDialog({

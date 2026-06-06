@@ -27,6 +27,7 @@ Windows builds are currently unsigned, so the first launch may show operating-sy
 - In-document find and replace with match navigation
 - Markdown table insertion and text-to-table conversion
 - Image insertion with local preview and desktop relative-path handling
+- PDF export for sharing polished rendered documents
 - Welcome workspace, recent files, saved state, and unsaved-change protection
 - Document outline that jumps to headings in the editor
 - Editable document file names for new files, downloads, Save As defaults, and HTML exports
@@ -47,7 +48,7 @@ Windows builds are currently unsigned, so the first launch may show operating-sy
 - Restored view mode, split balance, and workspace sidebar tab between sessions
 - Local browser draft autosave
 - Open local Markdown files through the browser file picker
-- Download Markdown and export standalone HTML
+- Download Markdown and export standalone HTML or PDF
 - Light and dark themes
 - Document stats and clickable heading outline
 - Browser and desktop window title sync with the active document and unsaved state
@@ -92,6 +93,7 @@ Useful desktop shortcuts:
 - `Ctrl+S`: save current Markdown file
 - `Ctrl+Shift+S`: save as
 - `Ctrl+E`: export HTML
+- `Ctrl+Shift+E`: export PDF
 - `Ctrl+F`: find in the current document
 - `Ctrl+H`: replace in the current document
 - `Ctrl+Shift+P`: open the command palette

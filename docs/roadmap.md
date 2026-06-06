@@ -23,7 +23,7 @@
 - Better table editing
 - Image insert and path handling ✅
 - Search and replace
-- PDF export
+- PDF export ✅
 - Theme settings
 
 ## Milestone 4: Open Source Growth

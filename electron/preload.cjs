@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('openmark', {
   selectImageFile: () => ipcRenderer.invoke('openmark:select-image-file'),
   saveMarkdownFile: (payload) => ipcRenderer.invoke('openmark:save-markdown-file', payload),
   saveHtmlFile: (payload) => ipcRenderer.invoke('openmark:save-html-file', payload),
+  savePdfFile: (payload) => ipcRenderer.invoke('openmark:save-pdf-file', payload),
   onCommand: (callback) => {
     const listener = (_event, command) => callback(command)
     ipcRenderer.on('openmark:command', listener)

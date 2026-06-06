@@ -33,6 +33,7 @@ import {
   Command as CommandIcon,
   Download,
   Eye,
+  FileDown,
   FilePlus2,
   FileText,
   FolderOpen,
@@ -903,6 +904,15 @@ function App() {
       action: () => { void handleExportHtml() },
     },
     {
+      id: 'export-pdf',
+      label: 'Export PDF',
+      group: 'File',
+      shortcut: 'Ctrl+Shift+E',
+      Icon: FileDown,
+      keywords: ['print', 'publish'],
+      action: () => { void handleExportPdf() },
+    },
+    {
       id: 'find-document',
       label: 'Find in document',
       group: 'Edit',
@@ -1166,6 +1176,9 @@ function App() {
           break
         case 'export-html':
           void handleExportHtml()
+          break
+        case 'export-pdf':
+          void handleExportPdf()
           break
         case 'set-write-mode':
           setMode('write')
@@ -1465,7 +1478,7 @@ function App() {
     setSavedSnapshot(markdownValue)
   }
 
-  function buildExportHtml() {
+  function buildExportHtml(contentHtml = exportHtml) {
     const title = escapeHtml(getBaseName(fileName))
 
     return `<!doctype html>
@@ -1475,6 +1488,7 @@ function App() {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title}</title>
   <style>
+    @page { margin: 22mm 18mm; }
     body { margin: 0; background: #f7f8f4; color: #1c241d; font: 17px/1.7 ui-serif, Georgia, serif; }
     main { max-width: 780px; margin: 0 auto; padding: 56px 28px; }
     h1, h2, h3 { line-height: 1.2; font-family: ui-sans-serif, system-ui, sans-serif; }
@@ -1484,10 +1498,16 @@ function App() {
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1px solid #d9e2d8; padding: 8px 10px; }
     img { max-width: 100%; }
+    @media print {
+      body { background: #ffffff; }
+      main { max-width: none; padding: 0; }
+      pre, blockquote, table, img { break-inside: avoid; }
+      a { color: inherit; }
+    }
   </style>
 </head>
 <body>
-  <main>${exportHtml}</main>
+  <main>${contentHtml}</main>
 </body>
 </html>`
   }
@@ -1508,6 +1528,41 @@ function App() {
       htmlFileName,
       'text/html;charset=utf-8',
     )
+  }
+
+  async function handleExportPdf() {
+    const pdfFileName = `${getBaseName(fileName)}.pdf`
+    const htmlContent = buildExportHtml(renderedHtml)
+
+    if (window.openmark) {
+      const result = await window.openmark.savePdfFile({
+        content: htmlContent,
+        fileName: pdfFileName,
+      })
+
+      if (result.error) {
+        window.alert(result.error)
+      }
+
+      return
+    }
+
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer')
+
+    if (!printWindow) {
+      window.alert('Allow pop-ups to open the print view, then choose Save as PDF.')
+      return
+    }
+
+    printWindow.document.open()
+    printWindow.document.write(htmlContent)
+    printWindow.document.close()
+    printWindow.document.title = pdfFileName
+    printWindow.focus()
+
+    window.setTimeout(() => {
+      printWindow.print()
+    }, 250)
   }
 
   function toggleTheme() {
@@ -1880,6 +1935,15 @@ function App() {
             >
               <Download size={17} />
               <span>HTML</span>
+            </button>
+            <button
+              type="button"
+              className="tool-button"
+              onClick={() => { void handleExportPdf() }}
+              title="Export PDF"
+            >
+              <FileDown size={17} />
+              <span>PDF</span>
             </button>
           </div>
 

@@ -4,6 +4,11 @@ All notable changes to OpenMark will be documented in this file.
 
 ## Unreleased
 
+### PDF Export
+
+- Added PDF export from the toolbar, command palette, and desktop File menu.
+- Added desktop PDF generation through Electron and browser print-to-PDF support.
+
 ### Image Handling
 
 - Added local image insertion from the toolbar, command palette, and desktop Edit menu.
