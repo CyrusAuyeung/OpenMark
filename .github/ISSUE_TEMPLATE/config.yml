@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Download the latest OpenMark release
+    url: https://github.com/CyrusAuyeung/OpenMark/releases/latest
+    about: Check the newest release before reporting an issue fixed in a newer build.
+  - name: Read the project roadmap
+    url: https://github.com/CyrusAuyeung/OpenMark/blob/main/docs/roadmap.md
+    about: Check planned work before opening a new feature request.

@@ -4,6 +4,28 @@ title: "feature: "
 labels:
   - enhancement
 body:
+  - type: markdown
+    attributes:
+      value: |
+        OpenMark aims to stay local-first and focused on Markdown writing. The best requests describe one workflow and the smallest useful improvement.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Where would this improvement fit?
+      options:
+        - Editor and formatting
+        - Preview rendering
+        - File open/save
+        - Export HTML/PDF
+        - Search, replace, or command palette
+        - Images and local paths
+        - Appearance settings
+        - Desktop packaging or release
+        - Documentation
+        - Other
+    validations:
+      required: true
   - type: textarea
     id: problem
     attributes:
@@ -20,6 +42,14 @@ body:
     validations:
       required: true
   - type: textarea
+    id: success
+    attributes:
+      label: What would success look like?
+      description: List the observable behavior or acceptance criteria.
+      placeholder: |
+        - I can...
+        - The preview/export/editor...
+  - type: textarea
     id: alternatives
     attributes:
       label: Alternatives considered
@@ -30,4 +60,6 @@ body:
       label: Scope check
       options:
         - label: This keeps OpenMark focused on local-first Markdown editing.
+          required: true
+        - label: This can be useful without adding cloud sync or account-based workflows.
           required: true

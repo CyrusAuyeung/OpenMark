@@ -6,13 +6,31 @@ labels:
 body:
   - type: markdown
     attributes:
-      value: Thanks for helping make OpenMark more reliable.
+      value: |
+        Thanks for helping make OpenMark more reliable. Clear reproduction steps and environment details help keep fixes small and fast.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of OpenMark is affected?
+      options:
+        - Editor and formatting
+        - Preview rendering
+        - File open/save
+        - Export HTML/PDF
+        - Search, replace, or command palette
+        - Images and local paths
+        - Appearance settings
+        - Desktop packaging or startup
+        - Other
+    validations:
+      required: true
   - type: textarea
     id: what-happened
     attributes:
       label: What happened?
-      description: Describe the bug and what you expected instead.
-      placeholder: The editor...
+      description: Describe the broken behavior and what you expected instead.
+      placeholder: The editor did..., but I expected...
     validations:
       required: true
   - type: textarea
@@ -25,11 +43,20 @@ body:
         3. See...
     validations:
       required: true
+  - type: textarea
+    id: sample-markdown
+    attributes:
+      label: Sample Markdown or file context
+      description: Paste the smallest Markdown snippet or describe the file type/path involved, if relevant.
+      render: markdown
   - type: input
     id: version
     attributes:
       label: OpenMark version
-      placeholder: 0.1.0
+      description: Use the release version, or say `main` with a commit if running from source.
+      placeholder: 0.3.0 or main@abcdef0
+    validations:
+      required: true
   - type: dropdown
     id: platform
     attributes:
@@ -42,8 +69,17 @@ body:
         - Other
     validations:
       required: true
+  - type: dropdown
+    id: regression
+    attributes:
+      label: Regression?
+      description: Did this work in an earlier version?
+      options:
+        - Not sure
+        - Yes, this used to work
+        - No, this is new behavior I tried
   - type: textarea
     id: logs
     attributes:
       label: Logs or screenshots
-      description: Add screenshots, console output, or a short recording if useful.
+      description: Add screenshots, console output, or a short recording if useful. Remove private file paths or note content first.
