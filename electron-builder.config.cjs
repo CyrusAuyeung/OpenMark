@@ -54,6 +54,7 @@ module.exports = {
   },
   linux: {
     category: 'Office',
+    maintainer: 'OpenMark contributors <CyrusAuyeung@users.noreply.github.com>',
     target: [
       {
         target: 'deb',
