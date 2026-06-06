@@ -4,6 +4,8 @@ All notable changes to OpenMark will be documented in this file.
 
 ## Unreleased
 
+## 0.3.0 - 2026-06-06
+
 ### Editor Layout
 
 - Added a draggable split-view divider that remembers the editor and preview pane balance.

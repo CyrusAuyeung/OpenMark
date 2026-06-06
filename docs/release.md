@@ -18,9 +18,9 @@ This creates Windows installer and portable artifacts in `release/`.
 
 Expected Windows artifacts:
 
-- `OpenMark Setup 0.1.0.exe`
-- `OpenMark 0.1.0.exe`
-- `OpenMark Setup 0.1.0.exe.blockmap`
+- `OpenMark Setup 0.3.0.exe`
+- `OpenMark 0.3.0.exe`
+- `OpenMark Setup 0.3.0.exe.blockmap`
 
 ## GitHub Release
 
@@ -29,8 +29,8 @@ Repository: <https://github.com/CyrusAuyeung/OpenMark>
 The release workflow runs on tags that start with `v`.
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.3.0
+git push origin v0.3.0
 ```
 
 The workflow runs lint, builds the renderer, packages Windows artifacts, uploads workflow artifacts, and attaches the files to the GitHub release.
