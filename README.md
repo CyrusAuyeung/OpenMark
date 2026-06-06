@@ -8,15 +8,23 @@
 
 OpenMark is a local-first Markdown editor for people who want a calm desktop writing tool without turning their notes into a full knowledge-management system. It focuses on the core loop first: write Markdown, preview safely, save locally, reopen recent files, and keep the workspace exactly where you left it.
 
-![OpenMark v0.3 workspace with document sidebar, Markdown editor, split preview, and status bar](docs/assets/openmark-screenshot.png)
+![OpenMark v0.4 workspace with document sidebar, Markdown editor, split preview, and status bar](docs/assets/openmark-screenshot.png)
 
 ## Demo
 
-See [Demo Assets](docs/demo.md) for the screenshot gallery, short video script, and capture checklist.
+See [Demo Assets](docs/demo.md) for the screenshot gallery, short video script, and capture checklist. The README uses full-width screenshots so the editor, preview, toolbar, and dialogs remain readable on GitHub.
 
-| Command palette | Appearance settings |
-| --- | --- |
-| ![OpenMark command palette with export actions](docs/assets/openmark-demo-command-palette.png) | ![OpenMark appearance settings in dark theme](docs/assets/openmark-demo-appearance-settings.png) |
+### Command Palette
+
+![OpenMark command palette over a split Markdown workspace with file, edit, view, workspace, and update commands](docs/assets/openmark-demo-command-palette.png)
+
+The command palette keeps OpenMark keyboard-first: create and open documents, save or export, find and replace, insert images and tables, switch view modes, jump between sidebar panels, adjust appearance, and check for updates.
+
+### Appearance Settings
+
+![OpenMark appearance settings in dark theme with theme, language, editor font size, and update controls](docs/assets/openmark-demo-appearance-settings.png)
+
+Appearance settings cover light, dark, and system themes, language preference, editor font size, and packaged-app update checks without leaving the writing workspace.
 
 ## Download
 

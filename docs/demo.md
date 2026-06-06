@@ -1,18 +1,22 @@
 # Demo Assets
 
-OpenMark's demo assets are meant to show the real editor experience first: local Markdown writing, split preview, command palette actions, exports, and appearance settings.
+OpenMark's demo assets are meant to show the real editor experience first: local Markdown writing, split preview, command palette actions, exports, appearance settings, and packaged-app update checks.
 
 ## Screenshots
 
-Use these screenshots in release notes, social posts, README sections, and store listings.
+Use these screenshots in release notes, social posts, README sections, and store listings. Each screenshot should be captured from the live app at a 16:9 desktop viewport and saved at 1600x900 so GitHub, package pages, and social previews display them consistently.
 
-| Asset | Purpose |
-| --- | --- |
-| [`openmark-screenshot.png`](assets/openmark-screenshot.png) | Primary workspace screenshot for the README hero. |
-| [`openmark-demo-command-palette.png`](assets/openmark-demo-command-palette.png) | Shows keyboard-first command discovery and export actions. |
-| [`openmark-demo-appearance-settings.png`](assets/openmark-demo-appearance-settings.png) | Shows theme and editor font size settings in the desktop-like workspace. |
+| Asset | Size | Purpose |
+| --- | --- | --- |
+| [`openmark-screenshot.png`](assets/openmark-screenshot.png) | 1600x900 | Primary workspace screenshot for the README hero. |
+| [`openmark-demo-command-palette.png`](assets/openmark-demo-command-palette.png) | 1600x900 | Shows keyboard-first command discovery across file, edit, view, workspace, export, and update actions. |
+| [`openmark-demo-appearance-settings.png`](assets/openmark-demo-appearance-settings.png) | 1600x900 | Shows theme, language, editor font size, and update settings inside the desktop-like workspace. |
+
+### Command Palette
 
 ![OpenMark command palette demo](assets/openmark-demo-command-palette.png)
+
+### Appearance Settings
 
 ![OpenMark appearance settings demo](assets/openmark-demo-appearance-settings.png)
 
@@ -38,7 +42,9 @@ Target length: 45-60 seconds.
 - Use a 1600x900 viewport for screenshots and the video recording.
 - Use split mode so editor and preview are both visible.
 - Keep the document title as `openmark-demo.md`.
-- Include a table, blockquote, checklist-like bullets, and export-related copy.
+- Include headings, a table, blockquote, checklist-like bullets, recent files, and export-related copy.
+- Capture the command palette on a light workspace with enough commands visible to show file, edit, view, workspace, help, and export flows.
+- Capture appearance settings on a dark workspace with theme, language, font size, and update controls visible.
 - Keep desktop notifications, browser UI, and unrelated local paths out of frame.
 - Verify `npm run lint` and `npm run build` before recording a release video.
 
