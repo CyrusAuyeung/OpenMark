@@ -31,6 +31,7 @@ import './App.css'
 
 type ViewMode = 'write' | 'split' | 'preview'
 type ThemeMode = 'light' | 'dark'
+type SidebarTab = 'document' | 'outline' | 'recent'
 type InlineFormat = 'bold' | 'italic' | 'link'
 type BlockFormat = 'heading-2' | 'bullet-list' | 'ordered-list' | 'quote' | 'code-block'
 type MarkdownFormat = InlineFormat | BlockFormat
@@ -342,6 +343,7 @@ function App() {
   const [savedSnapshot, setSavedSnapshot] = useState(initialMarkdownValue)
   const [recentFiles, setRecentFiles] = useState(loadRecentFiles)
   const [isWelcomeVisible, setIsWelcomeVisible] = useState(initialMarkdownValue.trim().length === 0)
+  const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>('document')
   const [mode, setMode] = useState<ViewMode>('split')
   const [theme, setTheme] = useState<ThemeMode>(() => {
     const storedTheme = window.localStorage.getItem(themeStorageKey)
@@ -374,6 +376,11 @@ function App() {
   )
   const hasUnsavedChanges = markdownValue !== savedSnapshot
   const showWelcome = isWelcomeVisible && markdownValue.trim().length === 0 && activeFilePath === null
+  const sidebarTabs: Array<{ value: SidebarTab; label: string; detail: string }> = [
+    { value: 'document', label: 'Document', detail: hasUnsavedChanges ? 'Unsaved' : 'Saved' },
+    { value: 'outline', label: 'Outline', detail: String(outline.length) },
+    { value: 'recent', label: 'Recent', detail: String(recentFiles.length) },
+  ]
 
   const lastSavedLabel = useMemo(() => {
     if (!lastSavedAt) {
@@ -847,6 +854,22 @@ function App() {
       <main className={`workspace mode-${mode}${showWelcome ? ' is-welcome' : ''}`}>
         {!showWelcome && (
         <aside className="inspector" aria-label="Document inspector">
+          <div className="sidebar-tabs" role="navigation" aria-label="Workspace panels">
+            {sidebarTabs.map((tab) => (
+              <button
+                key={tab.value}
+                type="button"
+                className={activeSidebarTab === tab.value ? 'active' : ''}
+                onClick={() => setActiveSidebarTab(tab.value)}
+              >
+                <span>{tab.label}</span>
+                <small>{tab.detail}</small>
+              </button>
+            ))}
+          </div>
+
+          <div className="sidebar-panel">
+          {activeSidebarTab === 'document' && (
           <section className="inspector-section">
             <h2>Document</h2>
             <div className="file-chip" title={fileName}>
@@ -881,7 +904,9 @@ function App() {
               </div>
             </div>
           </section>
+          )}
 
+          {activeSidebarTab === 'outline' && (
           <section className="inspector-section outline-section">
             <h2>Outline</h2>
             {outline.length > 0 ? (
@@ -916,8 +941,9 @@ function App() {
               <p className="muted">No headings yet</p>
             )}
           </section>
+          )}
 
-          {window.openmark && (
+          {activeSidebarTab === 'recent' && (
             <section className="inspector-section recent-section">
               <div className="section-heading-row">
                 <h2>Recent</h2>
@@ -927,13 +953,14 @@ function App() {
                   </button>
                 )}
               </div>
-              {recentFiles.length > 0 ? (
+              {window.openmark && recentFiles.length > 0 ? (
                 renderRecentFiles()
               ) : (
                 <p className="muted">No recent files</p>
               )}
             </section>
           )}
+          </div>
         </aside>
         )}
 
