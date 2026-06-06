@@ -22,6 +22,7 @@ OpenMark is a local-first Markdown editor MVP for building toward a polished ope
 - Download Markdown and export standalone HTML
 - Light and dark themes
 - Document stats and clickable heading outline
+- Browser and desktop window title sync with the active document and unsaved state
 - Markdown formatting toolbar and editor shortcuts
 - First-run welcome workspace and manageable recent files
 - Tabbed workspace sidebar for document details, outline, and recent files

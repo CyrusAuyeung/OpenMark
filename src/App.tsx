@@ -423,6 +423,9 @@ function App() {
   )
   const hasUnsavedChanges = markdownValue !== savedSnapshot
   const showWelcome = isWelcomeVisible && markdownValue.trim().length === 0 && activeFilePath === null
+  const appTitle = showWelcome
+    ? 'OpenMark'
+    : `${hasUnsavedChanges ? '* ' : ''}${withMarkdownExtension(fileName)} - OpenMark`
   const sidebarTabs: Array<{ value: SidebarTab; label: string; detail: string }> = [
     { value: 'document', label: 'Document', detail: hasUnsavedChanges ? 'Unsaved' : 'Saved' },
     { value: 'outline', label: 'Outline', detail: String(outline.length) },
@@ -455,6 +458,10 @@ function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme
   }, [theme])
+
+  useEffect(() => {
+    document.title = appTitle
+  }, [appTitle])
 
   useEffect(() => {
     window.localStorage.setItem(splitPaneRatioStorageKey, splitPaneRatio.toFixed(2))

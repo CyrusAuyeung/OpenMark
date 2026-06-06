@@ -8,6 +8,10 @@ All notable changes to OpenMark will be documented in this file.
 
 - Added a draggable split-view divider that remembers the editor and preview pane balance.
 
+### Document Status
+
+- Updated the browser and desktop window title to show the current document name and unsaved marker.
+
 ### File Workflow
 
 - Added a first-run welcome workspace with new/open actions.
