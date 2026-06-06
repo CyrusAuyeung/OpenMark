@@ -92,6 +92,9 @@ function createApplicationMenu() {
         { role: 'copy' },
         { role: 'paste' },
         { role: 'selectAll' },
+        { type: 'separator' },
+        { label: 'Find', accelerator: 'CmdOrCtrl+F', click: () => sendCommand('find-document') },
+        { label: 'Replace', accelerator: 'CmdOrCtrl+H', click: () => sendCommand('replace-document') },
       ],
     },
   ]

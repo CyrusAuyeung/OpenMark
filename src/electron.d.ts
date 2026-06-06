@@ -11,6 +11,8 @@ declare global {
     | 'set-split-mode'
     | 'set-preview-mode'
     | 'toggle-theme'
+    | 'find-document'
+    | 'replace-document'
 
   interface Window {
     openmark?: {

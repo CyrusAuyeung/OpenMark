@@ -4,6 +4,11 @@ All notable changes to OpenMark will be documented in this file.
 
 ## Unreleased
 
+### Search and Replace
+
+- Added in-document find and replace with match navigation, match case, and whole-word options.
+- Added desktop and browser shortcuts for Find (`Ctrl+F`) and Replace (`Ctrl+H`).
+
 ## 0.3.0 - 2026-06-06
 
 ### Editor Layout

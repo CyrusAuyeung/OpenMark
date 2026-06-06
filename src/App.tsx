@@ -10,11 +10,23 @@ import {
 import CodeMirror, { type ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { oneDark } from '@codemirror/theme-one-dark'
+import {
+  SearchQuery,
+  findNext,
+  findPrevious,
+  replaceAll,
+  replaceNext,
+  search,
+  setSearchQuery,
+} from '@codemirror/search'
 import { EditorView, keymap } from '@codemirror/view'
 import MarkdownIt from 'markdown-it'
 import DOMPurify from 'dompurify'
 import {
   Bold,
+  CaseSensitive,
+  ChevronDown,
+  ChevronUp,
   Code2,
   Columns2,
   Download,
@@ -29,9 +41,13 @@ import {
   ListOrdered,
   Moon,
   Quote,
+  Replace,
+  ReplaceAll as ReplaceAllIcon,
   Save,
+  Search as SearchIcon,
   Sun,
   Type,
+  WholeWord,
   X,
   type LucideIcon,
 } from 'lucide-react'
@@ -62,6 +78,11 @@ type RecentFile = {
   filePath: string
   fileName: string
   openedAt: number
+}
+
+type SearchMatch = {
+  from: number
+  to: number
 }
 
 const draftStorageKey = 'openmark:draft'
@@ -244,6 +265,39 @@ function getPathFileName(filePath: string) {
   return filePath.split(/[\\/]/).pop() ?? filePath
 }
 
+function isSearchWordCharacter(character: string) {
+  return /^[A-Za-z0-9_]$/.test(character)
+}
+
+function getSearchMatches(
+  markdownValue: string,
+  searchTerm: string,
+  options: { caseSensitive: boolean; wholeWord: boolean },
+) {
+  if (searchTerm.length === 0) {
+    return []
+  }
+
+  const source = options.caseSensitive ? markdownValue : markdownValue.toLowerCase()
+  const query = options.caseSensitive ? searchTerm : searchTerm.toLowerCase()
+  const matches: SearchMatch[] = []
+  let index = source.indexOf(query)
+
+  while (index !== -1) {
+    const matchEnd = index + query.length
+    const startsAtWordBoundary = !isSearchWordCharacter(markdownValue[index - 1] ?? '')
+    const endsAtWordBoundary = !isSearchWordCharacter(markdownValue[matchEnd] ?? '')
+
+    if (!options.wholeWord || (startsAtWordBoundary && endsAtWordBoundary)) {
+      matches.push({ from: index, to: matchEnd })
+    }
+
+    index = source.indexOf(query, Math.max(index + query.length, index + 1))
+  }
+
+  return matches
+}
+
 function escapeHtml(value: string) {
   const entities: Record<string, string> = {
     '&': '&amp;',
@@ -395,6 +449,7 @@ function App() {
   const editorRef = useRef<ReactCodeMirrorRef | null>(null)
   const editorViewRef = useRef<EditorView | null>(null)
   const pendingOutlineJumpRef = useRef<OutlineItem | null>(null)
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
   const initialMarkdownValue = useMemo(() => loadStoredValue(draftStorageKey, ''), [])
   const [markdownValue, setMarkdownValue] = useState(initialMarkdownValue)
   const [fileName, setFileName] = useState(() =>
@@ -413,10 +468,18 @@ function App() {
   })
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const [activeOutlineLine, setActiveOutlineLine] = useState<number | null>(null)
+  const [isSearchVisible, setIsSearchVisible] = useState(false)
+  const [isReplaceVisible, setIsReplaceVisible] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [replaceTerm, setReplaceTerm] = useState('')
+  const [isSearchCaseSensitive, setIsSearchCaseSensitive] = useState(false)
+  const [isSearchWholeWord, setIsSearchWholeWord] = useState(false)
+  const [activeSearchRange, setActiveSearchRange] = useState<SearchMatch | null>(null)
 
   const editorExtensions = useMemo(
     () => [
       markdown({ base: markdownLanguage }),
+      search({ top: true }),
       keymap.of([
         { key: 'Mod-b', run: (view) => applyInlineFormat(view, 'bold') },
         { key: 'Mod-i', run: (view) => applyInlineFormat(view, 'italic') },
@@ -432,10 +495,23 @@ function App() {
   )
 
   const outline = useMemo(() => getOutline(markdownValue), [markdownValue])
+  const searchMatches = useMemo(
+    () => getSearchMatches(markdownValue, searchTerm, {
+      caseSensitive: isSearchCaseSensitive,
+      wholeWord: isSearchWholeWord,
+    }),
+    [isSearchCaseSensitive, isSearchWholeWord, markdownValue, searchTerm],
+  )
   const stats = useMemo(
     () => getDocumentStats(markdownValue, outline),
     [markdownValue, outline],
   )
+  const activeSearchMatchIndex = activeSearchRange
+    ? searchMatches.findIndex((match) => match.from === activeSearchRange.from && match.to === activeSearchRange.to)
+    : -1
+  const searchStatusLabel = searchTerm.length === 0
+    ? 'No query'
+    : `${activeSearchMatchIndex >= 0 ? activeSearchMatchIndex + 1 : 0} of ${searchMatches.length}`
   const hasUnsavedChanges = markdownValue !== savedSnapshot
   const showWelcome = isWelcomeVisible && markdownValue.trim().length === 0 && activeFilePath === null
   const appTitle = showWelcome
@@ -493,6 +569,48 @@ function App() {
   useEffect(() => {
     editorWorkbenchRef.current?.style.setProperty('--editor-pane-size', `${splitPaneRatio}%`)
   }, [splitPaneRatio])
+
+  useEffect(() => {
+    const editorView = editorViewRef.current ?? editorRef.current?.view
+
+    if (!editorView) {
+      return
+    }
+
+    editorView.dispatch({
+      effects: setSearchQuery.of(new SearchQuery({
+        search: searchTerm,
+        replace: replaceTerm,
+        caseSensitive: isSearchCaseSensitive,
+        wholeWord: isSearchWholeWord,
+        literal: true,
+      })),
+    })
+  }, [isSearchCaseSensitive, isSearchWholeWord, replaceTerm, searchTerm])
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const usesCommandKey = event.ctrlKey || event.metaKey
+
+      if (!usesCommandKey || event.altKey) {
+        return
+      }
+
+      if (event.key.toLowerCase() === 'f') {
+        event.preventDefault()
+        openSearchBar('find')
+      }
+
+      if (event.key.toLowerCase() === 'h') {
+        event.preventDefault()
+        openSearchBar('replace')
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  })
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -555,6 +673,12 @@ function App() {
           break
         case 'toggle-theme':
           toggleTheme()
+          break
+        case 'find-document':
+          openSearchBar('find')
+          break
+        case 'replace-document':
+          openSearchBar('replace')
           break
       }
     })
@@ -777,6 +901,102 @@ function App() {
     applyMarkdownFormat(editorView, format)
   }
 
+  function getEditorView() {
+    return editorViewRef.current ?? editorRef.current?.view ?? null
+  }
+
+  function getSelectedSearchRange(editorView: EditorView): SearchMatch | null {
+    const selection = editorView.state.selection.main
+
+    return selection.empty ? null : { from: selection.from, to: selection.to }
+  }
+
+  function focusSearchInput() {
+    window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus()
+      searchInputRef.current?.select()
+    })
+  }
+
+  function openSearchBar(searchMode: 'find' | 'replace') {
+    if (showWelcome) {
+      setIsWelcomeVisible(false)
+    }
+
+    setIsSearchVisible(true)
+    setIsReplaceVisible(searchMode === 'replace')
+
+    if (mode === 'preview') {
+      setMode((currentMode) => (currentMode === 'preview' ? 'split' : currentMode))
+    }
+
+    focusSearchInput()
+  }
+
+  function closeSearchBar() {
+    setIsSearchVisible(false)
+    setIsReplaceVisible(false)
+    setActiveSearchRange(null)
+    getEditorView()?.focus()
+  }
+
+  function syncActiveSearchRange(editorView: EditorView) {
+    window.requestAnimationFrame(() => {
+      setActiveSearchRange(getSelectedSearchRange(editorView))
+    })
+  }
+
+  function moveSearchMatch(direction: 'next' | 'previous') {
+    const editorView = getEditorView()
+
+    if (!editorView || searchTerm.length === 0) {
+      return
+    }
+
+    const didMove = direction === 'next' ? findNext(editorView) : findPrevious(editorView)
+
+    if (didMove) {
+      syncActiveSearchRange(editorView)
+    }
+  }
+
+  function replaceCurrentSearchMatch() {
+    const editorView = getEditorView()
+
+    if (!editorView || searchTerm.length === 0) {
+      return
+    }
+
+    const didReplace = replaceNext(editorView)
+
+    if (didReplace) {
+      syncActiveSearchRange(editorView)
+    }
+  }
+
+  function replaceAllSearchMatches() {
+    const editorView = getEditorView()
+
+    if (!editorView || searchTerm.length === 0) {
+      return
+    }
+
+    replaceAll(editorView)
+    setActiveSearchRange(null)
+  }
+
+  function handleSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      moveSearchMatch(event.shiftKey ? 'previous' : 'next')
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      closeSearchBar()
+    }
+  }
+
   function updateSplitPaneRatio(clientX: number) {
     const workbench = editorWorkbenchRef.current
 
@@ -975,6 +1195,27 @@ function App() {
             >
               <Download size={17} />
               <span>HTML</span>
+            </button>
+          </div>
+
+          <div className="tool-group">
+            <button
+              type="button"
+              className="icon-button"
+              onClick={() => openSearchBar('find')}
+              title="Find in document"
+              aria-label="Find in document"
+            >
+              <SearchIcon size={18} />
+            </button>
+            <button
+              type="button"
+              className="icon-button"
+              onClick={() => openSearchBar('replace')}
+              title="Replace in document"
+              aria-label="Replace in document"
+            >
+              <Replace size={18} />
             </button>
           </div>
 
@@ -1202,6 +1443,125 @@ function App() {
                     </div>
                     <span className="panel-file-name">{withMarkdownExtension(fileName)}</span>
                   </div>
+                  {isSearchVisible && (
+                    <div className="search-bar" role="search" aria-label="Find and replace">
+                      <div className="search-row">
+                        <label className="search-field">
+                          <SearchIcon size={15} aria-hidden="true" />
+                          <input
+                            ref={searchInputRef}
+                            type="search"
+                            value={searchTerm}
+                            placeholder="Find"
+                            aria-label="Find text"
+                            spellCheck={false}
+                            onChange={(event) => {
+                              setSearchTerm(event.target.value)
+                              setActiveSearchRange(null)
+                            }}
+                            onKeyDown={handleSearchKeyDown}
+                          />
+                        </label>
+                        <span className="search-count" aria-live="polite">{searchStatusLabel}</span>
+                        <button
+                          type="button"
+                          className="search-icon-button"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => moveSearchMatch('previous')}
+                          title="Previous match"
+                          aria-label="Previous match"
+                        >
+                          <ChevronUp size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          className="search-icon-button"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => moveSearchMatch('next')}
+                          title="Next match"
+                          aria-label="Next match"
+                        >
+                          <ChevronDown size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          className={isSearchCaseSensitive ? 'search-toggle active' : 'search-toggle'}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => setIsSearchCaseSensitive((isEnabled) => !isEnabled)}
+                          title="Match case"
+                          aria-label="Match case"
+                        >
+                          <CaseSensitive size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          className={isSearchWholeWord ? 'search-toggle active' : 'search-toggle'}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => setIsSearchWholeWord((isEnabled) => !isEnabled)}
+                          title="Match whole word"
+                          aria-label="Match whole word"
+                        >
+                          <WholeWord size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          className="search-icon-button"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => setIsReplaceVisible((isVisible) => !isVisible)}
+                          title="Toggle replace"
+                          aria-label="Toggle replace"
+                        >
+                          <Replace size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          className="search-icon-button"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={closeSearchBar}
+                          title="Close find"
+                          aria-label="Close find"
+                        >
+                          <X size={15} />
+                        </button>
+                      </div>
+                      {isReplaceVisible && (
+                        <div className="search-row replace-row">
+                          <label className="search-field replace-field">
+                            <Replace size={15} aria-hidden="true" />
+                            <input
+                              type="text"
+                              value={replaceTerm}
+                              placeholder="Replace"
+                              aria-label="Replace text"
+                              spellCheck={false}
+                              onChange={(event) => setReplaceTerm(event.target.value)}
+                              onKeyDown={handleSearchKeyDown}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            className="search-action-button"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={replaceCurrentSearchMatch}
+                            title="Replace current match"
+                          >
+                            <Replace size={14} />
+                            <span>Replace</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="search-action-button"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={replaceAllSearchMatches}
+                            title="Replace all matches"
+                          >
+                            <ReplaceAllIcon size={14} />
+                            <span>All</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="editor-host">
                     <CodeMirror
                       ref={editorRef}

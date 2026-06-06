@@ -783,6 +783,109 @@ body.is-resizing-split * {
   outline-offset: 2px;
 }
 
+.search-bar {
+  display: grid;
+  gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-0);
+}
+
+.search-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.search-field {
+  min-width: 150px;
+  flex: 1 1 180px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--surface-1);
+}
+
+.replace-field {
+  flex-basis: 260px;
+}
+
+.search-field:focus-within {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 2px var(--focus);
+}
+
+.search-field input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  color: var(--ink);
+  background: transparent;
+  font-size: 13px;
+}
+
+.search-field input:focus {
+  outline: none;
+}
+
+.search-count {
+  min-width: 58px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.search-icon-button,
+.search-toggle,
+.search-action-button {
+  min-width: 34px;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--button-border);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--button-bg);
+  cursor: pointer;
+}
+
+.search-action-button {
+  padding: 0 10px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.search-icon-button:hover,
+.search-toggle:hover,
+.search-action-button:hover {
+  border-color: var(--accent-border);
+  color: var(--ink);
+  background: var(--button-hover);
+}
+
+.search-toggle.active {
+  border-color: var(--accent-border);
+  color: var(--ink);
+  background: var(--accent-soft);
+}
+
+.search-icon-button:focus-visible,
+.search-toggle:focus-visible,
+.search-action-button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 .editor-host {
   flex: 1;
   min-height: 0;
@@ -801,6 +904,14 @@ body.is-resizing-split * {
 
 .editor-host .cm-focused {
   outline: none;
+}
+
+.editor-host .cm-searchMatch {
+  background: color-mix(in srgb, var(--warning) 30%, transparent);
+}
+
+.editor-host .cm-searchMatch-selected {
+  background: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 .preview-scroll {
@@ -998,6 +1109,11 @@ body.is-resizing-split * {
     order: 3;
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .search-field,
+  .replace-field {
+    flex-basis: 100%;
   }
 
   .panel-file-name {
