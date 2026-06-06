@@ -8,7 +8,7 @@
 
 OpenMark is a local-first Markdown editor for people who want a calm desktop writing tool without turning their notes into a full knowledge-management system. It focuses on the core loop first: write Markdown, preview safely, save locally, reopen recent files, and keep the workspace exactly where you left it.
 
-![OpenMark editor screenshot](docs/assets/openmark-screenshot.png)
+![OpenMark v0.3 workspace with document sidebar, Markdown editor, split preview, and status bar](docs/assets/openmark-screenshot.png)
 
 ## Download
 
