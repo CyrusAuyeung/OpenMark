@@ -6,11 +6,29 @@
 [![License](https://img.shields.io/github/license/CyrusAuyeung/OpenMark)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)](docs/release.md)
 
-OpenMark is a local-first Markdown editor MVP for building toward a polished open-source desktop writing tool. The first milestone focuses on the smallest useful core: fast Markdown editing, live preview, local draft persistence, and export.
+OpenMark is a local-first Markdown editor for people who want a calm desktop writing tool without turning their notes into a full knowledge-management system. It focuses on the core loop first: write Markdown, preview safely, save locally, reopen recent files, and keep the workspace exactly where you left it.
 
 ![OpenMark editor screenshot](docs/assets/openmark-screenshot.png)
 
-## Current MVP
+## Download
+
+The latest Windows release is available on the [GitHub Releases page](https://github.com/CyrusAuyeung/OpenMark/releases/latest).
+
+- Windows installer: `OpenMark.Setup.0.3.0.exe`
+- Windows portable app: `OpenMark.0.3.0.exe`
+
+Windows builds are currently unsigned, so the first launch may show operating-system warnings.
+
+## Highlights
+
+- Local-first Markdown editing with native desktop open/save dialogs
+- Source editor, safe preview, and resizable split view
+- Welcome workspace, recent files, saved state, and unsaved-change protection
+- Document outline that jumps to headings in the editor
+- Editable document file names for new files, downloads, Save As defaults, and HTML exports
+- Restored view mode, split balance, and workspace sidebar tab between sessions
+
+## Current Capabilities
 
 - React, TypeScript, and Vite application shell
 - CodeMirror Markdown editing experience
@@ -32,22 +50,31 @@ OpenMark is a local-first Markdown editor MVP for building toward a polished ope
 - Desktop menu shortcuts for file commands, view modes, and theme switching
 - Recent files list and unsaved-change indicator
 
-## Getting Started
+## Run From Source
+
+Install dependencies and start the browser version:
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Desktop App
-
-Rust is not required for the current desktop milestone. OpenMark uses a lightweight Electron shell until the project is ready to evaluate Tauri.
+Run the desktop shell during development:
 
 ```bash
 npm run desktop:dev
 ```
 
-The desktop shell adds native Markdown open/save dialogs while keeping the browser MVP available through `npm run dev`.
+Rust is not required for the current desktop milestone. OpenMark uses a lightweight Electron shell until the project is ready to evaluate Tauri.
+
+If Electron downloads slowly, set a mirror before the first desktop run:
+
+```powershell
+$env:ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/"
+npm run desktop:dev
+```
+
+## Shortcuts
 
 Useful desktop shortcuts:
 
@@ -61,18 +88,11 @@ Useful desktop shortcuts:
 
 Useful editor shortcuts:
 
-The editor toolbar also exposes common Markdown formatting actions for bold, italic, links, headings, lists, quotes, and code blocks.
-
 - `Ctrl+B`: wrap selection in bold Markdown
 - `Ctrl+I`: wrap selection in italic Markdown
 - `Ctrl+K`: insert a Markdown link
 
-If Electron downloads slowly, set a mirror before the first desktop run:
-
-```powershell
-$env:ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/"
-npm run desktop:dev
-```
+The editor toolbar also exposes common Markdown formatting actions for bold, italic, links, headings, lists, quotes, and code blocks.
 
 ## Quality Checks
 
@@ -92,9 +112,9 @@ Windows release files are written to `release/`, including `OpenMark Setup 0.3.0
 
 See [Release Guide](docs/release.md) for local packaging and GitHub release steps.
 
-## Project Direction
+## Roadmap Direction
 
-OpenMark should stay simple before it becomes powerful. The near-term goal is a reliable editor core and a native desktop shell. The long-term goal is a calm open-source alternative for people who want a focused Markdown editor without turning their notes into a full knowledge-management system.
+OpenMark should stay simple before it becomes powerful. The near-term goal is a reliable editor core and native desktop shell. The next product milestones are document search, stronger preview/editor navigation, export polish, and cross-platform distribution.
 
 ## Documentation
 
