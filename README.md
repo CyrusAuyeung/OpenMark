@@ -28,6 +28,7 @@ Windows builds are currently unsigned, so the first launch may show operating-sy
 - Markdown table insertion and text-to-table conversion
 - Image insertion with local preview and desktop relative-path handling
 - PDF export for sharing polished rendered documents
+- Appearance settings for light, dark, system theme, and editor font size
 - Welcome workspace, recent files, saved state, and unsaved-change protection
 - Document outline that jumps to headings in the editor
 - Editable document file names for new files, downloads, Save As defaults, and HTML exports
@@ -49,7 +50,7 @@ Windows builds are currently unsigned, so the first launch may show operating-sy
 - Local browser draft autosave
 - Open local Markdown files through the browser file picker
 - Download Markdown and export standalone HTML or PDF
-- Light and dark themes
+- Light, dark, and system theme preferences with adjustable editor font size
 - Document stats and clickable heading outline
 - Browser and desktop window title sync with the active document and unsaved state
 - Markdown formatting toolbar and editor shortcuts
@@ -99,6 +100,7 @@ Useful desktop shortcuts:
 - `Ctrl+Shift+P`: open the command palette
 - `Ctrl+1`, `Ctrl+2`, `Ctrl+3`: write, split, and preview modes
 - `Ctrl+Shift+L`: toggle theme
+- `Ctrl+,`: open appearance settings
 
 Useful editor shortcuts:
 

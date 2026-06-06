@@ -78,6 +78,7 @@ function createApplicationMenu() {
         { label: 'Preview Mode', accelerator: 'CmdOrCtrl+3', click: () => sendCommand('set-preview-mode') },
         { type: 'separator' },
         { label: 'Toggle Theme', accelerator: 'CmdOrCtrl+Shift+L', click: () => sendCommand('toggle-theme') },
+        { label: 'Appearance Settings...', click: () => sendCommand('open-theme-settings') },
         { type: 'separator' },
         { role: 'reload' },
         { role: 'toggleDevTools' },

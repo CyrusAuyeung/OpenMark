@@ -40,6 +40,7 @@ import {
   Heading2,
   ImagePlus,
   Italic,
+  Laptop,
   Link as LinkIcon,
   List,
   ListOrdered,
@@ -49,6 +50,7 @@ import {
   ReplaceAll as ReplaceAllIcon,
   Save,
   Search as SearchIcon,
+  Settings2,
   Sun,
   Table,
   Type,
@@ -60,6 +62,7 @@ import './App.css'
 
 type ViewMode = 'write' | 'split' | 'preview'
 type ThemeMode = 'light' | 'dark'
+type ThemePreference = ThemeMode | 'system'
 type SidebarTab = 'document' | 'outline' | 'recent'
 type InlineFormat = 'bold' | 'italic' | 'link'
 type BlockFormat = 'heading-2' | 'bullet-list' | 'ordered-list' | 'quote' | 'code-block' | 'table'
@@ -109,6 +112,7 @@ type CommandPaletteItem = {
 const draftStorageKey = 'openmark:draft'
 const fileNameStorageKey = 'openmark:file-name'
 const themeStorageKey = 'openmark:theme'
+const editorFontSizeStorageKey = 'openmark:editor-font-size'
 const recentFilesStorageKey = 'openmark:recent-files'
 const splitPaneRatioStorageKey = 'openmark:split-pane-ratio'
 const viewModeStorageKey = 'openmark:view-mode'
@@ -117,6 +121,9 @@ const maxRecentFiles = 6
 const defaultSplitPaneRatio = 50
 const minSplitPaneRatio = 30
 const maxSplitPaneRatio = 70
+const defaultEditorFontSize = 16
+const minEditorFontSize = 14
+const maxEditorFontSize = 22
 const invalidFileNameCharacters = new Set(['<', '>', ':', '"', '/', '\\', '|', '?', '*'])
 const imageFileExtensions = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'])
 
@@ -138,6 +145,17 @@ const modeOptions: Array<{
 
 const validViewModes = new Set<ViewMode>(['write', 'split', 'preview'])
 const validSidebarTabs = new Set<SidebarTab>(['document', 'outline', 'recent'])
+const validThemePreferences = new Set<ThemePreference>(['light', 'dark', 'system'])
+
+const themeOptions: Array<{
+  value: ThemePreference
+  label: string
+  Icon: LucideIcon
+}> = [
+  { value: 'light', label: 'Light', Icon: Sun },
+  { value: 'dark', label: 'Dark', Icon: Moon },
+  { value: 'system', label: 'System', Icon: Laptop },
+]
 
 const markdownToolbarGroups: Array<
   Array<{
@@ -213,6 +231,24 @@ function loadViewMode() {
 function loadSidebarTab() {
   const storedTab = window.localStorage.getItem(sidebarTabStorageKey)
   return validSidebarTabs.has(storedTab as SidebarTab) ? storedTab as SidebarTab : 'document'
+}
+
+function loadThemePreference() {
+  const storedTheme = window.localStorage.getItem(themeStorageKey)
+  return validThemePreferences.has(storedTheme as ThemePreference) ? storedTheme as ThemePreference : 'system'
+}
+
+function getSystemTheme(): ThemeMode {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
+function clampEditorFontSize(value: number) {
+  return Math.min(maxEditorFontSize, Math.max(minEditorFontSize, value))
+}
+
+function loadEditorFontSize() {
+  const storedSize = Number(window.localStorage.getItem(editorFontSizeStorageKey))
+  return Number.isFinite(storedSize) ? clampEditorFontSize(storedSize) : defaultEditorFontSize
 }
 
 function getOutline(markdownValue: string): OutlineItem[] {
@@ -785,10 +821,9 @@ function App() {
   const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>(loadSidebarTab)
   const [splitPaneRatio, setSplitPaneRatio] = useState(loadSplitPaneRatio)
   const [mode, setMode] = useState<ViewMode>(loadViewMode)
-  const [theme, setTheme] = useState<ThemeMode>(() => {
-    const storedTheme = window.localStorage.getItem(themeStorageKey)
-    return storedTheme === 'dark' ? 'dark' : 'light'
-  })
+  const [themePreference, setThemePreference] = useState<ThemePreference>(loadThemePreference)
+  const [systemTheme, setSystemTheme] = useState<ThemeMode>(getSystemTheme)
+  const [editorFontSize, setEditorFontSize] = useState(loadEditorFontSize)
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const [activeOutlineLine, setActiveOutlineLine] = useState<number | null>(null)
   const [isSearchVisible, setIsSearchVisible] = useState(false)
@@ -802,6 +837,8 @@ function App() {
   const [commandQuery, setCommandQuery] = useState('')
   const [activeCommandIndex, setActiveCommandIndex] = useState(0)
   const [previewImageSources, setPreviewImageSources] = useState<PreviewImageSource[]>([])
+  const [isThemeSettingsOpen, setIsThemeSettingsOpen] = useState(false)
+  const theme = themePreference === 'system' ? systemTheme : themePreference
 
   const editorExtensions = useMemo(
     () => [
@@ -1006,6 +1043,14 @@ function App() {
       keywords: ['dark', 'light'],
       action: toggleTheme,
     },
+    {
+      id: 'theme-settings',
+      label: 'Open appearance settings',
+      group: 'View',
+      Icon: Settings2,
+      keywords: ['theme', 'appearance', 'font', 'system'],
+      action: openThemeSettings,
+    },
   ]
   const normalizedCommandQuery = commandQuery.trim().toLowerCase()
   const filteredCommandPaletteItems = normalizedCommandQuery.length === 0
@@ -1036,17 +1081,35 @@ function App() {
     const saveTimer = window.setTimeout(() => {
       window.localStorage.setItem(draftStorageKey, markdownValue)
       window.localStorage.setItem(fileNameStorageKey, fileName)
-      window.localStorage.setItem(themeStorageKey, theme)
       persistRecentFiles(recentFiles)
       setLastSavedAt(new Date())
     }, 250)
 
     return () => window.clearTimeout(saveTimer)
-  }, [fileName, markdownValue, recentFiles, theme])
+  }, [fileName, markdownValue, recentFiles])
+
+  useEffect(() => {
+    window.localStorage.setItem(themeStorageKey, themePreference)
+  }, [themePreference])
+
+  useEffect(() => {
+    window.localStorage.setItem(editorFontSizeStorageKey, editorFontSize.toFixed(0))
+  }, [editorFontSize])
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
-  }, [theme])
+    document.documentElement.style.setProperty('--editor-font-size', `${editorFontSize}px`)
+  }, [editorFontSize, theme])
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const handleSystemThemeChange = () => setSystemTheme(mediaQuery.matches ? 'dark' : 'light')
+
+    handleSystemThemeChange()
+    mediaQuery.addEventListener('change', handleSystemThemeChange)
+
+    return () => mediaQuery.removeEventListener('change', handleSystemThemeChange)
+  }, [])
 
   useEffect(() => {
     document.title = appTitle
@@ -1109,6 +1172,11 @@ function App() {
       if (event.shiftKey && event.key.toLowerCase() === 'p') {
         event.preventDefault()
         openCommandPalette()
+      }
+
+      if (event.key === ',') {
+        event.preventDefault()
+        openThemeSettings()
       }
 
       if (event.key.toLowerCase() === 'f') {
@@ -1191,6 +1259,9 @@ function App() {
           break
         case 'toggle-theme':
           toggleTheme()
+          break
+        case 'open-theme-settings':
+          openThemeSettings()
           break
         case 'find-document':
           openSearchBar('find')
@@ -1566,7 +1637,19 @@ function App() {
   }
 
   function toggleTheme() {
-    setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'))
+    setThemePreference((currentPreference) => {
+      const currentTheme = currentPreference === 'system' ? systemTheme : currentPreference
+      return currentTheme === 'dark' ? 'light' : 'dark'
+    })
+  }
+
+  function openThemeSettings() {
+    setIsThemeSettingsOpen(true)
+  }
+
+  function closeThemeSettings() {
+    setIsThemeSettingsOpen(false)
+    getEditorView()?.focus()
   }
 
   function handleMarkdownFormat(format: MarkdownFormat) {
@@ -1992,6 +2075,16 @@ function App() {
             aria-label="Toggle theme"
           >
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
+          <button
+            type="button"
+            className="icon-button"
+            onClick={openThemeSettings}
+            title="Appearance settings"
+            aria-label="Appearance settings"
+          >
+            <Settings2 size={18} />
           </button>
 
           <button
@@ -2462,6 +2555,68 @@ function App() {
               )}
             </div>
           </form>
+        </div>
+      )}
+
+      {isThemeSettingsOpen && (
+        <div className="settings-backdrop" role="presentation" onMouseDown={closeThemeSettings}>
+          <section
+            className="settings-dialog"
+            role="dialog"
+            aria-label="Appearance settings"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="settings-header">
+              <div>
+                <h2>Appearance</h2>
+                <span>{themePreference === 'system' ? `System ${systemTheme}` : themePreference}</span>
+              </div>
+              <button
+                type="button"
+                className="icon-button"
+                onClick={closeThemeSettings}
+                title="Close appearance settings"
+                aria-label="Close appearance settings"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="settings-section">
+              <span className="settings-label">Theme</span>
+              <div className="theme-choice-group" aria-label="Theme preference">
+                {themeOptions.map(({ value, label, Icon }) => (
+                  <button
+                    type="button"
+                    key={value}
+                    className={themePreference === value ? 'theme-choice active' : 'theme-choice'}
+                    onClick={() => setThemePreference(value)}
+                    aria-label={`${label} theme`}
+                  >
+                    <Icon size={16} />
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <label className="settings-section font-size-setting">
+              <span className="settings-label">Editor font size</span>
+              <div className="range-row">
+                <Type size={16} aria-hidden="true" />
+                <input
+                  type="range"
+                  min={minEditorFontSize}
+                  max={maxEditorFontSize}
+                  step="1"
+                  value={editorFontSize}
+                  onChange={(event) => setEditorFontSize(clampEditorFontSize(Number(event.target.value)))}
+                  aria-label="Editor font size"
+                />
+                <strong>{editorFontSize}px</strong>
+              </div>
+            </label>
+          </section>
         </div>
       )}
     </div>

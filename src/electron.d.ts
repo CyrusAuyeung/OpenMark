@@ -12,6 +12,7 @@ declare global {
     | 'set-split-mode'
     | 'set-preview-mode'
     | 'toggle-theme'
+    | 'open-theme-settings'
     | 'find-document'
     | 'replace-document'
     | 'open-command-palette'

@@ -24,7 +24,7 @@
 - Image insert and path handling ✅
 - Search and replace
 - PDF export ✅
-- Theme settings
+- Theme settings ✅
 
 ## Milestone 4: Open Source Growth
 

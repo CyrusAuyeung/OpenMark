@@ -4,6 +4,12 @@ All notable changes to OpenMark will be documented in this file.
 
 ## Unreleased
 
+### Appearance Settings
+
+- Added appearance settings for light, dark, and system theme preferences.
+- Added persistent editor font size control.
+- Added toolbar, command palette, keyboard shortcut, and desktop menu access to appearance settings.
+
 ### PDF Export
 
 - Added PDF export from the toolbar, command palette, and desktop File menu.
