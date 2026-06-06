@@ -56,10 +56,6 @@ module.exports = {
     category: 'Office',
     target: [
       {
-        target: 'AppImage',
-        arch: ['x64'],
-      },
-      {
         target: 'deb',
         arch: ['x64'],
       },

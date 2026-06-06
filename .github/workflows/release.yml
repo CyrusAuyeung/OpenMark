@@ -147,7 +147,6 @@ jobs:
         with:
           name: openmark-linux-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           path: |
-            release/*.AppImage
             release/*.deb
             release/*.yml
           if-no-files-found: error

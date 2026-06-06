@@ -10,7 +10,6 @@ Get the latest desktop build from the [GitHub Releases page](https://github.com/
 | Windows | `OpenMark <version>.exe` | Portable build for trying OpenMark without installation. |
 | macOS | `OpenMark-<version>.dmg` | Intel Mac disk image. Currently unsigned and not notarized. |
 | macOS | `OpenMark-<version>-arm64.dmg` | Apple Silicon disk image. Currently unsigned and not notarized. |
-| Linux | `OpenMark-<version>.AppImage` | Portable AppImage build with automatic update support when launched as an AppImage. |
 | Linux | `openmark-editor_<version>_amd64.deb` | Debian/Ubuntu package managed through the system package installer. |
 
 ## Before Installing
@@ -18,7 +17,7 @@ Get the latest desktop build from the [GitHub Releases page](https://github.com/
 - Download OpenMark only from the official GitHub Releases page.
 - Windows and macOS builds may show operating-system warnings until signed releases are published.
 - Keep release metadata files such as `latest.yml` attached to the release; installed apps use them for update checks.
-- For the smoothest update path, prefer the Windows installer or Linux AppImage.
+- Linux AppImage support is planned after the `.deb` release path is stable.
 
 ## Update Checks
 

@@ -39,7 +39,6 @@ Expected macOS artifacts:
 
 Expected Linux artifacts:
 
-- `OpenMark-0.4.0.AppImage`
 - `openmark-editor_0.4.0_amd64.deb`
 
 ## Automated GitHub Release
@@ -91,9 +90,10 @@ OpenMark uses `electron-updater` with GitHub Releases as the update provider.
 - Users can also run **Help > Check for Updates...** or open **Settings > Updates**.
 - Downloaded updates can be installed from the update section in settings.
 - The update channel follows the release version: stable builds use stable releases, prerelease builds can receive prereleases.
-- Auto-update is designed for installer/AppImage builds. Development builds and unsupported package formats show a disabled update state.
+- Auto-update is designed for installer builds. Development builds and unsupported package formats show a disabled update state.
 
 ## Notes
 
 - macOS first launch may require user approval until Developer ID signing and notarization are configured.
+- Linux AppImage support is planned after the `.deb` release path is stable.
 - Unsigned installers may show operating-system warnings until signed releases are published.

@@ -24,7 +24,6 @@ Choose the package for your operating system from the assets below.
 | Windows | `OpenMark <version>.exe` | Portable app. |
 | macOS Intel | `OpenMark-<version>.dmg` | Unsigned/not notarized for now. |
 | macOS Apple Silicon | `OpenMark-<version>-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux | `OpenMark-<version>.AppImage` | Portable AppImage. |
 | Linux Debian/Ubuntu | `openmark-editor_<version>_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
@@ -52,4 +51,5 @@ Keep these auto-update metadata files attached when generated:
 
 - Windows code signing is optional until signing secrets are configured.
 - macOS builds are currently unsigned and not notarized.
+- Linux AppImage support is planned after the `.deb` release path is stable.
 - Large renderer bundle warning is expected while CodeMirror is bundled eagerly.

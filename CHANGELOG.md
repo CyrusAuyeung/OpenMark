@@ -9,7 +9,7 @@ All notable changes to OpenMark will be documented in this file.
 ### Distribution Polish
 
 - Added optional Windows code-signing configuration for local and GitHub Actions builds.
-- Added macOS and Linux package targets alongside Windows installer and portable artifacts.
+- Added macOS package targets and a Linux Debian package alongside Windows installer and portable artifacts.
 - Added a desktop auto-update channel backed by GitHub Releases and Electron update metadata.
 - Added the public download guide and expanded the GitHub release notes template.
 - Updated release documentation for cross-platform artifacts, update metadata, and release verification.

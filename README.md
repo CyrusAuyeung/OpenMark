@@ -25,7 +25,6 @@ The latest desktop release is available on the [GitHub Releases page](https://gi
 - Windows installer: `OpenMark Setup 0.4.0.exe`
 - Windows portable app: `OpenMark 0.4.0.exe`
 - macOS disk image: `OpenMark-0.4.0.dmg`
-- Linux AppImage: `OpenMark-0.4.0.AppImage`
 - Linux Debian package: `openmark-editor_0.4.0_amd64.deb`
 
 Windows and macOS builds are currently unsigned, so the first launch may show operating-system warnings.
@@ -141,7 +140,7 @@ npm run dist:linux
 
 Release files are written to `release/`. Run platform distribution scripts on their matching operating systems.
 
-Packaged installer builds can check GitHub Releases for updates from **Help > Check for Updates...** or **Settings > Updates**.
+Packaged installer builds can check GitHub Releases for updates from **Help > Check for Updates...** or **Settings > Updates**. Linux AppImage support is planned after the `.deb` release path is stable.
 
 See [Release Guide](docs/release.md) for local packaging and GitHub release steps.
 
