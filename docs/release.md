@@ -26,9 +26,9 @@ Windows artifacts are unsigned unless a signing certificate is provided through 
 
 Expected Windows artifacts:
 
-- `OpenMark Setup 0.4.0.exe`
-- `OpenMark 0.4.0.exe`
-- `OpenMark Setup 0.4.0.exe.blockmap`
+- `OpenMark.Setup.0.4.0.exe`
+- `OpenMark.0.4.0.exe`
+- `OpenMark.Setup.0.4.0.exe.blockmap`
 
 Expected macOS artifacts:
 

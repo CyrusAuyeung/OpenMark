@@ -20,8 +20,8 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark Setup <version>.exe` | Recommended installer. |
-| Windows | `OpenMark <version>.exe` | Portable app. |
+| Windows | `OpenMark.Setup.<version>.exe` | Recommended installer. |
+| Windows | `OpenMark.<version>.exe` | Portable app. |
 | macOS Intel | `OpenMark-<version>.dmg` | Unsigned/not notarized for now. |
 | macOS Apple Silicon | `OpenMark-<version>-arm64.dmg` | Unsigned/not notarized for now. |
 | Linux Debian/Ubuntu | `openmark-editor_<version>_amd64.deb` | System package install. |

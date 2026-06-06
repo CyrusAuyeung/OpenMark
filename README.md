@@ -1,87 +1,77 @@
 # OpenMark
 
+<p>
+  <a href="#english">English</a> · <a href="#zh-cn">简体中文</a>
+</p>
+
 [![CI](https://github.com/CyrusAuyeung/OpenMark/actions/workflows/ci.yml/badge.svg)](https://github.com/CyrusAuyeung/OpenMark/actions/workflows/ci.yml)
 [![Release](https://github.com/CyrusAuyeung/OpenMark/actions/workflows/release.yml/badge.svg)](https://github.com/CyrusAuyeung/OpenMark/actions/workflows/release.yml)
 [![GitHub release](https://img.shields.io/github/v/release/CyrusAuyeung/OpenMark?display_name=tag&sort=semver)](https://github.com/CyrusAuyeung/OpenMark/releases)
 [![License](https://img.shields.io/github/license/CyrusAuyeung/OpenMark)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](docs/download.md)
 
-OpenMark is a local-first Markdown editor for people who want a calm desktop writing tool without turning their notes into a full knowledge-management system. It focuses on the core loop first: write Markdown, preview safely, save locally, reopen recent files, and keep the workspace exactly where you left it.
+<a id="english"></a>
+
+## English
+
+OpenMark is a local-first Markdown editor for people who want a calm desktop writing tool without turning their notes into a full knowledge-management system. It keeps the core loop focused: write Markdown, preview safely, save locally, reopen recent files, and export when a document is ready to share.
 
 ![OpenMark v0.4 workspace with document sidebar, Markdown editor, split preview, and status bar](docs/assets/openmark-screenshot.png)
 
-## Demo
+### Why OpenMark
 
-See [Demo Assets](docs/demo.md) for the screenshot gallery, short video script, and capture checklist. The README uses full-width screenshots so the editor, preview, toolbar, and dialogs remain readable on GitHub.
+- Local-first by default: your Markdown files stay on your machine.
+- Editor-first interface: no marketing shell, no account flow, no workspace lock-in.
+- Practical desktop features: native open/save dialogs, recent files, HTML/PDF export, and update checks.
+- Safe preview pipeline: Markdown is rendered with `markdown-it` and sanitized with `DOMPurify`.
+- Small roadmap, steady polish: OpenMark favors reliable editor improvements over broad feature bundles.
 
-### Command Palette
+### Demo
+
+See [Demo Assets](docs/demo.md) for the screenshot gallery, video script, and capture checklist. README screenshots are shown at full width so the editor, preview, toolbar, and dialogs remain readable on GitHub.
+
+#### Command Palette
 
 ![OpenMark command palette over a split Markdown workspace with file, edit, view, workspace, and update commands](docs/assets/openmark-demo-command-palette.png)
 
 The command palette keeps OpenMark keyboard-first: create and open documents, save or export, find and replace, insert images and tables, switch view modes, jump between sidebar panels, adjust appearance, and check for updates.
 
-### Appearance Settings
+#### Appearance Settings
 
 ![OpenMark appearance settings in dark theme with theme, language, editor font size, and update controls](docs/assets/openmark-demo-appearance-settings.png)
 
 Appearance settings cover light, dark, and system themes, language preference, editor font size, and packaged-app update checks without leaving the writing workspace.
 
-## Download
+### Download
 
-The latest desktop release is available on the [GitHub Releases page](https://github.com/CyrusAuyeung/OpenMark/releases/latest). See the [Download Guide](docs/download.md) for platform-specific package guidance.
+The latest desktop release is available on the [GitHub Releases page](https://github.com/CyrusAuyeung/OpenMark/releases/latest). See the [Download Guide](docs/download.md) for platform-specific guidance.
 
-- Windows installer: `OpenMark Setup 0.4.0.exe`
-- Windows portable app: `OpenMark 0.4.0.exe`
-- macOS disk image: `OpenMark-0.4.0.dmg`
-- Linux Debian package: `openmark-editor_0.4.0_amd64.deb`
+| Platform | Package |
+| --- | --- |
+| Windows installer | `OpenMark.Setup.0.4.0.exe` |
+| Windows portable app | `OpenMark.0.4.0.exe` |
+| macOS Intel | `OpenMark-0.4.0.dmg` |
+| macOS Apple Silicon | `OpenMark-0.4.0-arm64.dmg` |
+| Linux Debian/Ubuntu | `openmark-editor_0.4.0_amd64.deb` |
 
-Windows and macOS builds are currently unsigned, so the first launch may show operating-system warnings.
+Windows and macOS builds are currently unsigned, so the first launch may show operating-system warnings. Signed Windows releases are supported once code-signing secrets are configured in GitHub Actions; see [Windows Code Signing](docs/windows-signing.md).
 
-Signed Windows releases are supported when code-signing secrets are configured in GitHub Actions. See [Windows Code Signing](docs/windows-signing.md) for setup and verification.
+### Features
 
-## Highlights
+- CodeMirror Markdown editing with write, split, and preview modes
+- Resizable editor/preview panes with saved split balance
+- Command palette for file, edit, view, workspace, export, and update actions
+- Markdown toolbar for bold, italic, links, images, headings, lists, quotes, code blocks, and tables
+- Find and replace with match case, whole word, navigation, replace next, and replace all
+- Markdown table insertion and selected text-to-table conversion
+- Local image insertion with desktop relative-path handling and safe preview support
+- HTML and PDF export from the toolbar, command palette, and desktop menu
+- Document outline, stats, editable file name, recent files, and unsaved-change protection
+- Light, dark, and system theme preferences with adjustable editor font size
+- English and Simplified Chinese UI language preferences
+- Electron desktop shell with native open, save, Save As, HTML export, and update checks
 
-- Local-first Markdown editing with native desktop open/save dialogs
-- Source editor, safe preview, and resizable split view
-- Command palette for quickly running editor, file, view, and workspace actions
-- In-document find and replace with match navigation
-- Markdown table insertion and text-to-table conversion
-- Image insertion with local preview and desktop relative-path handling
-- PDF export for sharing polished rendered documents
-- Appearance settings for light, dark, system theme, editor font size, and language preference
-- Welcome workspace, recent files, saved state, and unsaved-change protection
-- Document outline that jumps to headings in the editor
-- Editable document file names for new files, downloads, Save As defaults, and HTML exports
-- Restored view mode, split balance, and workspace sidebar tab between sessions
-
-## Current Capabilities
-
-- React, TypeScript, and Vite application shell
-- CodeMirror Markdown editing experience
-- Safe Markdown preview with markdown-it and DOMPurify
-- Write, split, and preview modes
-- Resizable split view for balancing the editor and preview panes
-- Command palette for keyboard-first access to file, edit, view, and workspace commands
-- In-document find and replace with match case and whole-word options
-- Insert Markdown tables or convert selected comma, tab, or pipe-separated lines into tables
-- Insert local images from the toolbar or command palette, with saved desktop documents using relative paths
-- Preview local desktop image paths and current browser-session image selections safely
-- Restored view mode, split balance, and workspace sidebar tab between sessions
-- Local browser draft autosave
-- Open local Markdown files through the browser file picker
-- Download Markdown and export standalone HTML or PDF
-- Light, dark, and system theme preferences with adjustable editor font size and language preference
-- Document stats and clickable heading outline
-- Browser and desktop window title sync with the active document and unsaved state
-- Markdown formatting toolbar and editor shortcuts
-- First-run welcome workspace and manageable recent files
-- Tabbed workspace sidebar for document details, outline, and recent files
-- Editable document file names for new documents, downloads, and export defaults
-- Electron desktop shell with native open, save, Save As, and HTML export dialogs
-- Desktop menu shortcuts for file commands, view modes, and theme switching
-- Recent files list and unsaved-change indicator
-
-## Run From Source
+### Run From Source
 
 Install dependencies and start the browser version:
 
@@ -105,7 +95,7 @@ $env:ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/"
 npm run desktop:dev
 ```
 
-## Shortcuts
+### Shortcuts
 
 Useful desktop shortcuts:
 
@@ -128,16 +118,12 @@ Useful editor shortcuts:
 - `Ctrl+I`: wrap selection in italic Markdown
 - `Ctrl+K`: insert a Markdown link
 
-The editor toolbar also exposes common Markdown formatting actions for bold, italic, links, images, headings, lists, quotes, code blocks, and tables.
-
-## Quality Checks
+### Quality And Packaging
 
 ```bash
 npm run lint
 npm run build
 ```
-
-## Packaging
 
 ```bash
 npm run package
@@ -148,15 +134,15 @@ npm run dist:linux
 
 Release files are written to `release/`. Run platform distribution scripts on their matching operating systems.
 
-Packaged installer builds can check GitHub Releases for updates from **Help > Check for Updates...** or **Settings > Updates**. Linux AppImage support is planned after the `.deb` release path is stable.
+Packaged installer builds can check GitHub Releases from **Help > Check for Updates...** or **Settings > Updates**. Linux AppImage support is planned after the `.deb` release path is stable.
 
 See [Release Guide](docs/release.md) for local packaging and GitHub release steps.
 
-## Roadmap Direction
+### Roadmap Direction
 
-OpenMark should stay simple before it becomes powerful. The near-term goal is a reliable editor core and native desktop shell. The next product milestones are document search, stronger preview/editor navigation, export polish, and cross-platform distribution.
+OpenMark should stay simple before it becomes powerful. The near-term goal is a reliable editor core and native desktop shell. Upcoming product work focuses on document search, stronger preview/editor navigation, export polish, and cross-platform distribution quality.
 
-## Documentation
+### Documentation
 
 - [Architecture](docs/architecture.md)
 - [Roadmap](docs/roadmap.md)
@@ -169,13 +155,169 @@ OpenMark should stay simple before it becomes powerful. The near-term goal is a 
 - [Release Guide](docs/release.md)
 - [Changelog](CHANGELOG.md)
 
-## Community
+### Community
 
 - Report bugs through [GitHub Issues](https://github.com/CyrusAuyeung/OpenMark/issues/new?template=bug_report.yml).
 - Suggest focused features with the [feature request form](https://github.com/CyrusAuyeung/OpenMark/issues/new?template=feature_request.yml).
 - Open pull requests with `npm run lint` and `npm run build` results.
 - Read the [Security Policy](SECURITY.md) before reporting vulnerabilities.
 
-## License
+### License
+
+MIT
+
+<a id="zh-cn"></a>
+
+## 简体中文
+
+OpenMark 是一个本地优先的 Markdown 编辑器，面向希望拥有安静、可靠桌面写作工具的用户。它不把笔记强行变成复杂知识库，而是把核心写作闭环做好：编写 Markdown、安全预览、本地保存、重新打开最近文件，并在需要时导出分享。
+
+![OpenMark v0.4 工作区：文档侧栏、Markdown 编辑器、分屏预览和状态栏](docs/assets/openmark-screenshot.png)
+
+### 为什么选择 OpenMark
+
+- 默认本地优先：Markdown 文件保存在你的电脑上。
+- 以编辑器为中心：没有营销页、账号流程或平台锁定。
+- 实用桌面能力：原生打开/保存、最近文件、HTML/PDF 导出和更新检查。
+- 安全预览链路：使用 `markdown-it` 渲染 Markdown，并通过 `DOMPurify` 清理 HTML。
+- 小步稳定迭代：优先打磨可靠编辑体验，而不是一次塞进庞大功能包。
+
+### 演示
+
+查看 [Demo Assets](docs/demo.md) 获取截图图库、短视频脚本和截图检查清单。README 中的截图采用全宽展示，确保在 GitHub 页面中依然能看清编辑器、预览区、工具栏和弹窗。
+
+#### 命令面板
+
+![OpenMark 命令面板：覆盖在分屏 Markdown 工作区上，展示文件、编辑、视图、工作区和更新命令](docs/assets/openmark-demo-command-palette.png)
+
+命令面板让 OpenMark 更适合键盘操作：新建和打开文档、保存或导出、查找替换、插入图片和表格、切换视图、切换侧栏、调整外观，以及检查更新。
+
+#### 外观设置
+
+![OpenMark 深色主题外观设置：主题、语言、编辑器字号和更新控件](docs/assets/openmark-demo-appearance-settings.png)
+
+外观设置支持浅色、深色和跟随系统主题，语言偏好、编辑器字号，以及打包应用的更新检查。所有设置都在写作工作区内完成。
+
+### 下载
+
+最新桌面版本可在 [GitHub Releases 页面](https://github.com/CyrusAuyeung/OpenMark/releases/latest) 下载。平台选择说明见 [下载指南](docs/download.md)。
+
+| 平台 | 安装包 |
+| --- | --- |
+| Windows 安装版 | `OpenMark.Setup.0.4.0.exe` |
+| Windows 便携版 | `OpenMark.0.4.0.exe` |
+| macOS Intel | `OpenMark-0.4.0.dmg` |
+| macOS Apple Silicon | `OpenMark-0.4.0-arm64.dmg` |
+| Linux Debian/Ubuntu | `openmark-editor_0.4.0_amd64.deb` |
+
+Windows 和 macOS 构建当前尚未签名，首次启动可能出现系统安全提示。配置 GitHub Actions 签名密钥后可发布已签名 Windows 版本，流程见 [Windows Code Signing](docs/windows-signing.md)。
+
+### 功能
+
+- 基于 CodeMirror 的 Markdown 编辑体验，支持编写、分屏和预览模式
+- 可调整的编辑器/预览分栏，并记住分栏比例
+- 命令面板覆盖文件、编辑、视图、工作区、导出和更新操作
+- Markdown 工具栏支持粗体、斜体、链接、图片、标题、列表、引用、代码块和表格
+- 查找替换支持大小写匹配、全词匹配、匹配导航、替换当前项和全部替换
+- 插入 Markdown 表格，或将选中的逗号、Tab、竖线分隔文本转换为表格
+- 插入本地图片，桌面端保存时使用相对路径，并在预览中安全显示
+- 通过工具栏、命令面板和桌面菜单导出 HTML/PDF
+- 文档大纲、统计信息、可编辑文件名、最近文件和未保存保护
+- 浅色、深色、跟随系统主题，以及可调整编辑器字号
+- 英文和简体中文界面语言偏好
+- Electron 桌面外壳，支持原生打开、保存、另存为、HTML 导出和更新检查
+
+### 从源码运行
+
+安装依赖并启动浏览器版本：
+
+```bash
+npm install
+npm run dev
+```
+
+开发时启动桌面外壳：
+
+```bash
+npm run desktop:dev
+```
+
+当前桌面阶段不需要 Rust。OpenMark 目前使用轻量 Electron 外壳，等项目准备好后再评估 Tauri。
+
+如果 Electron 下载较慢，可以在首次桌面运行前设置镜像：
+
+```powershell
+$env:ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/"
+npm run desktop:dev
+```
+
+### 快捷键
+
+常用桌面快捷键：
+
+- `Ctrl+N`：新建文档
+- `Ctrl+O`：打开 Markdown 文件
+- `Ctrl+S`：保存当前 Markdown 文件
+- `Ctrl+Shift+S`：另存为
+- `Ctrl+E`：导出 HTML
+- `Ctrl+Shift+E`：导出 PDF
+- `Ctrl+F`：在当前文档中查找
+- `Ctrl+H`：在当前文档中替换
+- `Ctrl+Shift+P`：打开命令面板
+- `Ctrl+1`、`Ctrl+2`、`Ctrl+3`：编写、分屏和预览模式
+- `Ctrl+Shift+L`：切换主题
+- `Ctrl+,`：打开外观设置
+
+常用编辑器快捷键：
+
+- `Ctrl+B`：将选中文本包裹为 Markdown 粗体
+- `Ctrl+I`：将选中文本包裹为 Markdown 斜体
+- `Ctrl+K`：插入 Markdown 链接
+
+### 质量检查与打包
+
+```bash
+npm run lint
+npm run build
+```
+
+```bash
+npm run package
+npm run dist:win
+npm run dist:mac
+npm run dist:linux
+```
+
+发布文件会写入 `release/`。平台分发脚本应在对应操作系统上运行。
+
+打包后的安装器版本可通过 **Help > Check for Updates...** 或 **Settings > Updates** 检查 GitHub Releases 更新。Linux AppImage 支持会在 `.deb` 发布路径稳定后继续推进。
+
+本地打包和 GitHub 发布流程见 [Release Guide](docs/release.md)。
+
+### 路线方向
+
+OpenMark 会先保持简单，再逐步变强。近期目标是可靠编辑器核心和原生桌面外壳；后续重点包括文档搜索、更强的预览/编辑联动、导出质量打磨和跨平台分发体验。
+
+### 文档
+
+- [架构](docs/architecture.md)
+- [路线图](docs/roadmap.md)
+- [下载指南](docs/download.md)
+- [演示资产](docs/demo.md)
+- [插件 API 设计](docs/plugin-api.md)
+- [本地化](docs/localization.md)
+- [Windows 代码签名](docs/windows-signing.md)
+- [贡献指南](docs/contributing.md)
+- [发布指南](docs/release.md)
+- [更新日志](CHANGELOG.md)
+
+### 社区
+
+- 通过 [GitHub Issues](https://github.com/CyrusAuyeung/OpenMark/issues/new?template=bug_report.yml) 报告问题。
+- 通过 [功能建议表单](https://github.com/CyrusAuyeung/OpenMark/issues/new?template=feature_request.yml) 提出聚焦的功能建议。
+- 提交 PR 时请附上 `npm run lint` 和 `npm run build` 的结果。
+- 报告安全问题前请阅读 [Security Policy](SECURITY.md)。
+
+### 许可证
 
 MIT
