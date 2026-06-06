@@ -4,6 +4,10 @@ All notable changes to OpenMark will be documented in this file.
 
 ## Unreleased
 
+### Editor Layout
+
+- Added a draggable split-view divider that remembers the editor and preview pane balance.
+
 ### File Workflow
 
 - Added a first-run welcome workspace with new/open actions.

@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import CodeMirror, { type ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { oneDark } from '@codemirror/theme-one-dark'
@@ -60,7 +68,11 @@ const draftStorageKey = 'openmark:draft'
 const fileNameStorageKey = 'openmark:file-name'
 const themeStorageKey = 'openmark:theme'
 const recentFilesStorageKey = 'openmark:recent-files'
+const splitPaneRatioStorageKey = 'openmark:split-pane-ratio'
 const maxRecentFiles = 6
+const defaultSplitPaneRatio = 50
+const minSplitPaneRatio = 30
+const maxSplitPaneRatio = 70
 const invalidFileNameCharacters = new Set(['<', '>', ':', '"', '/', '\\', '|', '?', '*'])
 
 const markdownRenderer = new MarkdownIt({
@@ -130,6 +142,18 @@ function loadRecentFiles(): RecentFile[] {
 
 function persistRecentFiles(recentFiles: RecentFile[]) {
   window.localStorage.setItem(recentFilesStorageKey, JSON.stringify(recentFiles))
+}
+
+function clampSplitPaneRatio(value: number) {
+  return Math.min(maxSplitPaneRatio, Math.max(minSplitPaneRatio, value))
+}
+
+function loadSplitPaneRatio() {
+  const storedRatio = Number(window.localStorage.getItem(splitPaneRatioStorageKey))
+
+  return Number.isFinite(storedRatio)
+    ? clampSplitPaneRatio(storedRatio)
+    : defaultSplitPaneRatio
 }
 
 function getOutline(markdownValue: string): OutlineItem[] {
@@ -352,6 +376,7 @@ function applyMarkdownFormat(view: EditorView, format: MarkdownFormat) {
 
 function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const editorWorkbenchRef = useRef<HTMLElement | null>(null)
   const editorRef = useRef<ReactCodeMirrorRef | null>(null)
   const editorViewRef = useRef<EditorView | null>(null)
   const pendingOutlineJumpRef = useRef<OutlineItem | null>(null)
@@ -365,6 +390,7 @@ function App() {
   const [recentFiles, setRecentFiles] = useState(loadRecentFiles)
   const [isWelcomeVisible, setIsWelcomeVisible] = useState(initialMarkdownValue.trim().length === 0)
   const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>('document')
+  const [splitPaneRatio, setSplitPaneRatio] = useState(loadSplitPaneRatio)
   const [mode, setMode] = useState<ViewMode>('split')
   const [theme, setTheme] = useState<ThemeMode>(() => {
     const storedTheme = window.localStorage.getItem(themeStorageKey)
@@ -429,6 +455,14 @@ function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme
   }, [theme])
+
+  useEffect(() => {
+    window.localStorage.setItem(splitPaneRatioStorageKey, splitPaneRatio.toFixed(2))
+  }, [splitPaneRatio])
+
+  useEffect(() => {
+    editorWorkbenchRef.current?.style.setProperty('--editor-pane-size', `${splitPaneRatio}%`)
+  }, [splitPaneRatio])
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -711,6 +745,79 @@ function App() {
     }
 
     applyMarkdownFormat(editorView, format)
+  }
+
+  function updateSplitPaneRatio(clientX: number) {
+    const workbench = editorWorkbenchRef.current
+
+    if (!workbench) {
+      return
+    }
+
+    const bounds = workbench.getBoundingClientRect()
+
+    if (bounds.width === 0) {
+      return
+    }
+
+    setSplitPaneRatio(clampSplitPaneRatio(((clientX - bounds.left) / bounds.width) * 100))
+  }
+
+  function beginSplitResize(
+    clientX: number,
+    moveEventName: 'mousemove' | 'pointermove',
+    stopEventNames: Array<'mouseup' | 'pointerup' | 'pointercancel'>,
+  ) {
+    if (mode !== 'split') {
+      return
+    }
+
+    updateSplitPaneRatio(clientX)
+    document.body.classList.add('is-resizing-split')
+
+    const handleMove = (moveEvent: MouseEvent | PointerEvent) => {
+      updateSplitPaneRatio(moveEvent.clientX)
+    }
+
+    const stopResize = () => {
+      document.body.classList.remove('is-resizing-split')
+      window.removeEventListener(moveEventName, handleMove)
+      stopEventNames.forEach((eventName) => window.removeEventListener(eventName, stopResize))
+    }
+
+    window.addEventListener(moveEventName, handleMove)
+    stopEventNames.forEach((eventName) => window.addEventListener(eventName, stopResize))
+  }
+
+  function handleSplitPointerResizeStart(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (event.pointerType === 'mouse') {
+      return
+    }
+
+    event.preventDefault()
+    beginSplitResize(event.clientX, 'pointermove', ['pointerup', 'pointercancel'])
+  }
+
+  function handleSplitMouseResizeStart(event: ReactMouseEvent<HTMLButtonElement>) {
+    event.preventDefault()
+    beginSplitResize(event.clientX, 'mousemove', ['mouseup'])
+  }
+
+  function handleSplitResizeKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault()
+      setSplitPaneRatio((currentRatio) => clampSplitPaneRatio(currentRatio - 5))
+    }
+
+    if (event.key === 'ArrowRight') {
+      event.preventDefault()
+      setSplitPaneRatio((currentRatio) => clampSplitPaneRatio(currentRatio + 5))
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      setSplitPaneRatio(defaultSplitPaneRatio)
+    }
   }
 
   function jumpToEditorLine(item: OutlineItem) {
@@ -1003,7 +1110,11 @@ function App() {
         </aside>
         )}
 
-        <section className="editor-workbench" aria-label="Editor workspace">
+        <section
+          ref={editorWorkbenchRef}
+          className="editor-workbench"
+          aria-label="Editor workspace"
+        >
           {showWelcome ? (
             <section className="welcome-panel" aria-label="Welcome">
               <div className="welcome-inner">
@@ -1083,7 +1194,21 @@ function App() {
                 </section>
               )}
 
-          {(mode === 'preview' || mode === 'split') && (
+              {mode === 'split' && (
+                <button
+                  type="button"
+                  className="split-resizer"
+                  title="Resize split view"
+                  aria-label="Resize split view"
+                  onPointerDown={handleSplitPointerResizeStart}
+                  onMouseDown={handleSplitMouseResizeStart}
+                  onKeyDown={handleSplitResizeKeyDown}
+                >
+                  <span aria-hidden="true"></span>
+                </button>
+              )}
+
+              {(mode === 'preview' || mode === 'split') && (
             <section className="preview-panel panel" aria-label="Markdown preview">
               <div className="panel-header">
                 <span>Preview</span>
