@@ -61,6 +61,7 @@ const fileNameStorageKey = 'openmark:file-name'
 const themeStorageKey = 'openmark:theme'
 const recentFilesStorageKey = 'openmark:recent-files'
 const maxRecentFiles = 6
+const invalidFileNameCharacters = new Set(['<', '>', ':', '"', '/', '\\', '|', '?', '*'])
 
 const markdownRenderer = new MarkdownIt({
   html: false,
@@ -180,8 +181,28 @@ function getBaseName(fileName: string) {
   return fileName.replace(/\.(md|markdown|txt|html)$/i, '') || 'document'
 }
 
+function sanitizeFileNameInput(fileName: string) {
+  return Array.from(fileName)
+    .map((character) => (
+      invalidFileNameCharacters.has(character) || character.charCodeAt(0) < 32
+        ? '-'
+        : character
+    ))
+    .join('')
+    .trimStart()
+}
+
+function normalizeFileName(fileName: string) {
+  return sanitizeFileNameInput(fileName).trim() || 'untitled.md'
+}
+
 function withMarkdownExtension(fileName: string) {
-  return /\.(md|markdown)$/i.test(fileName) ? fileName : `${fileName}.md`
+  const normalizedFileName = normalizeFileName(fileName)
+  return /\.(md|markdown)$/i.test(normalizedFileName) ? normalizedFileName : `${normalizedFileName}.md`
+}
+
+function getPathFileName(filePath: string) {
+  return filePath.split(/[\\/]/).pop() ?? filePath
 }
 
 function escapeHtml(value: string) {
@@ -598,19 +619,26 @@ function App() {
   }
 
   async function handleSaveMarkdown(options?: { forceDialog?: boolean }) {
+    const targetFileName = withMarkdownExtension(fileName)
+    const shouldForceDialog = options?.forceDialog || (
+      window.openmark &&
+      activeFilePath !== null &&
+      targetFileName !== getPathFileName(activeFilePath)
+    )
+
     if (window.openmark) {
       const result = await window.openmark.saveMarkdownFile({
         content: markdownValue,
         filePath: activeFilePath,
-        fileName: withMarkdownExtension(fileName),
-        forceDialog: options?.forceDialog,
+        fileName: targetFileName,
+        forceDialog: shouldForceDialog,
       })
 
       if (!result.canceled && result.filePath) {
         setActiveFilePath(result.filePath)
-        setFileName(result.fileName ?? withMarkdownExtension(fileName))
+        setFileName(result.fileName ?? targetFileName)
         setSavedSnapshot(markdownValue)
-        rememberRecentFile(result.filePath, result.fileName ?? withMarkdownExtension(fileName))
+        rememberRecentFile(result.filePath, result.fileName ?? targetFileName)
         setLastSavedAt(new Date())
       }
 
@@ -619,9 +647,10 @@ function App() {
 
     downloadFile(
       markdownValue,
-      withMarkdownExtension(fileName),
+      targetFileName,
       'text/markdown;charset=utf-8',
     )
+    setFileName(targetFileName)
     setSavedSnapshot(markdownValue)
   }
 
@@ -872,10 +901,20 @@ function App() {
           {activeSidebarTab === 'document' && (
           <section className="inspector-section">
             <h2>Document</h2>
-            <div className="file-chip" title={fileName}>
-              <FileText size={16} />
-              <span>{fileName}</span>
-            </div>
+            <label className="file-name-field">
+              <span>File name</span>
+              <div className="file-name-input-wrap">
+                <FileText size={16} aria-hidden="true" />
+                <input
+                  type="text"
+                  value={fileName}
+                  spellCheck={false}
+                  aria-label="Document file name"
+                  onChange={(event) => setFileName(sanitizeFileNameInput(event.target.value))}
+                  onBlur={() => setFileName(withMarkdownExtension(fileName))}
+                />
+              </div>
+            </label>
             <div className="document-state" aria-live="polite">
               <span className={hasUnsavedChanges ? 'state-dot dirty' : 'state-dot saved'}></span>
               <span>{hasUnsavedChanges ? 'Unsaved changes' : 'Saved'}</span>

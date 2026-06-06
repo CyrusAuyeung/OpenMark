@@ -156,8 +156,9 @@ ipcMain.handle('openmark:open-recent-file', async (_event, filePath) => {
 
 ipcMain.handle('openmark:save-markdown-file', async (_event, payload) => {
   const content = typeof payload?.content === 'string' ? payload.content : ''
-  const defaultPath = typeof payload?.fileName === 'string' ? payload.fileName : 'untitled.md'
+  const defaultFileName = typeof payload?.fileName === 'string' ? payload.fileName : 'untitled.md'
   const knownPath = typeof payload?.filePath === 'string' && payload.filePath.length > 0 ? payload.filePath : null
+  const defaultPath = knownPath ? path.join(path.dirname(knownPath), defaultFileName) : defaultFileName
   const targetPath = payload?.forceDialog
     ? await showSaveDialog(defaultPath, 'Markdown', ['md', 'markdown'])
     : knownPath ?? (await showSaveDialog(defaultPath, 'Markdown', ['md', 'markdown']))

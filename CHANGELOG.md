@@ -9,6 +9,7 @@ All notable changes to OpenMark will be documented in this file.
 - Added a first-run welcome workspace with new/open actions.
 - Added recent-file removal and clearing controls.
 - Reworked the left inspector into Document, Outline, and Recent tabs.
+- Added editable document file names for new documents, downloads, Save As defaults, and HTML exports.
 - Improved recent-file error handling and support for opening empty Markdown files.
 
 ## 0.2.1 - 2026-06-06

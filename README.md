@@ -24,6 +24,7 @@ OpenMark is a local-first Markdown editor MVP for building toward a polished ope
 - Markdown formatting toolbar and editor shortcuts
 - First-run welcome workspace and manageable recent files
 - Tabbed workspace sidebar for document details, outline, and recent files
+- Editable document file names for new documents, downloads, and export defaults
 - Electron desktop shell with native open, save, Save As, and HTML export dialogs
 - Desktop menu shortcuts for file commands, view modes, and theme switching
 - Recent files list and unsaved-change indicator
