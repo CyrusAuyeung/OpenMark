@@ -49,6 +49,7 @@ declare global {
     fileName: string
     relativePath: string
     modifiedAt: number
+    missing?: boolean
   }
 
   type OpenMarkWorkspaceFolderResult = {

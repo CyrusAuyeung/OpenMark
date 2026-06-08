@@ -681,6 +681,18 @@
   background: var(--accent-soft);
 }
 
+.workspace-file-button.missing,
+.recent-open-button.missing {
+  border-color: color-mix(in srgb, var(--warning) 46%, var(--border));
+  background: color-mix(in srgb, var(--warning) 10%, var(--surface-0));
+}
+
+.workspace-file-button.missing small,
+.recent-open-button.missing small {
+  color: var(--warning);
+  font-weight: 750;
+}
+
 .recent-pin-button,
 .recent-remove-button {
   width: 30px;

@@ -116,6 +116,7 @@ type RecentFile = {
   fileName: string
   openedAt: number
   pinned?: boolean
+  missing?: boolean
 }
 
 type WorkspaceFolderState = {
@@ -322,6 +323,7 @@ function loadRecentFiles(): RecentFile[] {
         fileName: item.fileName,
         openedAt: item.openedAt,
         pinned: item.pinned === true,
+        missing: item.missing === true,
       })))
   } catch {
     return []
@@ -347,6 +349,7 @@ function normalizeRecentFiles(recentFiles: RecentFile[]) {
       fileName: item.fileName,
       openedAt: Math.max(item.openedAt, existingItem?.openedAt ?? 0),
       pinned: item.pinned === true || existingItem?.pinned === true,
+      missing: item.missing === true && existingItem?.missing !== false,
     })
   })
 
@@ -374,16 +377,26 @@ function loadWorkspaceFolder(): WorkspaceFolderState | null {
       return null
     }
 
-    return {
-      folderPath: parsed.folderPath,
-      folderName: parsed.folderName,
-      files: parsed.files.filter(
+    const files: OpenMarkWorkspaceFile[] = parsed.files
+      .filter(
         (item: Partial<OpenMarkWorkspaceFile>): item is OpenMarkWorkspaceFile =>
           typeof item?.filePath === 'string' &&
           typeof item?.fileName === 'string' &&
           typeof item?.relativePath === 'string' &&
           typeof item?.modifiedAt === 'number',
-      ),
+      )
+      .map((item: OpenMarkWorkspaceFile) => ({
+        filePath: item.filePath,
+        fileName: item.fileName,
+        relativePath: item.relativePath,
+        modifiedAt: item.modifiedAt,
+        missing: item.missing === true,
+      }))
+
+    return {
+      folderPath: parsed.folderPath,
+      folderName: parsed.folderName,
+      files,
       truncated: parsed.truncated === true,
     }
   } catch {
@@ -1517,11 +1530,12 @@ function App() {
       item.filePath.toLowerCase().includes(normalizedRecentFileQuery)
     ))
   const normalizedQuickOpenQuery = quickOpenQuery.trim().toLowerCase()
+  const availableWorkspaceFiles = workspaceFolder?.files.filter((item) => !item.missing) ?? []
   const filteredQuickOpenFiles = !workspaceFolder
     ? []
     : normalizedQuickOpenQuery.length === 0
-      ? workspaceFolder.files
-      : workspaceFolder.files.filter((item) => (
+      ? availableWorkspaceFiles
+      : availableWorkspaceFiles.filter((item) => (
         item.fileName.toLowerCase().includes(normalizedQuickOpenQuery) ||
         item.relativePath.toLowerCase().includes(normalizedQuickOpenQuery) ||
         item.filePath.toLowerCase().includes(normalizedQuickOpenQuery)
@@ -2173,10 +2187,55 @@ function App() {
       const existingFile = currentFiles.find((item) => item.filePath === filePath)
 
       return normalizeRecentFiles([
-        { filePath, fileName: nextFileName, openedAt: Date.now(), pinned: existingFile?.pinned },
+        { filePath, fileName: nextFileName, openedAt: Date.now(), pinned: existingFile?.pinned, missing: false },
         ...currentFiles.filter((item) => item.filePath !== filePath),
       ])
     })
+  }
+
+  function markRecentFileMissing(filePath: string) {
+    setRecentFiles((currentFiles) => normalizeRecentFiles(
+      currentFiles.map((item) => (
+        item.filePath === filePath
+          ? { ...item, missing: true }
+          : item
+      )),
+    ))
+  }
+
+  function markWorkspaceFileMissing(filePath: string) {
+    setWorkspaceFolder((currentFolder) => currentFolder
+      ? {
+          ...currentFolder,
+          files: currentFolder.files.map((item) => (
+            item.filePath === filePath
+              ? { ...item, missing: true }
+              : item
+          )),
+        }
+      : currentFolder)
+  }
+
+  function clearWorkspaceFileMissing(filePath: string | null) {
+    if (!filePath) {
+      return
+    }
+
+    setWorkspaceFolder((currentFolder) => currentFolder
+      ? {
+          ...currentFolder,
+          files: currentFolder.files.map((item) => (
+            item.filePath === filePath
+              ? { ...item, missing: false }
+              : item
+          )),
+        }
+      : currentFolder)
+  }
+
+  function markFileMissing(filePath: string) {
+    markRecentFileMissing(filePath)
+    markWorkspaceFileMissing(filePath)
   }
 
   function toggleRecentFilePinned(filePath: string) {
@@ -2227,6 +2286,7 @@ function App() {
     setActiveFilePath(nextFilePath)
     setSavedSnapshot(content)
     rememberRecentFile(nextFilePath, nextFileName)
+    clearWorkspaceFileMissing(nextFilePath)
     setLastSavedAt(new Date())
     setIsWelcomeVisible(false)
     clearPreviewImageSources()
@@ -2256,15 +2316,13 @@ function App() {
     try {
       result = await window.openmark?.openRecentFile(filePath)
     } catch {
-      window.alert(t.alerts.recentFileOpenFailed)
-      removeRecentFile(filePath)
+      markFileMissing(filePath)
       return
     }
 
     if (!result || result.canceled || typeof result.content !== 'string' || !result.fileName) {
       if (result?.error) {
-        window.alert(result.error)
-        removeRecentFile(filePath)
+        markFileMissing(filePath)
       }
       return
     }
@@ -3171,7 +3229,19 @@ ${getExportStyleCss(exportStyle)}
   function renderRecentFiles(items = recentFiles) {
     return (
       <div className="recent-list">
-        {items.map((item) => (
+        {items.map((item) => {
+          const recentOpenButtonClassName = [
+            'recent-open-button',
+            item.pinned ? 'pinned' : '',
+            item.missing ? 'missing' : '',
+          ].filter(Boolean).join(' ')
+          const recentMeta = [
+            item.missing ? t.document.missing : '',
+            item.pinned ? t.document.pinned : '',
+            new Date(item.openedAt).toLocaleDateString(),
+          ].filter(Boolean).join(' · ')
+
+          return (
           <div className="recent-file-row" key={item.filePath}>
             <button
               type="button"
@@ -3184,12 +3254,12 @@ ${getExportStyleCss(exportStyle)}
             </button>
             <button
               type="button"
-              className={item.pinned ? 'recent-open-button pinned' : 'recent-open-button'}
+              className={recentOpenButtonClassName}
               onClick={() => handleOpenRecentFile(item.filePath)}
               title={item.filePath}
             >
               <span>{item.fileName}</span>
-              <small>{item.pinned ? `${t.document.pinned} · ` : ''}{new Date(item.openedAt).toLocaleDateString()}</small>
+              <small>{recentMeta}</small>
             </button>
             <button
               type="button"
@@ -3201,7 +3271,8 @@ ${getExportStyleCss(exportStyle)}
               <X size={14} />
             </button>
           </div>
-        ))}
+          )
+        })}
       </div>
     )
   }
@@ -3213,19 +3284,27 @@ ${getExportStyleCss(exportStyle)}
 
     return (
       <div className="workspace-file-list">
-        {workspaceFolder.files.map((item) => (
-          <button
-            type="button"
-            className={item.filePath === activeFilePath ? 'workspace-file-button active' : 'workspace-file-button'}
-            key={item.filePath}
-            onClick={() => { void handleOpenWorkspaceFile(item.filePath) }}
-            title={item.filePath}
-          >
-            <FileText size={15} aria-hidden="true" />
-            <span>{item.relativePath}</span>
-            <small>{new Date(item.modifiedAt).toLocaleDateString()}</small>
-          </button>
-        ))}
+        {workspaceFolder.files.map((item) => {
+          const workspaceFileButtonClassName = [
+            'workspace-file-button',
+            item.filePath === activeFilePath ? 'active' : '',
+            item.missing ? 'missing' : '',
+          ].filter(Boolean).join(' ')
+
+          return (
+            <button
+              type="button"
+              className={workspaceFileButtonClassName}
+              key={item.filePath}
+              onClick={() => { void handleOpenWorkspaceFile(item.filePath) }}
+              title={item.filePath}
+            >
+              <FileText size={15} aria-hidden="true" />
+              <span>{item.relativePath}</span>
+              <small>{item.missing ? t.workspace.missing : new Date(item.modifiedAt).toLocaleDateString()}</small>
+            </button>
+          )
+        })}
       </div>
     )
   }

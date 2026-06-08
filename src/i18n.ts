@@ -116,6 +116,7 @@ const en = {
     pinRecentFile: 'Pin recent file',
     unpinRecentFile: 'Unpin recent file',
     pinned: 'Pinned',
+    missing: 'Missing',
   },
   welcome: {
     welcome: 'Welcome',
@@ -136,6 +137,7 @@ const en = {
     noFiles: 'No Markdown files found in this folder.',
     loading: 'Loading workspace files...',
     noQuickOpenMatches: 'No matching workspace files',
+    missing: 'Missing',
     truncated: 'Showing the first 120 Markdown files.',
     desktopOnly: 'Workspace folders are available in the desktop app.',
   },
@@ -354,6 +356,7 @@ const zhCN: TranslationCatalog = {
     pinRecentFile: '置顶最近文件',
     unpinRecentFile: '取消置顶最近文件',
     pinned: '已置顶',
+    missing: '缺失',
   },
   welcome: {
     welcome: '欢迎',
@@ -374,6 +377,7 @@ const zhCN: TranslationCatalog = {
     noFiles: '这个文件夹里没有找到 Markdown 文件。',
     loading: '正在加载工作区文件...',
     noQuickOpenMatches: '没有匹配的工作区文件',
+    missing: '缺失',
     truncated: '正在显示前 120 个 Markdown 文件。',
     desktopOnly: '工作区文件夹功能适用于桌面应用。',
   },
