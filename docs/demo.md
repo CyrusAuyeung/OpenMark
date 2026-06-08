@@ -15,7 +15,7 @@ Use these screenshots in release notes, social posts, README sections, and store
 | Asset | Size | Purpose |
 | --- | --- | --- |
 | [`openmark-screenshot.png`](assets/openmark-screenshot.png) | 1600x900 | Primary workspace screenshot for the README hero. |
-| [`openmark-demo-command-palette.png`](assets/openmark-demo-command-palette.png) | 1600x900 | Shows keyboard-first command discovery across file, edit, view, workspace, export, and update actions. |
+| [`openmark-demo-command-palette.png`](assets/openmark-demo-command-palette.png) | 1600x900 | Shows keyboard-first command discovery across copy, export, file, edit, view, workspace, and update actions. |
 | [`openmark-demo-appearance-settings.png`](assets/openmark-demo-appearance-settings.png) | 1600x900 | Shows theme, language, editor font size, and update settings inside the desktop-like workspace. |
 
 ### Command Palette
@@ -34,14 +34,14 @@ Target length: 45-60 seconds.
    Narration: "OpenMark is a local-first Markdown editor focused on a calm writing loop."
 2. Type or select a small Markdown section while the preview updates.
    Narration: "Write Markdown on the left and keep a safe live preview on the right."
-3. Open the command palette and search for `export`.
-   Narration: "Use the command palette for fast access to file, editor, and export actions."
+3. Open the command palette and search for `copy`.
+   Narration: "Use the command palette for fast access to file, editor, clipboard, and export actions."
 4. Show table formatting and image insertion from the toolbar.
    Narration: "Common Markdown actions stay close without turning the editor into a heavy word processor."
 5. Open appearance settings, switch theme, and adjust the editor font size.
    Narration: "Tune the workspace for long writing sessions with light, dark, system theme, and editor font size settings."
-6. End on HTML/PDF export buttons and recent files.
-   Narration: "Save locally, reopen recent files, and export polished HTML or PDF when you are ready to share."
+6. End on copy Markdown, copy HTML, HTML export, PDF export, and recent files.
+   Narration: "Save locally, reopen recent files, copy what you need, and export polished HTML or PDF when you are ready to share."
 
 ## Capture Checklist
 
@@ -49,7 +49,7 @@ Target length: 45-60 seconds.
 - If the capture environment uses a high-DPI or constrained browser viewport, crop to the rendered app viewport before resizing to 1600x900.
 - Use split mode so editor and preview are both visible.
 - Keep the document title as `openmark-demo.md`.
-- Include headings, a table, blockquote, checklist-like bullets, recent files, and export-related copy.
+- Include headings, a table, blockquote, checklist-like bullets, recent files, and copy/export-related text.
 - Capture the command palette on a light workspace with enough commands visible to show file, edit, view, workspace, help, and export flows.
 - Capture appearance settings on a dark workspace with theme, language, font size, and update controls visible.
 - Keep desktop notifications, browser UI, and unrelated local paths out of frame.
@@ -57,7 +57,7 @@ Target length: 45-60 seconds.
 
 ## Suggested Posting Copy
 
-OpenMark is a local-first Markdown editor for focused writing: CodeMirror editing, safe preview, native desktop file dialogs, recent files, command palette, local image handling, HTML/PDF export, and appearance settings.
+OpenMark is a local-first Markdown editor for focused writing: CodeMirror editing, safe preview, native desktop file dialogs, recent files, command palette, local image handling, Markdown/HTML clipboard copy, HTML/PDF export, and appearance settings.
 
 <a id="zh-cn"></a>
 
@@ -76,10 +76,10 @@ OpenMark 的演示资产应优先展示真实编辑器体验：本地 Markdown �
 
 - 使用分屏模式，同时展示编辑器和预览。
 - 文档标题保持为 `openmark-demo.md`。
-- 文档中包含标题、表格、引用、清单、最近文件和导出相关内容。
-- 命令面板截图使用浅色工作区，展示文件、编辑、视图、工作区、帮助和导出流程。
+- 文档中包含标题、表格、引用、清单、最近文件和复制/导出相关内容。
+- 命令面板截图使用浅色工作区，展示复制、导出、文件、编辑、视图、工作区和帮助流程。
 - 外观设置截图使用深色工作区，展示主题、语言、字号和更新控件。
 
 ### 推荐发布文案
 
-OpenMark 是一个本地优先的 Markdown 编辑器，适合专注写作：CodeMirror 编辑、安全预览、原生桌面文件对话框、最近文件、命令面板、本地图片处理、HTML/PDF 导出和外观设置。
+OpenMark 是一个本地优先的 Markdown 编辑器，适合专注写作：CodeMirror 编辑、安全预览、原生桌面文件对话框、最近文件、命令面板、本地图片处理、Markdown/HTML 剪贴板复制、HTML/PDF 导出和外观设置。

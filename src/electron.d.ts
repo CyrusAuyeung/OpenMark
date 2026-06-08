@@ -8,6 +8,8 @@ declare global {
     | 'save-document-as'
     | 'export-html'
     | 'export-pdf'
+    | 'copy-markdown'
+    | 'copy-html'
     | 'set-write-mode'
     | 'set-split-mode'
     | 'set-preview-mode'
@@ -86,6 +88,10 @@ declare global {
         canceled: boolean
         filePath?: string
         fileName?: string
+        error?: string
+      }>
+      writeClipboardText: (text: string) => Promise<{
+        copied: boolean
         error?: string
       }>
       getUpdateStatus: () => Promise<OpenMarkUpdateStatus>

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, dialog, ipcMain } = require('electron')
+const { app, BrowserWindow, Menu, dialog, ipcMain, clipboard } = require('electron')
 const { autoUpdater } = require('electron-updater')
 const fs = require('node:fs/promises')
 const path = require('node:path')
@@ -237,6 +237,9 @@ function createApplicationMenu() {
         { role: 'paste' },
         { role: 'selectAll' },
         { type: 'separator' },
+        { label: 'Copy Markdown', click: () => sendCommand('copy-markdown') },
+        { label: 'Copy HTML', click: () => sendCommand('copy-html') },
+        { type: 'separator' },
         { label: 'Insert Image...', click: () => sendCommand('insert-image') },
         { type: 'separator' },
         { label: 'Find', accelerator: 'CmdOrCtrl+F', click: () => sendCommand('find-document') },
@@ -397,6 +400,16 @@ ipcMain.handle('openmark:save-pdf-file', async (_event, payload) => {
     filePath: targetPath,
     fileName: getFileName(targetPath),
   }
+})
+
+ipcMain.handle('openmark:write-clipboard-text', (_event, text) => {
+  if (typeof text !== 'string') {
+    return { copied: false, error: 'Invalid clipboard content.' }
+  }
+
+  clipboard.writeText(text)
+
+  return { copied: true }
 })
 
 ipcMain.handle('openmark:get-update-status', () => getUpdateStatus())

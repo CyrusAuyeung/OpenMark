@@ -31,6 +31,7 @@ import {
   Code2,
   Columns2,
   Command as CommandIcon,
+  Copy,
   Download,
   Eye,
   FileDown,
@@ -84,6 +85,9 @@ type BlockFormat = 'heading-2' | 'bullet-list' | 'ordered-list' | 'quote' | 'cod
 type MarkdownFormat = InlineFormat | BlockFormat
 type TableEditAction = 'format' | 'insert-row-below' | 'delete-row' | 'insert-column-right' | 'delete-column'
 type TableTranslationKey = 'formatTable' | 'addRowBelow' | 'deleteRow' | 'addColumnRight' | 'deleteColumn'
+type ClipboardCopyKind = 'markdown' | 'html'
+
+const clipboardWriteTimeoutMs = 1200
 
 type OutlineItem = {
   level: number
@@ -1212,6 +1216,7 @@ function App() {
   const [previewImageSources, setPreviewImageSources] = useState<PreviewImageSource[]>([])
   const [isThemeSettingsOpen, setIsThemeSettingsOpen] = useState(false)
   const [updateStatus, setUpdateStatus] = useState<OpenMarkUpdateStatus>(defaultUpdateStatus)
+  const [clipboardCopyKind, setClipboardCopyKind] = useState<ClipboardCopyKind | null>(null)
   const theme = themePreference === 'system' ? systemTheme : themePreference
   const locale = localePreference === 'system' ? systemLocale : localePreference
   const t = translations[locale]
@@ -1331,6 +1336,22 @@ function App() {
       Icon: FileDown,
       keywords: ['print', 'publish'],
       action: () => { void handleExportPdf() },
+    },
+    {
+      id: 'copy-markdown',
+      label: t.commands.copyMarkdown,
+      group: t.groups.file,
+      Icon: Copy,
+      keywords: ['clipboard', 'share', 'source'],
+      action: () => { void handleCopyMarkdown() },
+    },
+    {
+      id: 'copy-html',
+      label: t.commands.copyHtml,
+      group: t.groups.file,
+      Icon: Copy,
+      keywords: ['clipboard', 'share', 'export', 'html'],
+      action: () => { void handleCopyHtml() },
     },
     {
       id: 'find-document',
@@ -1510,6 +1531,11 @@ function App() {
   const draftStatusLabel = lastSavedAt
     ? `${t.status.draftSaved} ${lastSavedLabel}`
     : lastSavedLabel
+  const clipboardStatusLabel = clipboardCopyKind === null
+    ? null
+    : clipboardCopyKind === 'markdown'
+      ? t.status.copiedMarkdown
+      : t.status.copiedHtml
 
   useEffect(() => {
     const saveTimer = window.setTimeout(() => {
@@ -1521,6 +1547,16 @@ function App() {
 
     return () => window.clearTimeout(saveTimer)
   }, [fileName, markdownValue, recentFiles])
+
+  useEffect(() => {
+    if (clipboardCopyKind === null) {
+      return undefined
+    }
+
+    const clearTimer = window.setTimeout(() => setClipboardCopyKind(null), 2400)
+
+    return () => window.clearTimeout(clearTimer)
+  }, [clipboardCopyKind])
 
   useEffect(() => {
     window.localStorage.setItem(themeStorageKey, themePreference)
@@ -1719,6 +1755,12 @@ function App() {
           break
         case 'export-pdf':
           void handleExportPdf()
+          break
+        case 'copy-markdown':
+          void handleCopyMarkdown()
+          break
+        case 'copy-html':
+          void handleCopyHtml()
           break
         case 'set-write-mode':
           setMode('write')
@@ -2138,6 +2180,79 @@ function App() {
     window.setTimeout(() => {
       printWindow.print()
     }, 250)
+  }
+
+  function copyTextWithTextArea(content: string) {
+    const textArea = document.createElement('textarea')
+    textArea.value = content
+    textArea.setAttribute('readonly', '')
+    textArea.style.position = 'fixed'
+    textArea.style.top = '-1000px'
+    document.body.append(textArea)
+    textArea.select()
+    const didCopy = document.execCommand('copy')
+    textArea.remove()
+
+    return didCopy
+  }
+
+  async function writeTextWithBrowserClipboard(content: string) {
+    if (!navigator.clipboard || !window.isSecureContext) {
+      return false
+    }
+
+    let timeoutId = 0
+
+    try {
+      await Promise.race([
+        navigator.clipboard.writeText(content),
+        new Promise<never>((_resolve, reject) => {
+          timeoutId = window.setTimeout(() => reject(new Error('Clipboard write timed out')), clipboardWriteTimeoutMs)
+        }),
+      ])
+
+      return true
+    } catch {
+      return false
+    } finally {
+      window.clearTimeout(timeoutId)
+    }
+  }
+
+  async function writeClipboardText(content: string) {
+    try {
+      if (window.openmark) {
+        const result = await window.openmark.writeClipboardText(content)
+        return result.copied
+      }
+
+      if (await writeTextWithBrowserClipboard(content)) {
+        return true
+      }
+
+      return copyTextWithTextArea(content)
+    } catch {
+      return false
+    }
+  }
+
+  async function copyDocumentToClipboard(kind: ClipboardCopyKind, content: string) {
+    const didCopy = await writeClipboardText(content)
+
+    if (!didCopy) {
+      window.alert(t.alerts.copyFailed)
+      return
+    }
+
+    setClipboardCopyKind(kind)
+  }
+
+  async function handleCopyMarkdown() {
+    await copyDocumentToClipboard('markdown', markdownValue)
+  }
+
+  async function handleCopyHtml() {
+    await copyDocumentToClipboard('html', buildExportHtml())
   }
 
   function toggleTheme() {
@@ -2691,6 +2806,24 @@ function App() {
               <FileDown size={17} />
               <span>PDF</span>
             </button>
+            <button
+              type="button"
+              className="tool-button compact-tool"
+              onClick={() => { void handleCopyMarkdown() }}
+              title={t.toolbar.copyMarkdown}
+            >
+              <Copy size={17} />
+              <span>MD</span>
+            </button>
+            <button
+              type="button"
+              className="tool-button compact-tool"
+              onClick={() => { void handleCopyHtml() }}
+              title={t.toolbar.copyHtml}
+            >
+              <Copy size={17} />
+              <span>HTML</span>
+            </button>
           </div>
 
           <div className="tool-group">
@@ -3229,7 +3362,7 @@ function App() {
         <span>{fileName}</span>
         <span>{t.viewModes[mode]}</span>
         <span>{hasUnsavedChanges ? t.document.unsaved : t.document.saved}</span>
-        <span>{draftStatusLabel}</span>
+        <span>{clipboardStatusLabel ?? draftStatusLabel}</span>
       </footer>
 
       {isCommandPaletteOpen && (

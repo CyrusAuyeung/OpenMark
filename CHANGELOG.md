@@ -4,6 +4,10 @@ All notable changes to OpenMark will be documented in this file.
 
 ## Unreleased
 
+### Export & Sharing
+
+- Added toolbar, command palette, and desktop menu actions for copying Markdown or export-ready HTML to the clipboard.
+
 ## 0.5.0 - 2026-06-08
 
 ### Search & Navigation

@@ -49,3 +49,10 @@
 - Editor and preview scroll synchronization ✅
 - Stronger table editing controls ✅
 - v0.5.0 screenshots, changelog, and release notes ✅
+
+## Milestone 7: Export & Sharing Polish
+
+- Copy Markdown and export-ready HTML to the clipboard ✅
+- Export preset polish
+- Printable preview improvements
+- Share-friendly document metadata

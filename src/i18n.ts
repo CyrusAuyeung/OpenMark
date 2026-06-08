@@ -17,6 +17,8 @@ const en = {
     saveAs: 'As',
     exportHtml: 'Export HTML',
     exportPdf: 'Export PDF',
+    copyMarkdown: 'Copy Markdown',
+    copyHtml: 'Copy HTML',
     findInDocument: 'Find in document',
     replaceInDocument: 'Replace in document',
     viewMode: 'View mode',
@@ -56,6 +58,8 @@ const en = {
     saveDocumentAs: 'Save document as',
     exportHtml: 'Export HTML',
     exportPdf: 'Export PDF',
+    copyMarkdown: 'Copy Markdown',
+    copyHtml: 'Copy HTML',
     findInDocument: 'Find in document',
     replaceInDocument: 'Replace in document',
     insertImage: 'Insert image',
@@ -175,6 +179,8 @@ const en = {
   status: {
     draftSaved: 'Draft saved',
     waitingForDraftSave: 'Waiting for draft save',
+    copiedMarkdown: 'Markdown copied',
+    copiedHtml: 'HTML copied',
   },
   alerts: {
     unsavedChanges: 'You have unsaved changes.',
@@ -183,6 +189,7 @@ const en = {
     recentFileOpenFailed: 'This recent file could not be opened.',
     unsupportedImage: 'Choose a PNG, JPG, GIF, WebP, or SVG image.',
     allowPopupsForPdf: 'Allow pop-ups to open the print view, then choose Save as PDF.',
+    copyFailed: 'This document could not be copied to the clipboard.',
   },
 }
 
@@ -202,6 +209,8 @@ const zhCN: TranslationCatalog = {
     saveAs: '另存',
     exportHtml: '导出 HTML',
     exportPdf: '导出 PDF',
+    copyMarkdown: '复制 Markdown',
+    copyHtml: '复制 HTML',
     findInDocument: '在文档中查找',
     replaceInDocument: '在文档中替换',
     viewMode: '视图模式',
@@ -241,6 +250,8 @@ const zhCN: TranslationCatalog = {
     saveDocumentAs: '文档另存为',
     exportHtml: '导出 HTML',
     exportPdf: '导出 PDF',
+    copyMarkdown: '复制 Markdown',
+    copyHtml: '复制 HTML',
     findInDocument: '在文档中查找',
     replaceInDocument: '在文档中替换',
     insertImage: '插入图片',
@@ -360,6 +371,8 @@ const zhCN: TranslationCatalog = {
   status: {
     draftSaved: '草稿已保存',
     waitingForDraftSave: '等待保存草稿',
+    copiedMarkdown: '已复制 Markdown',
+    copiedHtml: '已复制 HTML',
   },
   alerts: {
     unsavedChanges: '你有未保存的更改。',
@@ -368,6 +381,7 @@ const zhCN: TranslationCatalog = {
     recentFileOpenFailed: '无法打开这个最近文件。',
     unsupportedImage: '请选择 PNG、JPG、GIF、WebP 或 SVG 图片。',
     allowPopupsForPdf: '请允许弹出打印视图，然后选择另存为 PDF。',
+    copyFailed: '无法将当前文档复制到剪贴板。',
   },
 }
 

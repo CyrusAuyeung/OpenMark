@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('openmark', {
   saveMarkdownFile: (payload) => ipcRenderer.invoke('openmark:save-markdown-file', payload),
   saveHtmlFile: (payload) => ipcRenderer.invoke('openmark:save-html-file', payload),
   savePdfFile: (payload) => ipcRenderer.invoke('openmark:save-pdf-file', payload),
+  writeClipboardText: (text) => ipcRenderer.invoke('openmark:write-clipboard-text', text),
   getUpdateStatus: () => ipcRenderer.invoke('openmark:get-update-status'),
   checkForUpdates: () => ipcRenderer.invoke('openmark:check-for-updates'),
   installUpdate: () => ipcRenderer.invoke('openmark:install-update'),
