@@ -26,20 +26,20 @@ Windows artifacts are unsigned unless a signing certificate is provided through 
 
 Expected Windows artifacts:
 
-- `OpenMark.Setup.0.4.0.exe`
-- `OpenMark.0.4.0.exe`
-- `OpenMark.Setup.0.4.0.exe.blockmap`
+- `OpenMark.Setup.0.5.0.exe`
+- `OpenMark.0.5.0.exe`
+- `OpenMark.Setup.0.5.0.exe.blockmap`
 
 Expected macOS artifacts:
 
-- `OpenMark-0.4.0.dmg`
-- `OpenMark-0.4.0-arm64.dmg`
-- `OpenMark-0.4.0-mac.zip`
-- `OpenMark-0.4.0-arm64-mac.zip`
+- `OpenMark-0.5.0.dmg`
+- `OpenMark-0.5.0-arm64.dmg`
+- `OpenMark-0.5.0-mac.zip`
+- `OpenMark-0.5.0-arm64-mac.zip`
 
 Expected Linux artifacts:
 
-- `openmark-editor_0.4.0_amd64.deb`
+- `openmark-editor_0.5.0_amd64.deb`
 
 ## Automated GitHub Release
 
@@ -54,8 +54,8 @@ Release uploads include Electron auto-update metadata files such as `latest.yml`
 Push a version tag that starts with `v`:
 
 ```bash
-git tag v0.4.0
-git push origin v0.4.0
+git tag v0.5.0
+git push origin v0.5.0
 ```
 
 The workflow publishes the GitHub release automatically and asks GitHub to generate release notes.
@@ -65,9 +65,9 @@ The workflow publishes the GitHub release automatically and asks GitHub to gener
 Use the **Release** workflow from the Actions page when you need a manual build or draft release.
 
 - Leave `tag` empty to build and upload Windows, macOS, and Linux artifacts only.
-- Enter a tag like `v0.4.0` to publish a GitHub release from the workflow run. The tag is validated as semantic version style and points at the workflow commit.
+- Enter a tag like `v0.5.0` to publish a GitHub release from the workflow run. The tag is validated as semantic version style and points at the workflow commit.
 - Manual releases default to draft mode so artifacts and notes can be reviewed before publishing.
-- Enable `prerelease` for preview builds such as `v0.4.0-beta.1`.
+- Enable `prerelease` for preview builds such as `v0.5.0-beta.1`.
 
 Draft notes should start from [.github/RELEASE_TEMPLATE/release-notes.md](../.github/RELEASE_TEMPLATE/release-notes.md), then link to the [Download Guide](download.md) for package-selection details.
 

@@ -48,4 +48,4 @@
 - Preview-to-editor heading navigation ✅
 - Editor and preview scroll synchronization ✅
 - Stronger table editing controls ✅
-- v0.5.0 screenshots, changelog, and release notes
+- v0.5.0 screenshots, changelog, and release notes ✅

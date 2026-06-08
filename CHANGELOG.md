@@ -4,6 +4,24 @@ All notable changes to OpenMark will be documented in this file.
 
 ## Unreleased
 
+## 0.5.0 - 2026-06-08
+
+### Search & Navigation
+
+- Added current-document search results with line numbers, context snippets, and click-to-jump navigation.
+- Added preview heading navigation so headings in the rendered preview can jump back to the matching editor line.
+- Added editor and preview scroll synchronization in split mode for long Markdown documents.
+
+### Table Editing
+
+- Added contextual Markdown table controls for formatting the current table.
+- Added table row controls for adding a row below the current position and deleting the current data row.
+- Added table column controls for adding a column to the right and deleting the current column.
+
+### Layout
+
+- Locked the app shell to the viewport so long documents scroll inside the editor and preview panes instead of stretching the whole page.
+
 ## 0.4.0 - 2026-06-06
 
 ### Distribution Polish
