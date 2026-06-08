@@ -1,6 +1,7 @@
 const { app, BrowserWindow, Menu, dialog, ipcMain, clipboard } = require('electron')
 const { autoUpdater } = require('electron-updater')
 const fs = require('node:fs/promises')
+const os = require('node:os')
 const path = require('node:path')
 
 const isDev = !app.isPackaged
@@ -664,7 +665,8 @@ ipcMain.handle('openmark:save-pdf-file', async (_event, payload) => {
   try {
     const pdfBuffer = await renderHtmlToPdf(content)
     await fs.writeFile(targetPath, pdfBuffer)
-  } catch {
+  } catch (error) {
+    console.error('PDF export failed:', error)
     return { canceled: true, error: getApplicationStrings().errors.pdfExportFailed }
   }
 
@@ -702,6 +704,9 @@ ipcMain.handle('openmark:install-update', () => {
 })
 
 async function renderHtmlToPdf(content) {
+  const tempDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'openmark-pdf-'))
+  const tempHtmlPath = path.join(tempDirectory, 'document.html')
+
   const printWindow = new BrowserWindow({
     show: false,
     backgroundColor: '#ffffff',
@@ -713,7 +718,8 @@ async function renderHtmlToPdf(content) {
   })
 
   try {
-    await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(content)}`)
+    await fs.writeFile(tempHtmlPath, content, 'utf8')
+    await printWindow.loadFile(tempHtmlPath)
     await printWindow.webContents.executeJavaScript(`
       Promise.all([
         document.fonts?.ready ?? Promise.resolve(),
@@ -728,7 +734,7 @@ async function renderHtmlToPdf(content) {
       ]).then(() => true)
     `)
 
-    return printWindow.webContents.printToPDF({
+    return await printWindow.webContents.printToPDF({
       printBackground: true,
       pageSize: 'A4',
       margins: { marginType: 'default' },
@@ -737,6 +743,8 @@ async function renderHtmlToPdf(content) {
     if (!printWindow.isDestroyed()) {
       printWindow.close()
     }
+
+    await fs.rm(tempDirectory, { recursive: true, force: true })
   }
 }
 
