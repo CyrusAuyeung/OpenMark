@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/CyrusAuyeung/OpenMark/actions/workflows/ci.yml/badge.svg)](https://github.com/CyrusAuyeung/OpenMark/actions/workflows/ci.yml)
 [![Release](https://github.com/CyrusAuyeung/OpenMark/actions/workflows/release.yml/badge.svg)](https://github.com/CyrusAuyeung/OpenMark/actions/workflows/release.yml)
-[![GitHub release](https://img.shields.io/github/v/release/CyrusAuyeung/OpenMark?display_name=tag&sort=semver)](https://github.com/CyrusAuyeung/OpenMark/releases)
+[![Release version](https://img.shields.io/badge/release-v0.5.0-2f7a5f)](https://github.com/CyrusAuyeung/OpenMark/releases/tag/v0.5.0)
 [![License](https://img.shields.io/github/license/CyrusAuyeung/OpenMark)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](docs/download.md)
 
