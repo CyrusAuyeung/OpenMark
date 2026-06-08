@@ -188,6 +188,7 @@ type CommandPaletteItem = {
 
 const draftStorageKey = 'openmark:draft'
 const fileNameStorageKey = 'openmark:file-name'
+const activeFilePathStorageKey = 'openmark:active-file-path'
 const themeStorageKey = 'openmark:theme'
 const localeStorageKey = 'openmark:locale'
 const editorFontSizeStorageKey = 'openmark:editor-font-size'
@@ -330,6 +331,11 @@ function loadStoredValue(key: string, fallback: string) {
   return window.localStorage.getItem(key) ?? fallback
 }
 
+function loadStoredFilePath() {
+  const storedFilePath = window.localStorage.getItem(activeFilePathStorageKey)
+  return window.openmark && storedFilePath ? storedFilePath : null
+}
+
 function loadRecentFiles(): RecentFile[] {
   try {
     const parsed = JSON.parse(window.localStorage.getItem(recentFilesStorageKey) ?? '[]')
@@ -438,6 +444,15 @@ function persistWorkspaceFolder(workspaceFolder: WorkspaceFolderState | null) {
   }
 
   window.localStorage.setItem(workspaceFolderStorageKey, JSON.stringify(workspaceFolder))
+}
+
+function persistActiveFilePath(activeFilePath: string | null) {
+  if (!activeFilePath) {
+    window.localStorage.removeItem(activeFilePathStorageKey)
+    return
+  }
+
+  window.localStorage.setItem(activeFilePathStorageKey, activeFilePath)
 }
 
 function clampSplitPaneRatio(value: number) {
@@ -1494,7 +1509,7 @@ function App() {
   const [fileName, setFileName] = useState(() =>
     loadStoredValue(fileNameStorageKey, 'untitled.md'),
   )
-  const [activeFilePath, setActiveFilePath] = useState<string | null>(null)
+  const [activeFilePath, setActiveFilePath] = useState<string | null>(loadStoredFilePath)
   const [savedSnapshot, setSavedSnapshot] = useState(initialMarkdownValue)
   const [recentFiles, setRecentFiles] = useState(loadRecentFiles)
   const [workspaceFolder, setWorkspaceFolder] = useState<WorkspaceFolderState | null>(loadWorkspaceFolder)
@@ -2002,6 +2017,10 @@ function App() {
   useEffect(() => {
     persistWorkspaceFolder(workspaceFolder)
   }, [workspaceFolder])
+
+  useEffect(() => {
+    persistActiveFilePath(activeFilePath)
+  }, [activeFilePath])
 
   useEffect(() => {
     if (clipboardCopyKind === null) {

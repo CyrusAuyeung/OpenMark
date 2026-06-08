@@ -78,3 +78,10 @@
 - Richer workspace file states ✅
 - Recent/workspace unified quick open polish ✅
 - Library keyboard navigation refinements ✅
+
+## Milestone 11: Editor Workflow Polish
+
+- Restore active desktop file path between sessions ✅
+- Restore editor cursor and scroll position between sessions
+- Improve save/open error visibility
+- Refine quick open ranking and grouping
