@@ -16,6 +16,9 @@ declare global {
     | 'set-split-mode'
     | 'set-preview-mode'
     | 'toggle-theme'
+    | 'toggle-language'
+    | 'set-language-en'
+    | 'set-language-zh-cn'
     | 'open-theme-settings'
     | 'find-document'
     | 'replace-document'
@@ -116,6 +119,9 @@ declare global {
         error?: string
       }>
       getUpdateStatus: () => Promise<OpenMarkUpdateStatus>
+      setApplicationLocale: (locale: AppLocale) => Promise<{
+        accepted: boolean
+      }>
       checkForUpdates: () => Promise<OpenMarkUpdateStatus>
       installUpdate: () => Promise<{
         accepted: boolean

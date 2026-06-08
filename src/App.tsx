@@ -73,6 +73,7 @@ import './App.css'
 import {
   type AppLocale,
   type LocalePreference,
+  type TranslationCatalog,
   getPreferredLocale,
   isLocalePreference,
   translations,
@@ -160,6 +161,10 @@ type TableEditingState = {
   canDeleteRow: boolean
   canDeleteColumn: boolean
 }
+
+type MarkdownToolbarTranslationKey = keyof TranslationCatalog['markdownToolbar']
+
+type MarkdownPlaceholderCatalog = TranslationCatalog['markdownPlaceholders']
 
 type CommandPaletteItem = {
   id: string
@@ -265,25 +270,25 @@ const defaultUpdateStatus: OpenMarkUpdateStatus = {
 const markdownToolbarGroups: Array<
   Array<{
     format: MarkdownFormat
-    label: string
-    title: string
+    labelKey: MarkdownToolbarTranslationKey
+    titleKey: MarkdownToolbarTranslationKey
     Icon: LucideIcon
   }>
 > = [
   [
-    { format: 'bold', label: 'Bold', title: 'Bold (Ctrl+B)', Icon: Bold },
-    { format: 'italic', label: 'Italic', title: 'Italic (Ctrl+I)', Icon: Italic },
-    { format: 'link', label: 'Link', title: 'Insert link (Ctrl+K)', Icon: LinkIcon },
+    { format: 'bold', labelKey: 'bold', titleKey: 'boldTitle', Icon: Bold },
+    { format: 'italic', labelKey: 'italic', titleKey: 'italicTitle', Icon: Italic },
+    { format: 'link', labelKey: 'link', titleKey: 'linkTitle', Icon: LinkIcon },
   ],
   [
-    { format: 'heading-2', label: 'Heading', title: 'Format as heading', Icon: Heading2 },
-    { format: 'bullet-list', label: 'Bullet list', title: 'Format as bullet list', Icon: List },
-    { format: 'ordered-list', label: 'Numbered list', title: 'Format as numbered list', Icon: ListOrdered },
+    { format: 'heading-2', labelKey: 'heading', titleKey: 'headingTitle', Icon: Heading2 },
+    { format: 'bullet-list', labelKey: 'bulletList', titleKey: 'bulletListTitle', Icon: List },
+    { format: 'ordered-list', labelKey: 'orderedList', titleKey: 'orderedListTitle', Icon: ListOrdered },
   ],
   [
-    { format: 'quote', label: 'Quote', title: 'Format as quote', Icon: Quote },
-    { format: 'code-block', label: 'Code block', title: 'Insert code block', Icon: Code2 },
-    { format: 'table', label: 'Table', title: 'Insert or convert table', Icon: Table },
+    { format: 'quote', labelKey: 'quote', titleKey: 'quoteTitle', Icon: Quote },
+    { format: 'code-block', labelKey: 'codeBlock', titleKey: 'codeBlockTitle', Icon: Code2 },
+    { format: 'table', labelKey: 'table', titleKey: 'tableTitle', Icon: Table },
   ],
 ]
 
@@ -1307,7 +1312,7 @@ function applyTableEditAction(view: EditorView, action: TableEditAction) {
   return dispatchTableUpdate(view, context, rows, activeRowIndex, activeColumnIndex)
 }
 
-function createMarkdownTable(selectedText: string) {
+function createMarkdownTable(selectedText: string, placeholders: MarkdownPlaceholderCatalog) {
   const selectedLines = selectedText
     .split(/\r\n|\r|\n/)
     .map((line) => line.trim())
@@ -1325,18 +1330,19 @@ function createMarkdownTable(selectedText: string) {
     ].join('\n')
   }
 
+  const columnCount = Math.max(2, placeholders.tableHeaders.length)
+
   return [
-    '| Column 1 | Column 2 | Column 3 |',
-    '| --- | --- | --- |',
-    '| Value 1 | Value 2 | Value 3 |',
-    '| Value 4 | Value 5 | Value 6 |',
+    renderTableRow(placeholders.tableHeaders, columnCount),
+    renderTableRow(Array.from({ length: columnCount }, () => '---'), columnCount),
+    ...placeholders.tableRows.map((row) => renderTableRow(row, columnCount)),
   ].join('\n')
 }
 
-function applyTableFormat(view: EditorView) {
+function applyTableFormat(view: EditorView, placeholders: MarkdownPlaceholderCatalog) {
   const selection = view.state.selection.main
   const selectedText = view.state.sliceDoc(selection.from, selection.to)
-  const insertText = createMarkdownTable(selectedText)
+  const insertText = createMarkdownTable(selectedText, placeholders)
   const anchor = selection.from
   const head = anchor + insertText.length
 
@@ -1350,36 +1356,41 @@ function applyTableFormat(view: EditorView) {
   return true
 }
 
-function formatBlockLine(line: string, index: number, format: Exclude<BlockFormat, 'code-block' | 'table'>) {
+function formatBlockLine(
+  line: string,
+  index: number,
+  format: Exclude<BlockFormat, 'code-block' | 'table'>,
+  placeholders: MarkdownPlaceholderCatalog,
+) {
   const trimmedLine = line.trimStart()
   const indent = line.slice(0, line.length - trimmedLine.length)
 
   if (format === 'heading-2') {
     const body = trimmedLine.replace(/^#{1,6}\s*/, '')
-    return `${indent}## ${body || 'Heading'}`
+    return `${indent}## ${body || placeholders.heading}`
   }
 
   if (format === 'bullet-list') {
     const body = trimmedLine.replace(/^([-*+]\s+|\d+\.\s+)/, '')
-    return `${indent}- ${body || 'List item'}`
+    return `${indent}- ${body || placeholders.listItem}`
   }
 
   if (format === 'ordered-list') {
     const body = trimmedLine.replace(/^([-*+]\s+|\d+\.\s+)/, '')
-    return `${indent}${index + 1}. ${body || 'List item'}`
+    return `${indent}${index + 1}. ${body || placeholders.listItem}`
   }
 
   const body = trimmedLine.replace(/^>\s?/, '')
-  return `${indent}> ${body || 'Quote'}`
+  return `${indent}> ${body || placeholders.quote}`
 }
 
-function applyBlockFormat(view: EditorView, format: BlockFormat) {
+function applyBlockFormat(view: EditorView, format: BlockFormat, placeholders: MarkdownPlaceholderCatalog) {
   if (format === 'code-block') {
     return applyCodeBlockFormat(view)
   }
 
   if (format === 'table') {
-    return applyTableFormat(view)
+    return applyTableFormat(view, placeholders)
   }
 
   const selection = view.state.selection.main
@@ -1388,7 +1399,7 @@ function applyBlockFormat(view: EditorView, format: BlockFormat) {
   const toLine = view.state.doc.lineAt(lineEndPosition)
   const selectedLines = view.state.sliceDoc(fromLine.from, toLine.to).split('\n')
   const insertText = selectedLines
-    .map((line, index) => formatBlockLine(line, index, format))
+    .map((line, index) => formatBlockLine(line, index, format, placeholders))
     .join('\n')
   const anchor = fromLine.from
   const head = selection.empty ? fromLine.from + insertText.length : anchor + insertText.length
@@ -1403,10 +1414,10 @@ function applyBlockFormat(view: EditorView, format: BlockFormat) {
   return true
 }
 
-function applyMarkdownFormat(view: EditorView, format: MarkdownFormat) {
+function applyMarkdownFormat(view: EditorView, format: MarkdownFormat, placeholders: MarkdownPlaceholderCatalog) {
   return isInlineFormat(format)
     ? applyInlineFormat(view, format)
-    : applyBlockFormat(view, format)
+    : applyBlockFormat(view, format, placeholders)
 }
 
 function App() {
@@ -1472,6 +1483,8 @@ function App() {
   const theme = themePreference === 'system' ? systemTheme : themePreference
   const locale = localePreference === 'system' ? systemLocale : localePreference
   const t = translations[locale]
+  const nextLocale: AppLocale = locale === 'zh-CN' ? 'en' : 'zh-CN'
+  const nextLocaleLabel = nextLocale === 'zh-CN' ? '中' : 'EN'
 
   const editorExtensions = useMemo(
     () => [
@@ -1552,6 +1565,7 @@ function App() {
   const appTitle = showWelcome
     ? 'OpenMark'
     : `${hasUnsavedChanges ? '* ' : ''}${withMarkdownExtension(fileName)} - OpenMark`
+  const fileDateFormatter = useMemo(() => new Intl.DateTimeFormat(locale), [locale])
   const sidebarTabs: Array<{ value: SidebarTab; label: string; detail: string }> = [
     { value: 'document', label: t.sidebar.document, detail: hasUnsavedChanges ? t.document.unsaved : t.document.saved },
     { value: 'workspace', label: t.sidebar.workspace, detail: workspaceFolder ? String(workspaceFolder.files.length) : '-' },
@@ -1796,11 +1810,35 @@ function App() {
       action: toggleTheme,
     },
     {
+      id: 'switch-language',
+      label: t.commands.switchLanguage,
+      group: t.groups.view,
+      Icon: Languages,
+      keywords: ['language', 'locale', 'english', 'chinese', '中文', '语言'],
+      action: toggleLocale,
+    },
+    {
+      id: 'switch-language-english',
+      label: t.commands.switchToEnglish,
+      group: t.groups.view,
+      Icon: Languages,
+      keywords: ['language', 'locale', 'english', 'en'],
+      action: () => setLocalePreference('en'),
+    },
+    {
+      id: 'switch-language-chinese',
+      label: t.commands.switchToSimplifiedChinese,
+      group: t.groups.view,
+      Icon: Languages,
+      keywords: ['language', 'locale', 'chinese', 'zh', '中文', '简体中文'],
+      action: () => setLocalePreference('zh-CN'),
+    },
+    {
       id: 'theme-settings',
-      label: t.commands.openAppearanceSettings,
+      label: t.commands.openSettings,
       group: t.groups.view,
       Icon: Settings2,
-      keywords: ['theme', 'appearance', 'font', 'system'],
+      keywords: ['theme', 'appearance', 'font', 'language', 'settings', 'system'],
       action: openThemeSettings,
     },
     {
@@ -1880,6 +1918,10 @@ function App() {
   useEffect(() => {
     window.localStorage.setItem(localeStorageKey, localePreference)
   }, [localePreference])
+
+  useEffect(() => {
+    void window.openmark?.setApplicationLocale(locale)
+  }, [locale])
 
   useEffect(() => {
     window.localStorage.setItem(editorFontSizeStorageKey, editorFontSize.toFixed(0))
@@ -2098,6 +2140,15 @@ function App() {
           break
         case 'toggle-theme':
           toggleTheme()
+          break
+        case 'toggle-language':
+          toggleLocale()
+          break
+        case 'set-language-en':
+          setLocalePreference('en')
+          break
+        case 'set-language-zh-cn':
+          setLocalePreference('zh-CN')
           break
         case 'open-theme-settings':
           openThemeSettings()
@@ -2780,6 +2831,13 @@ ${getExportStyleCss(exportStyle)}
     })
   }
 
+  function toggleLocale() {
+    setLocalePreference((currentPreference) => {
+      const currentLocale = currentPreference === 'system' ? systemLocale : currentPreference
+      return currentLocale === 'zh-CN' ? 'en' : 'zh-CN'
+    })
+  }
+
   function openThemeSettings() {
     setIsThemeSettingsOpen(true)
   }
@@ -2808,7 +2866,7 @@ ${getExportStyleCss(exportStyle)}
       return
     }
 
-    applyMarkdownFormat(editorView, format)
+    applyMarkdownFormat(editorView, format, t.markdownPlaceholders)
   }
 
   function handleTableEditAction(action: TableEditAction) {
@@ -3238,7 +3296,7 @@ ${getExportStyleCss(exportStyle)}
           const recentMeta = [
             item.missing ? t.document.missing : '',
             item.pinned ? t.document.pinned : '',
-            new Date(item.openedAt).toLocaleDateString(),
+            fileDateFormatter.format(item.openedAt),
           ].filter(Boolean).join(' · ')
 
           return (
@@ -3301,7 +3359,7 @@ ${getExportStyleCss(exportStyle)}
             >
               <FileText size={15} aria-hidden="true" />
               <span>{item.relativePath}</span>
-              <small>{item.missing ? t.workspace.missing : new Date(item.modifiedAt).toLocaleDateString()}</small>
+              <small>{item.missing ? t.workspace.missing : fileDateFormatter.format(item.modifiedAt)}</small>
             </button>
           )
         })}
@@ -3462,10 +3520,21 @@ ${getExportStyleCss(exportStyle)}
             type="button"
             className="icon-button"
             onClick={openThemeSettings}
-            title={t.toolbar.appearanceSettings}
-            aria-label={t.toolbar.appearanceSettings}
+            title={t.toolbar.settings}
+            aria-label={t.toolbar.settings}
           >
             <Settings2 size={18} />
+          </button>
+
+          <button
+            type="button"
+            className="language-toggle-button"
+            onClick={toggleLocale}
+            title={`${t.toolbar.switchLanguage}: ${t.locales[nextLocale]}`}
+            aria-label={`${t.toolbar.switchLanguage}: ${t.locales[nextLocale]}`}
+          >
+            <Languages size={18} />
+            <span>{nextLocaleLabel}</span>
           </button>
 
           <button
@@ -3758,19 +3827,23 @@ ${getExportStyleCss(exportStyle)}
                     <div className="format-toolbar" role="toolbar" aria-label={t.toolbar.markdownFormatting}>
                       {markdownToolbarGroups.map((group, groupIndex) => (
                         <div className="format-group" key={`format-group-${groupIndex}`}>
-                          {group.map(({ format, label, title, Icon }) => (
-                            <button
-                              key={format}
-                              type="button"
-                              className="format-button"
-                              onMouseDown={(event) => event.preventDefault()}
-                              onClick={() => handleMarkdownFormat(format)}
-                              title={title}
-                              aria-label={label}
-                            >
-                              <Icon size={15} />
-                            </button>
-                          ))}
+                          {group.map(({ format, labelKey, titleKey, Icon }) => {
+                            const label = t.markdownToolbar[labelKey]
+
+                            return (
+                              <button
+                                key={format}
+                                type="button"
+                                className="format-button"
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => handleMarkdownFormat(format)}
+                                title={t.markdownToolbar[titleKey]}
+                                aria-label={label}
+                              >
+                                <Icon size={15} />
+                              </button>
+                            )
+                          })}
                         </div>
                       ))}
                       <div className="format-group">
@@ -4136,7 +4209,7 @@ ${getExportStyleCss(exportStyle)}
                       <strong>{item.relativePath}</strong>
                       <small>{workspaceFolder.folderName}</small>
                     </span>
-                    <kbd>{new Date(item.modifiedAt).toLocaleDateString()}</kbd>
+                    <kbd>{fileDateFormatter.format(item.modifiedAt)}</kbd>
                   </button>
                 ))
               ) : (
@@ -4199,7 +4272,7 @@ ${getExportStyleCss(exportStyle)}
           <section
             className="settings-dialog"
             role="dialog"
-            aria-label={t.toolbar.appearanceSettings}
+            aria-label={t.toolbar.settings}
             onMouseDown={(event) => event.stopPropagation()}
           >
             <div className="settings-header">
@@ -4211,8 +4284,8 @@ ${getExportStyleCss(exportStyle)}
                 type="button"
                 className="icon-button"
                 onClick={closeThemeSettings}
-                title={t.settings.closeAppearanceSettings}
-                aria-label={t.settings.closeAppearanceSettings}
+                title={t.settings.closeSettings}
+                aria-label={t.settings.closeSettings}
               >
                 <X size={16} />
               </button>

@@ -7,6 +7,7 @@ const isDev = !app.isPackaged
 const canUseAutoUpdater = !isDev && (process.platform !== 'linux' || Boolean(process.env.APPIMAGE))
 let mainWindow = null
 let hasScheduledInitialUpdateCheck = false
+let applicationLocale = 'en'
 const workspaceFileLimit = 120
 const ignoredWorkspaceDirectories = new Set([
   '.git',
@@ -29,6 +30,152 @@ const updateStatus = {
   canCheck: canUseAutoUpdater,
   canInstall: false,
   error: null,
+}
+
+const applicationStrings = {
+  en: {
+    menu: {
+      file: 'File',
+      newDocument: 'New Document',
+      open: 'Open...',
+      openFolder: 'Open Folder...',
+      save: 'Save',
+      saveAs: 'Save As...',
+      previewExport: 'Preview Export...',
+      exportHtml: 'Export HTML...',
+      exportPdf: 'Export PDF...',
+      view: 'View',
+      writeMode: 'Write Mode',
+      splitMode: 'Split Mode',
+      previewMode: 'Preview Mode',
+      toggleTheme: 'Toggle Theme',
+      language: 'Language',
+      english: 'English',
+      simplifiedChinese: 'Simplified Chinese',
+      toggleLanguage: 'Switch Language',
+      settings: 'Settings...',
+      edit: 'Edit',
+      copyMarkdown: 'Copy Markdown',
+      copyHtml: 'Copy HTML',
+      insertImage: 'Insert Image...',
+      find: 'Find',
+      replace: 'Replace',
+      commandPalette: 'Command Palette',
+      help: 'Help',
+      checkForUpdates: 'Check for Updates...',
+    },
+    dialogs: {
+      discardChanges: 'Discard changes',
+      keepEditing: 'Keep editing',
+      unsavedTitle: 'Unsaved changes',
+      unsavedMessage: 'This document has unsaved changes.',
+      unsavedDetail: 'Close OpenMark and discard the current changes?',
+      openMarkdownFile: 'Open Markdown file',
+      openWorkspaceFolder: 'Open Workspace Folder',
+      insertImage: 'Insert image',
+      saveFile: 'Save {type} file',
+    },
+    fileTypes: {
+      markdown: 'Markdown',
+      text: 'Text',
+      html: 'HTML',
+      pdf: 'PDF',
+      images: 'Images',
+      allFiles: 'All Files',
+    },
+    errors: {
+      folderOpenFailed: 'This folder could not be opened.',
+      pathNotFolder: 'This path is not a folder.',
+      unsupportedFileType: 'Unsupported file type',
+      fileOpenFailed: 'This file could not be opened.',
+      invalidFilePath: 'Invalid file path',
+      invalidFolderPath: 'Invalid folder path',
+      pdfExportFailed: 'This document could not be exported as PDF.',
+      invalidClipboardContent: 'Invalid clipboard content.',
+      noDownloadedUpdate: 'No downloaded update is ready to install.',
+    },
+  },
+  'zh-CN': {
+    menu: {
+      file: '文件',
+      newDocument: '新建文档',
+      open: '打开...',
+      openFolder: '打开文件夹...',
+      save: '保存',
+      saveAs: '另存为...',
+      previewExport: '预览导出...',
+      exportHtml: '导出 HTML...',
+      exportPdf: '导出 PDF...',
+      view: '视图',
+      writeMode: '编写模式',
+      splitMode: '分屏模式',
+      previewMode: '预览模式',
+      toggleTheme: '切换主题',
+      language: '语言',
+      english: 'English',
+      simplifiedChinese: '简体中文',
+      toggleLanguage: '切换语言',
+      settings: '设置...',
+      edit: '编辑',
+      copyMarkdown: '复制 Markdown',
+      copyHtml: '复制 HTML',
+      insertImage: '插入图片...',
+      find: '查找',
+      replace: '替换',
+      commandPalette: '命令面板',
+      help: '帮助',
+      checkForUpdates: '检查更新...',
+    },
+    dialogs: {
+      discardChanges: '丢弃更改',
+      keepEditing: '继续编辑',
+      unsavedTitle: '未保存更改',
+      unsavedMessage: '当前文档有未保存的更改。',
+      unsavedDetail: '要关闭 OpenMark 并丢弃当前更改吗？',
+      openMarkdownFile: '打开 Markdown 文件',
+      openWorkspaceFolder: '打开工作区文件夹',
+      insertImage: '插入图片',
+      saveFile: '保存 {type} 文件',
+    },
+    fileTypes: {
+      markdown: 'Markdown',
+      text: '文本',
+      html: 'HTML',
+      pdf: 'PDF',
+      images: '图片',
+      allFiles: '所有文件',
+    },
+    errors: {
+      folderOpenFailed: '无法打开这个文件夹。',
+      pathNotFolder: '这个路径不是文件夹。',
+      unsupportedFileType: '不支持的文件类型',
+      fileOpenFailed: '无法打开这个文件。',
+      invalidFilePath: '无效的文件路径',
+      invalidFolderPath: '无效的文件夹路径',
+      pdfExportFailed: '无法将当前文档导出为 PDF。',
+      invalidClipboardContent: '无效的剪贴板内容。',
+      noDownloadedUpdate: '没有可安装的已下载更新。',
+    },
+  },
+}
+
+function getApplicationStrings() {
+  return applicationStrings[applicationLocale] ?? applicationStrings.en
+}
+
+function isApplicationLocale(value) {
+  return value === 'en' || value === 'zh-CN'
+}
+
+function setApplicationLocale(value) {
+  if (!isApplicationLocale(value)) {
+    return { accepted: false }
+  }
+
+  applicationLocale = value
+  createApplicationMenu()
+
+  return { accepted: true }
 }
 
 autoUpdater.autoDownload = true
@@ -178,14 +325,15 @@ function createWindow() {
   })
 
   mainWindow.webContents.on('will-prevent-unload', (event) => {
+    const { dialogs } = getApplicationStrings()
     const choice = dialog.showMessageBoxSync(mainWindow, {
       type: 'question',
-      buttons: ['Discard changes', 'Keep editing'],
+      buttons: [dialogs.discardChanges, dialogs.keepEditing],
       defaultId: 1,
       cancelId: 1,
-      title: 'Unsaved changes',
-      message: 'This document has unsaved changes.',
-      detail: 'Close OpenMark and discard the current changes?',
+      title: dialogs.unsavedTitle,
+      message: dialogs.unsavedMessage,
+      detail: dialogs.unsavedDetail,
     })
 
     if (choice === 0) {
@@ -207,40 +355,50 @@ function sendCommand(command) {
 }
 
 function createApplicationMenu() {
+  const { menu } = getApplicationStrings()
   const template = [
     {
-      label: 'File',
+      label: menu.file,
       submenu: [
-        { label: 'New Document', accelerator: 'CmdOrCtrl+N', click: () => sendCommand('new-document') },
-        { label: 'Open...', accelerator: 'CmdOrCtrl+O', click: () => sendCommand('open-document') },
-        { label: 'Open Folder...', click: () => sendCommand('open-workspace-folder') },
+        { label: menu.newDocument, accelerator: 'CmdOrCtrl+N', click: () => sendCommand('new-document') },
+        { label: menu.open, accelerator: 'CmdOrCtrl+O', click: () => sendCommand('open-document') },
+        { label: menu.openFolder, click: () => sendCommand('open-workspace-folder') },
         { type: 'separator' },
-        { label: 'Save', accelerator: 'CmdOrCtrl+S', click: () => sendCommand('save-document') },
-        { label: 'Save As...', accelerator: 'CmdOrCtrl+Shift+S', click: () => sendCommand('save-document-as') },
+        { label: menu.save, accelerator: 'CmdOrCtrl+S', click: () => sendCommand('save-document') },
+        { label: menu.saveAs, accelerator: 'CmdOrCtrl+Shift+S', click: () => sendCommand('save-document-as') },
         { type: 'separator' },
-        { label: 'Preview Export...', click: () => sendCommand('preview-export') },
-        { label: 'Export HTML...', accelerator: 'CmdOrCtrl+E', click: () => sendCommand('export-html') },
-        { label: 'Export PDF...', accelerator: 'CmdOrCtrl+Shift+E', click: () => sendCommand('export-pdf') },
+        { label: menu.previewExport, click: () => sendCommand('preview-export') },
+        { label: menu.exportHtml, accelerator: 'CmdOrCtrl+E', click: () => sendCommand('export-html') },
+        { label: menu.exportPdf, accelerator: 'CmdOrCtrl+Shift+E', click: () => sendCommand('export-pdf') },
         { type: 'separator' },
         { role: process.platform === 'darwin' ? 'close' : 'quit' },
       ],
     },
     {
-      label: 'View',
+      label: menu.view,
       submenu: [
-        { label: 'Write Mode', accelerator: 'CmdOrCtrl+1', click: () => sendCommand('set-write-mode') },
-        { label: 'Split Mode', accelerator: 'CmdOrCtrl+2', click: () => sendCommand('set-split-mode') },
-        { label: 'Preview Mode', accelerator: 'CmdOrCtrl+3', click: () => sendCommand('set-preview-mode') },
+        { label: menu.writeMode, accelerator: 'CmdOrCtrl+1', click: () => sendCommand('set-write-mode') },
+        { label: menu.splitMode, accelerator: 'CmdOrCtrl+2', click: () => sendCommand('set-split-mode') },
+        { label: menu.previewMode, accelerator: 'CmdOrCtrl+3', click: () => sendCommand('set-preview-mode') },
         { type: 'separator' },
-        { label: 'Toggle Theme', accelerator: 'CmdOrCtrl+Shift+L', click: () => sendCommand('toggle-theme') },
-        { label: 'Appearance Settings...', click: () => sendCommand('open-theme-settings') },
+        { label: menu.toggleTheme, accelerator: 'CmdOrCtrl+Shift+L', click: () => sendCommand('toggle-theme') },
+        {
+          label: menu.language,
+          submenu: [
+            { label: menu.english, type: 'radio', checked: applicationLocale === 'en', click: () => sendCommand('set-language-en') },
+            { label: menu.simplifiedChinese, type: 'radio', checked: applicationLocale === 'zh-CN', click: () => sendCommand('set-language-zh-cn') },
+            { type: 'separator' },
+            { label: menu.toggleLanguage, click: () => sendCommand('toggle-language') },
+          ],
+        },
+        { label: menu.settings, accelerator: 'CmdOrCtrl+,', click: () => sendCommand('open-theme-settings') },
         { type: 'separator' },
         { role: 'reload' },
         { role: 'toggleDevTools' },
       ],
     },
     {
-      label: 'Edit',
+      label: menu.edit,
       submenu: [
         { role: 'undo' },
         { role: 'redo' },
@@ -250,21 +408,21 @@ function createApplicationMenu() {
         { role: 'paste' },
         { role: 'selectAll' },
         { type: 'separator' },
-        { label: 'Copy Markdown', click: () => sendCommand('copy-markdown') },
-        { label: 'Copy HTML', click: () => sendCommand('copy-html') },
+        { label: menu.copyMarkdown, click: () => sendCommand('copy-markdown') },
+        { label: menu.copyHtml, click: () => sendCommand('copy-html') },
         { type: 'separator' },
-        { label: 'Insert Image...', click: () => sendCommand('insert-image') },
+        { label: menu.insertImage, click: () => sendCommand('insert-image') },
         { type: 'separator' },
-        { label: 'Find', accelerator: 'CmdOrCtrl+F', click: () => sendCommand('find-document') },
-        { label: 'Replace', accelerator: 'CmdOrCtrl+H', click: () => sendCommand('replace-document') },
+        { label: menu.find, accelerator: 'CmdOrCtrl+F', click: () => sendCommand('find-document') },
+        { label: menu.replace, accelerator: 'CmdOrCtrl+H', click: () => sendCommand('replace-document') },
         { type: 'separator' },
-        { label: 'Command Palette', accelerator: 'CmdOrCtrl+Shift+P', click: () => sendCommand('open-command-palette') },
+        { label: menu.commandPalette, accelerator: 'CmdOrCtrl+Shift+P', click: () => sendCommand('open-command-palette') },
       ],
     },
     {
-      label: 'Help',
+      label: menu.help,
       submenu: [
-        { label: 'Check for Updates...', click: () => sendCommand('check-for-updates') },
+        { label: menu.checkForUpdates, click: () => sendCommand('check-for-updates') },
         { type: 'separator' },
         { role: 'about' },
       ],
@@ -292,11 +450,11 @@ async function listWorkspaceFolder(folderPath) {
   try {
     folderStats = await fs.stat(folderPath)
   } catch {
-    return { canceled: true, error: 'This folder could not be opened.' }
+    return { canceled: true, error: getApplicationStrings().errors.folderOpenFailed }
   }
 
   if (!folderStats.isDirectory()) {
-    return { canceled: true, error: 'This path is not a folder.' }
+    return { canceled: true, error: getApplicationStrings().errors.pathNotFolder }
   }
 
   const files = []
@@ -363,7 +521,7 @@ async function listWorkspaceFolder(folderPath) {
 
 async function readMarkdownFile(filePath) {
   if (!isMarkdownLikeFile(filePath)) {
-    return { canceled: true, error: 'Unsupported file type' }
+    return { canceled: true, error: getApplicationStrings().errors.unsupportedFileType }
   }
 
   let content
@@ -371,7 +529,7 @@ async function readMarkdownFile(filePath) {
   try {
     content = await fs.readFile(filePath, 'utf8')
   } catch {
-    return { canceled: true, error: 'This file could not be opened.' }
+    return { canceled: true, error: getApplicationStrings().errors.fileOpenFailed }
   }
 
   return {
@@ -383,13 +541,14 @@ async function readMarkdownFile(filePath) {
 }
 
 ipcMain.handle('openmark:open-markdown-file', async () => {
+  const { dialogs, fileTypes } = getApplicationStrings()
   const result = await dialog.showOpenDialog({
-    title: 'Open Markdown file',
+    title: dialogs.openMarkdownFile,
     properties: ['openFile'],
     filters: [
-      { name: 'Markdown', extensions: ['md', 'markdown', 'mdown'] },
-      { name: 'Text', extensions: ['txt'] },
-      { name: 'All Files', extensions: ['*'] },
+      { name: fileTypes.markdown, extensions: ['md', 'markdown', 'mdown'] },
+      { name: fileTypes.text, extensions: ['txt'] },
+      { name: fileTypes.allFiles, extensions: ['*'] },
     ],
   })
 
@@ -402,7 +561,7 @@ ipcMain.handle('openmark:open-markdown-file', async () => {
 
 ipcMain.handle('openmark:open-recent-file', async (_event, filePath) => {
   if (typeof filePath !== 'string' || filePath.length === 0) {
-    return { canceled: true, error: 'Invalid file path' }
+    return { canceled: true, error: getApplicationStrings().errors.invalidFilePath }
   }
 
   return readMarkdownFile(filePath)
@@ -410,7 +569,7 @@ ipcMain.handle('openmark:open-recent-file', async (_event, filePath) => {
 
 ipcMain.handle('openmark:select-workspace-folder', async () => {
   const result = await dialog.showOpenDialog({
-    title: 'Open Workspace Folder',
+    title: getApplicationStrings().dialogs.openWorkspaceFolder,
     properties: ['openDirectory'],
   })
 
@@ -423,19 +582,20 @@ ipcMain.handle('openmark:select-workspace-folder', async () => {
 
 ipcMain.handle('openmark:read-workspace-folder', async (_event, folderPath) => {
   if (typeof folderPath !== 'string' || folderPath.length === 0) {
-    return { canceled: true, error: 'Invalid folder path' }
+    return { canceled: true, error: getApplicationStrings().errors.invalidFolderPath }
   }
 
   return listWorkspaceFolder(folderPath)
 })
 
 ipcMain.handle('openmark:select-image-file', async () => {
+  const { dialogs, fileTypes } = getApplicationStrings()
   const result = await dialog.showOpenDialog({
-    title: 'Insert image',
+    title: dialogs.insertImage,
     properties: ['openFile'],
     filters: [
-      { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'] },
-      { name: 'All Files', extensions: ['*'] },
+      { name: fileTypes.images, extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'] },
+      { name: fileTypes.allFiles, extensions: ['*'] },
     ],
   })
 
@@ -458,8 +618,8 @@ ipcMain.handle('openmark:save-markdown-file', async (_event, payload) => {
   const knownPath = typeof payload?.filePath === 'string' && payload.filePath.length > 0 ? payload.filePath : null
   const defaultPath = knownPath ? path.join(path.dirname(knownPath), defaultFileName) : defaultFileName
   const targetPath = payload?.forceDialog
-    ? await showSaveDialog(defaultPath, 'Markdown', ['md', 'markdown'])
-    : knownPath ?? (await showSaveDialog(defaultPath, 'Markdown', ['md', 'markdown']))
+    ? await showSaveDialog(defaultPath, 'markdown', ['md', 'markdown'])
+    : knownPath ?? (await showSaveDialog(defaultPath, 'markdown', ['md', 'markdown']))
 
   if (!targetPath) {
     return { canceled: true }
@@ -477,7 +637,7 @@ ipcMain.handle('openmark:save-markdown-file', async (_event, payload) => {
 ipcMain.handle('openmark:save-html-file', async (_event, payload) => {
   const content = typeof payload?.content === 'string' ? payload.content : ''
   const defaultPath = typeof payload?.fileName === 'string' ? payload.fileName : 'document.html'
-  const targetPath = await showSaveDialog(defaultPath, 'HTML', ['html'])
+  const targetPath = await showSaveDialog(defaultPath, 'html', ['html'])
 
   if (!targetPath) {
     return { canceled: true }
@@ -495,7 +655,7 @@ ipcMain.handle('openmark:save-html-file', async (_event, payload) => {
 ipcMain.handle('openmark:save-pdf-file', async (_event, payload) => {
   const content = typeof payload?.content === 'string' ? payload.content : ''
   const defaultPath = typeof payload?.fileName === 'string' ? payload.fileName : 'document.pdf'
-  const targetPath = await showSaveDialog(defaultPath, 'PDF', ['pdf'])
+  const targetPath = await showSaveDialog(defaultPath, 'pdf', ['pdf'])
 
   if (!targetPath) {
     return { canceled: true }
@@ -505,7 +665,7 @@ ipcMain.handle('openmark:save-pdf-file', async (_event, payload) => {
     const pdfBuffer = await renderHtmlToPdf(content)
     await fs.writeFile(targetPath, pdfBuffer)
   } catch {
-    return { canceled: true, error: 'This document could not be exported as PDF.' }
+    return { canceled: true, error: getApplicationStrings().errors.pdfExportFailed }
   }
 
   return {
@@ -517,7 +677,7 @@ ipcMain.handle('openmark:save-pdf-file', async (_event, payload) => {
 
 ipcMain.handle('openmark:write-clipboard-text', (_event, text) => {
   if (typeof text !== 'string') {
-    return { copied: false, error: 'Invalid clipboard content.' }
+    return { copied: false, error: getApplicationStrings().errors.invalidClipboardContent }
   }
 
   clipboard.writeText(text)
@@ -527,11 +687,13 @@ ipcMain.handle('openmark:write-clipboard-text', (_event, text) => {
 
 ipcMain.handle('openmark:get-update-status', () => getUpdateStatus())
 
+ipcMain.handle('openmark:set-application-locale', (_event, locale) => setApplicationLocale(locale))
+
 ipcMain.handle('openmark:check-for-updates', async () => checkForUpdates())
 
 ipcMain.handle('openmark:install-update', () => {
   if (!updateStatus.canInstall) {
-    return { accepted: false, error: 'No downloaded update is ready to install.' }
+    return { accepted: false, error: getApplicationStrings().errors.noDownloadedUpdate }
   }
 
   setImmediate(() => autoUpdater.quitAndInstall(false, true))
@@ -578,13 +740,15 @@ async function renderHtmlToPdf(content) {
   }
 }
 
-async function showSaveDialog(defaultPath, name, extensions) {
+async function showSaveDialog(defaultPath, fileType, extensions) {
+  const { dialogs, fileTypes } = getApplicationStrings()
+  const fileTypeName = fileTypes[fileType] ?? fileType
   const result = await dialog.showSaveDialog({
-    title: `Save ${name} file`,
+    title: dialogs.saveFile.replace('{type}', fileTypeName),
     defaultPath,
     filters: [
-      { name, extensions },
-      { name: 'All Files', extensions: ['*'] },
+      { name: fileTypeName, extensions },
+      { name: fileTypes.allFiles, extensions: ['*'] },
     ],
   })
 

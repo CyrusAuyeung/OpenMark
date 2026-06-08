@@ -12,6 +12,10 @@ All notable changes to OpenMark will be documented in this file.
 - Added quick open for Markdown files in the active workspace.
 - Added missing-file states for unavailable recent and workspace files.
 
+### Localization
+
+- Added a visible English/Chinese language switcher in the toolbar, command palette, settings, and desktop menu.
+
 ## 0.6.0 - 2026-06-08
 
 ### Export & Sharing

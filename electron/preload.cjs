@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('openmark', {
   savePdfFile: (payload) => ipcRenderer.invoke('openmark:save-pdf-file', payload),
   writeClipboardText: (text) => ipcRenderer.invoke('openmark:write-clipboard-text', text),
   getUpdateStatus: () => ipcRenderer.invoke('openmark:get-update-status'),
+  setApplicationLocale: (locale) => ipcRenderer.invoke('openmark:set-application-locale', locale),
   checkForUpdates: () => ipcRenderer.invoke('openmark:check-for-updates'),
   installUpdate: () => ipcRenderer.invoke('openmark:install-update'),
   onUpdateStatus: (callback) => {
