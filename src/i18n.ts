@@ -105,6 +105,9 @@ const en = {
     noRecentFiles: 'No recent files',
     clear: 'Clear',
     removeFromRecent: 'Remove from recent',
+    pinRecentFile: 'Pin recent file',
+    unpinRecentFile: 'Unpin recent file',
+    pinned: 'Pinned',
   },
   welcome: {
     welcome: 'Welcome',
@@ -315,6 +318,9 @@ const zhCN: TranslationCatalog = {
     noRecentFiles: '没有最近文件',
     clear: '清空',
     removeFromRecent: '从最近文件中移除',
+    pinRecentFile: '置顶最近文件',
+    unpinRecentFile: '取消置顶最近文件',
+    pinned: '已置顶',
   },
   welcome: {
     welcome: '欢迎',

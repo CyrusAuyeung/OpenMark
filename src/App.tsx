@@ -51,6 +51,7 @@ import {
   PanelBottomClose,
   PanelRight,
   PanelRightClose,
+  Pin,
   Printer,
   Quote,
   RefreshCw,
@@ -114,6 +115,7 @@ type RecentFile = {
   filePath: string
   fileName: string
   openedAt: number
+  pinned?: boolean
 }
 
 type PreviewImageSource = {
@@ -300,17 +302,51 @@ function loadRecentFiles(): RecentFile[] {
       return []
     }
 
-    return parsed
+    return normalizeRecentFiles(parsed
       .filter(
         (item): item is RecentFile =>
           typeof item?.filePath === 'string' &&
           typeof item?.fileName === 'string' &&
           typeof item?.openedAt === 'number',
       )
-      .slice(0, maxRecentFiles)
+      .map((item) => ({
+        filePath: item.filePath,
+        fileName: item.fileName,
+        openedAt: item.openedAt,
+        pinned: item.pinned === true,
+      })))
   } catch {
     return []
   }
+}
+
+function compareRecentFiles(left: RecentFile, right: RecentFile) {
+  if (left.pinned !== right.pinned) {
+    return left.pinned ? -1 : 1
+  }
+
+  return right.openedAt - left.openedAt
+}
+
+function normalizeRecentFiles(recentFiles: RecentFile[]) {
+  const filesByPath = new Map<string, RecentFile>()
+
+  recentFiles.forEach((item) => {
+    const existingItem = filesByPath.get(item.filePath)
+
+    filesByPath.set(item.filePath, {
+      filePath: item.filePath,
+      fileName: item.fileName,
+      openedAt: Math.max(item.openedAt, existingItem?.openedAt ?? 0),
+      pinned: item.pinned === true || existingItem?.pinned === true,
+    })
+  })
+
+  const sortedFiles = Array.from(filesByPath.values()).sort(compareRecentFiles)
+  const pinnedFiles = sortedFiles.filter((item) => item.pinned)
+  const unpinnedFiles = sortedFiles.filter((item) => !item.pinned).slice(0, maxRecentFiles)
+
+  return [...pinnedFiles, ...unpinnedFiles]
 }
 
 function persistRecentFiles(recentFiles: RecentFile[]) {
@@ -1701,12 +1737,15 @@ function App() {
     const saveTimer = window.setTimeout(() => {
       window.localStorage.setItem(draftStorageKey, markdownValue)
       window.localStorage.setItem(fileNameStorageKey, fileName)
-      persistRecentFiles(recentFiles)
       setLastSavedAt(new Date())
     }, 250)
 
     return () => window.clearTimeout(saveTimer)
-  }, [fileName, markdownValue, recentFiles])
+  }, [fileName, markdownValue])
+
+  useEffect(() => {
+    persistRecentFiles(recentFiles)
+  }, [recentFiles])
 
   useEffect(() => {
     if (clipboardCopyKind === null) {
@@ -2025,10 +2064,24 @@ function App() {
       return
     }
 
-    setRecentFiles((currentFiles) => [
-      { filePath, fileName: nextFileName, openedAt: Date.now() },
-      ...currentFiles.filter((item) => item.filePath !== filePath),
-    ].slice(0, maxRecentFiles))
+    setRecentFiles((currentFiles) => {
+      const existingFile = currentFiles.find((item) => item.filePath === filePath)
+
+      return normalizeRecentFiles([
+        { filePath, fileName: nextFileName, openedAt: Date.now(), pinned: existingFile?.pinned },
+        ...currentFiles.filter((item) => item.filePath !== filePath),
+      ])
+    })
+  }
+
+  function toggleRecentFilePinned(filePath: string) {
+    setRecentFiles((currentFiles) => normalizeRecentFiles(
+      currentFiles.map((item) => (
+        item.filePath === filePath
+          ? { ...item, pinned: !item.pinned }
+          : item
+      )),
+    ))
   }
 
   function removeRecentFile(filePath: string) {
@@ -2892,12 +2945,21 @@ ${getExportStyleCss(exportStyle)}
           <div className="recent-file-row" key={item.filePath}>
             <button
               type="button"
-              className="recent-open-button"
+              className={item.pinned ? 'recent-pin-button active' : 'recent-pin-button'}
+              onClick={() => toggleRecentFilePinned(item.filePath)}
+              title={item.pinned ? t.document.unpinRecentFile : t.document.pinRecentFile}
+              aria-label={`${item.pinned ? t.document.unpinRecentFile : t.document.pinRecentFile}: ${item.fileName}`}
+            >
+              <Pin size={14} />
+            </button>
+            <button
+              type="button"
+              className={item.pinned ? 'recent-open-button pinned' : 'recent-open-button'}
               onClick={() => handleOpenRecentFile(item.filePath)}
               title={item.filePath}
             >
               <span>{item.fileName}</span>
-              <small>{new Date(item.openedAt).toLocaleDateString()}</small>
+              <small>{item.pinned ? `${t.document.pinned} · ` : ''}{new Date(item.openedAt).toLocaleDateString()}</small>
             </button>
             <button
               type="button"

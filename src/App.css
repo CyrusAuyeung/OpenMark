@@ -475,12 +475,13 @@
 .recent-file-row {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 30px;
+  grid-template-columns: 30px minmax(0, 1fr) 30px;
   gap: 6px;
   align-items: stretch;
 }
 
 .recent-open-button,
+.recent-pin-button,
 .recent-remove-button {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -497,6 +498,12 @@
   text-align: left;
 }
 
+.recent-open-button.pinned {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+
+.recent-pin-button,
 .recent-remove-button {
   width: 30px;
   display: inline-flex;
@@ -505,13 +512,21 @@
   color: var(--muted);
 }
 
+.recent-pin-button.active {
+  color: var(--accent);
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+
 .recent-open-button:hover,
+.recent-pin-button:hover,
 .recent-remove-button:hover {
   border-color: var(--accent-border);
   background: var(--button-hover);
 }
 
 .recent-open-button:focus-visible,
+.recent-pin-button:focus-visible,
 .recent-remove-button:focus-visible,
 .text-action:focus-visible {
   outline: 2px solid var(--focus);

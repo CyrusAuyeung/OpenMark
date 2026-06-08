@@ -2,6 +2,12 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## Unreleased
+
+### Workspace
+
+- Added pinned recent files so important local documents stay at the top of the recent list.
+
 ## 0.6.0 - 2026-06-08
 
 ### Export & Sharing
