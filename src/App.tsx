@@ -137,6 +137,18 @@ type WorkspaceFolderState = {
   truncated: boolean
 }
 
+type EditorSessionDocument = {
+  filePath: string | null
+  fileName: string
+}
+
+type EditorSessionState = EditorSessionDocument & {
+  selectionAnchor: number
+  selectionHead: number
+  scrollTop: number
+  scrollLeft: number
+}
+
 type PreviewImageSource = {
   markdownPath: string
   previewSrc: string
@@ -189,6 +201,7 @@ type CommandPaletteItem = {
 const draftStorageKey = 'openmark:draft'
 const fileNameStorageKey = 'openmark:file-name'
 const activeFilePathStorageKey = 'openmark:active-file-path'
+const editorSessionStorageKey = 'openmark:editor-session'
 const themeStorageKey = 'openmark:theme'
 const localeStorageKey = 'openmark:locale'
 const editorFontSizeStorageKey = 'openmark:editor-font-size'
@@ -206,6 +219,7 @@ const maxSplitPaneRatio = 70
 const defaultEditorFontSize = 16
 const minEditorFontSize = 14
 const maxEditorFontSize = 22
+const editorSessionSaveDelay = 160
 const invalidFileNameCharacters = new Set(['<', '>', ':', '"', '/', '\\', '|', '?', '*'])
 const imageFileExtensions = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'])
 const exportDescriptionMaxLength = 180
@@ -453,6 +467,69 @@ function persistActiveFilePath(activeFilePath: string | null) {
   }
 
   window.localStorage.setItem(activeFilePathStorageKey, activeFilePath)
+}
+
+function loadEditorSessionState(): EditorSessionState | null {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(editorSessionStorageKey) ?? 'null') as Partial<EditorSessionState> | null
+
+    if (!parsed || typeof parsed.fileName !== 'string') {
+      return null
+    }
+
+    const selectionAnchor = Number(parsed.selectionAnchor)
+    const selectionHead = Number(parsed.selectionHead)
+    const scrollTop = Number(parsed.scrollTop)
+    const scrollLeft = Number(parsed.scrollLeft ?? 0)
+
+    if (
+      !Number.isFinite(selectionAnchor) ||
+      !Number.isFinite(selectionHead) ||
+      !Number.isFinite(scrollTop) ||
+      !Number.isFinite(scrollLeft)
+    ) {
+      return null
+    }
+
+    return {
+      filePath: typeof parsed.filePath === 'string' ? parsed.filePath : null,
+      fileName: parsed.fileName,
+      selectionAnchor,
+      selectionHead,
+      scrollTop: Math.max(0, scrollTop),
+      scrollLeft: Math.max(0, scrollLeft),
+    }
+  } catch {
+    return null
+  }
+}
+
+function persistEditorSessionState(editorSession: EditorSessionState) {
+  window.localStorage.setItem(editorSessionStorageKey, JSON.stringify(editorSession))
+}
+
+function clearPersistedEditorSessionState() {
+  window.localStorage.removeItem(editorSessionStorageKey)
+}
+
+function isEditorSessionForDocument(editorSession: EditorSessionState, document: EditorSessionDocument) {
+  if (editorSession.filePath || document.filePath) {
+    return editorSession.filePath === document.filePath
+  }
+
+  return editorSession.fileName === document.fileName
+}
+
+function clampEditorPosition(position: number, documentLength: number) {
+  return Math.min(documentLength, Math.max(0, Math.round(position)))
+}
+
+function restoreEditorScrollPosition(element: HTMLElement, editorSession: EditorSessionState) {
+  const maxScrollTop = Math.max(0, element.scrollHeight - element.clientHeight)
+  const maxScrollLeft = Math.max(0, element.scrollWidth - element.clientWidth)
+
+  element.scrollTop = Math.min(editorSession.scrollTop, maxScrollTop)
+  element.scrollLeft = Math.min(editorSession.scrollLeft, maxScrollLeft)
 }
 
 function clampSplitPaneRatio(value: number) {
@@ -1495,6 +1572,10 @@ function App() {
   const editorRef = useRef<ReactCodeMirrorRef | null>(null)
   const editorViewRef = useRef<EditorView | null>(null)
   const editorScrollCleanupRef = useRef<(() => void) | null>(null)
+  const editorSessionSaveTimerRef = useRef<number | null>(null)
+  const editorSessionDocumentRef = useRef<EditorSessionDocument>({ filePath: null, fileName: 'untitled.md' })
+  const scheduleEditorSessionPersistRef = useRef<() => void>(() => undefined)
+  const flushEditorSessionPersistRef = useRef<() => void>(() => undefined)
   const pendingOutlineJumpRef = useRef<OutlineItem | null>(null)
   const scrollSyncSourceRef = useRef<'editor' | 'preview' | null>(null)
   const scrollSyncTimerRef = useRef<number | null>(null)
@@ -1505,11 +1586,14 @@ function App() {
   const exportPreviewFrameRef = useRef<HTMLIFrameElement | null>(null)
   const previewImageSourcesRef = useRef<PreviewImageSource[]>([])
   const initialMarkdownValue = useMemo(() => loadStoredValue(draftStorageKey, ''), [])
+  const initialEditorSessionState = useMemo(loadEditorSessionState, [])
+  const pendingEditorSessionRef = useRef<EditorSessionState | null>(initialEditorSessionState)
   const [markdownValue, setMarkdownValue] = useState(initialMarkdownValue)
   const [fileName, setFileName] = useState(() =>
     loadStoredValue(fileNameStorageKey, 'untitled.md'),
   )
   const [activeFilePath, setActiveFilePath] = useState<string | null>(loadStoredFilePath)
+  editorSessionDocumentRef.current = { filePath: activeFilePath, fileName }
   const [savedSnapshot, setSavedSnapshot] = useState(initialMarkdownValue)
   const [recentFiles, setRecentFiles] = useState(loadRecentFiles)
   const [workspaceFolder, setWorkspaceFolder] = useState<WorkspaceFolderState | null>(loadWorkspaceFolder)
@@ -1999,6 +2083,8 @@ function App() {
     : clipboardCopyKind === 'markdown'
       ? t.status.copiedMarkdown
       : t.status.copiedHtml
+  scheduleEditorSessionPersistRef.current = scheduleEditorSessionPersist
+  flushEditorSessionPersistRef.current = flushEditorSessionPersist
 
   useEffect(() => {
     const saveTimer = window.setTimeout(() => {
@@ -2021,6 +2107,14 @@ function App() {
   useEffect(() => {
     persistActiveFilePath(activeFilePath)
   }, [activeFilePath])
+
+  useEffect(() => {
+    const editorView = editorViewRef.current ?? editorRef.current?.view
+
+    if (editorView) {
+      scheduleEditorSessionPersistRef.current()
+    }
+  }, [activeFilePath, fileName])
 
   useEffect(() => {
     if (clipboardCopyKind === null) {
@@ -2114,6 +2208,10 @@ function App() {
     }
   }, [])
 
+  useEffect(() => () => {
+    flushEditorSessionPersistRef.current()
+  }, [])
+
   useEffect(() => {
     syncPreviewScrollFromEditorRef.current = syncPreviewScrollFromEditor
   })
@@ -2198,6 +2296,8 @@ function App() {
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      flushEditorSessionPersistRef.current()
+
       if (!hasUnsavedChanges) {
         return
       }
@@ -2455,6 +2555,7 @@ function App() {
 
     const nextMarkdown = '# Untitled\n\n'
 
+    clearEditorSessionState()
     setMarkdownValue(nextMarkdown)
     setFileName('untitled.md')
     setActiveFilePath(null)
@@ -2464,6 +2565,7 @@ function App() {
   }
 
   function applyOpenedDocument(content: string, nextFileName: string, nextFilePath: string | null) {
+    clearEditorSessionState()
     setMarkdownValue(content)
     setFileName(nextFileName)
     setActiveFilePath(nextFilePath)
@@ -2665,6 +2767,7 @@ function App() {
 
     const fileText = await selectedFile.text()
 
+    clearEditorSessionState()
     setMarkdownValue(fileText)
     setFileName(selectedFile.name)
     setActiveFilePath(null)
@@ -3105,6 +3208,80 @@ ${getExportStyleCss(exportStyle)}
 
   function getEditorView() {
     return editorViewRef.current ?? editorRef.current?.view ?? null
+  }
+
+  function clearEditorSessionSaveTimer() {
+    if (editorSessionSaveTimerRef.current === null) {
+      return
+    }
+
+    window.clearTimeout(editorSessionSaveTimerRef.current)
+    editorSessionSaveTimerRef.current = null
+  }
+
+  function getCurrentEditorSessionState(editorView: EditorView): EditorSessionState {
+    const selection = editorView.state.selection.main
+
+    return {
+      ...editorSessionDocumentRef.current,
+      selectionAnchor: selection.anchor,
+      selectionHead: selection.head,
+      scrollTop: editorView.scrollDOM.scrollTop,
+      scrollLeft: editorView.scrollDOM.scrollLeft,
+    }
+  }
+
+  function persistCurrentEditorSession(editorView: EditorView) {
+    persistEditorSessionState(getCurrentEditorSessionState(editorView))
+  }
+
+  function scheduleEditorSessionPersist() {
+    clearEditorSessionSaveTimer()
+
+    editorSessionSaveTimerRef.current = window.setTimeout(() => {
+      editorSessionSaveTimerRef.current = null
+
+      const editorView = getEditorView()
+
+      if (editorView) {
+        persistCurrentEditorSession(editorView)
+      }
+    }, editorSessionSaveDelay)
+  }
+
+  function flushEditorSessionPersist() {
+    clearEditorSessionSaveTimer()
+
+    const editorView = getEditorView()
+
+    if (editorView) {
+      persistCurrentEditorSession(editorView)
+    }
+  }
+
+  function clearEditorSessionState() {
+    pendingEditorSessionRef.current = null
+    clearEditorSessionSaveTimer()
+    clearPersistedEditorSessionState()
+  }
+
+  function restoreEditorSessionState(editorView: EditorView) {
+    const editorSession = pendingEditorSessionRef.current
+    pendingEditorSessionRef.current = null
+
+    if (!editorSession || !isEditorSessionForDocument(editorSession, editorSessionDocumentRef.current)) {
+      return
+    }
+
+    const documentLength = editorView.state.doc.length
+    const selectionAnchor = clampEditorPosition(editorSession.selectionAnchor, documentLength)
+    const selectionHead = clampEditorPosition(editorSession.selectionHead, documentLength)
+
+    editorView.dispatch({
+      selection: { anchor: selectionAnchor, head: selectionHead },
+    })
+
+    window.requestAnimationFrame(() => restoreEditorScrollPosition(editorView.scrollDOM, editorSession))
   }
 
   function getScrollableRatio(element: HTMLElement) {
@@ -4298,16 +4475,22 @@ ${getExportStyleCss(exportStyle)}
                       onCreateEditor={(view) => {
                         editorScrollCleanupRef.current?.()
                         editorViewRef.current = view
+                        restoreEditorSessionState(view)
                         setNextTableEditingState(getTableEditingState(view))
-                        const handleEditorScroll = () => syncPreviewScrollFromEditorRef.current()
+                        const handleEditorScroll = () => {
+                          syncPreviewScrollFromEditorRef.current()
+                          scheduleEditorSessionPersist()
+                        }
                         view.scrollDOM.addEventListener('scroll', handleEditorScroll)
                         editorScrollCleanupRef.current = () => {
+                          persistCurrentEditorSession(view)
                           view.scrollDOM.removeEventListener('scroll', handleEditorScroll)
                         }
                       }}
                       onUpdate={(viewUpdate) => {
                         if (viewUpdate.docChanged || viewUpdate.selectionSet) {
                           setNextTableEditingState(getTableEditingState(viewUpdate.view))
+                          scheduleEditorSessionPersist()
                         }
                       }}
                       onChange={(value) => setMarkdownValue(value)}
