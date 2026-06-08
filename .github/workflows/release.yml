@@ -34,10 +34,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
@@ -73,7 +73,7 @@ jobs:
         run: npx electron-builder --win --publish never --config electron-builder.config.cjs
 
       - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: openmark-windows-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           path: |
@@ -89,10 +89,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
@@ -107,7 +107,7 @@ jobs:
         run: npx electron-builder --mac --publish never --config electron-builder.config.cjs
 
       - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: openmark-macos-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           path: |
@@ -124,10 +124,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
@@ -151,7 +151,7 @@ jobs:
         run: find release -maxdepth 1 -type f -printf '%f\n' | sort
 
       - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: openmark-linux-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           path: |
@@ -168,15 +168,15 @@ jobs:
 
     steps:
       - name: Checkout release notes
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download release artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: release-artifacts
 
       - name: Publish GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           target_commitish: ${{ github.sha }}
