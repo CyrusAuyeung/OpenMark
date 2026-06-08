@@ -525,6 +525,120 @@
   outline-offset: 2px;
 }
 
+.workspace-folder-button {
+  width: 100%;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--button-border);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--button-bg);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.workspace-folder-button:hover:not(:disabled) {
+  border-color: var(--accent-border);
+  background: var(--button-hover);
+}
+
+.workspace-folder-button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.workspace-folder-button:focus-visible,
+.workspace-file-button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.workspace-folder-summary {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  margin: 12px 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-0);
+}
+
+.workspace-folder-summary strong,
+.workspace-folder-summary span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-folder-summary strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.workspace-folder-summary span,
+.workspace-toolbar-row {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.workspace-toolbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.workspace-file-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.workspace-file-button {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--surface-0);
+  text-align: left;
+  cursor: pointer;
+}
+
+.workspace-file-button:hover {
+  border-color: var(--accent-border);
+  background: var(--button-hover);
+}
+
+.workspace-file-button.active {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+
+.workspace-file-button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 650;
+}
+
+.workspace-file-button small {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 .recent-file-row {
   min-width: 0;
   display: grid;

@@ -3,6 +3,8 @@ const { contextBridge, ipcRenderer } = require('electron')
 contextBridge.exposeInMainWorld('openmark', {
   openMarkdownFile: () => ipcRenderer.invoke('openmark:open-markdown-file'),
   openRecentFile: (filePath) => ipcRenderer.invoke('openmark:open-recent-file', filePath),
+  selectWorkspaceFolder: () => ipcRenderer.invoke('openmark:select-workspace-folder'),
+  readWorkspaceFolder: (folderPath) => ipcRenderer.invoke('openmark:read-workspace-folder', folderPath),
   selectImageFile: () => ipcRenderer.invoke('openmark:select-image-file'),
   saveMarkdownFile: (payload) => ipcRenderer.invoke('openmark:save-markdown-file', payload),
   saveHtmlFile: (payload) => ipcRenderer.invoke('openmark:save-html-file', payload),

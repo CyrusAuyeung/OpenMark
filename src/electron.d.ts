@@ -4,6 +4,7 @@ declare global {
   type OpenMarkCommand =
     | 'new-document'
     | 'open-document'
+    | 'open-workspace-folder'
     | 'save-document'
     | 'save-document-as'
     | 'preview-export'
@@ -43,6 +44,22 @@ declare global {
     error: string | null
   }
 
+  type OpenMarkWorkspaceFile = {
+    filePath: string
+    fileName: string
+    relativePath: string
+    modifiedAt: number
+  }
+
+  type OpenMarkWorkspaceFolderResult = {
+    canceled: boolean
+    folderPath?: string
+    folderName?: string
+    files?: OpenMarkWorkspaceFile[]
+    truncated?: boolean
+    error?: string
+  }
+
   interface Window {
     openmark?: {
       openMarkdownFile: () => Promise<{
@@ -59,6 +76,8 @@ declare global {
         filePath?: string
         error?: string
       }>
+      selectWorkspaceFolder: () => Promise<OpenMarkWorkspaceFolderResult>
+      readWorkspaceFolder: (folderPath: string) => Promise<OpenMarkWorkspaceFolderResult>
       selectImageFile: () => Promise<{
         canceled: boolean
         fileName?: string

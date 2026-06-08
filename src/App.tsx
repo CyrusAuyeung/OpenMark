@@ -81,7 +81,7 @@ import {
 type ViewMode = 'write' | 'split' | 'preview'
 type ThemeMode = 'light' | 'dark'
 type ThemePreference = ThemeMode | 'system'
-type SidebarTab = 'document' | 'outline' | 'recent'
+type SidebarTab = 'document' | 'outline' | 'recent' | 'workspace'
 type InlineFormat = 'bold' | 'italic' | 'link'
 type BlockFormat = 'heading-2' | 'bullet-list' | 'ordered-list' | 'quote' | 'code-block' | 'table'
 type MarkdownFormat = InlineFormat | BlockFormat
@@ -116,6 +116,13 @@ type RecentFile = {
   fileName: string
   openedAt: number
   pinned?: boolean
+}
+
+type WorkspaceFolderState = {
+  folderPath: string
+  folderName: string
+  files: OpenMarkWorkspaceFile[]
+  truncated: boolean
 }
 
 type PreviewImageSource = {
@@ -170,6 +177,7 @@ const localeStorageKey = 'openmark:locale'
 const editorFontSizeStorageKey = 'openmark:editor-font-size'
 const exportStyleStorageKey = 'openmark:export-style'
 const recentFilesStorageKey = 'openmark:recent-files'
+const workspaceFolderStorageKey = 'openmark:workspace-folder'
 const splitPaneRatioStorageKey = 'openmark:split-pane-ratio'
 const viewModeStorageKey = 'openmark:view-mode'
 const sidebarTabStorageKey = 'openmark:sidebar-tab'
@@ -200,7 +208,7 @@ const modeOptions: Array<{
 ]
 
 const validViewModes = new Set<ViewMode>(['write', 'split', 'preview'])
-const validSidebarTabs = new Set<SidebarTab>(['document', 'outline', 'recent'])
+const validSidebarTabs = new Set<SidebarTab>(['document', 'outline', 'recent', 'workspace'])
 const validThemePreferences = new Set<ThemePreference>(['light', 'dark', 'system'])
 const validExportStyles = new Set<ExportStyle>(['reader', 'compact', 'manuscript'])
 const defaultTableEditingState: TableEditingState = {
@@ -351,6 +359,45 @@ function normalizeRecentFiles(recentFiles: RecentFile[]) {
 
 function persistRecentFiles(recentFiles: RecentFile[]) {
   window.localStorage.setItem(recentFilesStorageKey, JSON.stringify(recentFiles))
+}
+
+function loadWorkspaceFolder(): WorkspaceFolderState | null {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(workspaceFolderStorageKey) ?? 'null')
+
+    if (
+      !parsed ||
+      typeof parsed.folderPath !== 'string' ||
+      typeof parsed.folderName !== 'string' ||
+      !Array.isArray(parsed.files)
+    ) {
+      return null
+    }
+
+    return {
+      folderPath: parsed.folderPath,
+      folderName: parsed.folderName,
+      files: parsed.files.filter(
+        (item: Partial<OpenMarkWorkspaceFile>): item is OpenMarkWorkspaceFile =>
+          typeof item?.filePath === 'string' &&
+          typeof item?.fileName === 'string' &&
+          typeof item?.relativePath === 'string' &&
+          typeof item?.modifiedAt === 'number',
+      ),
+      truncated: parsed.truncated === true,
+    }
+  } catch {
+    return null
+  }
+}
+
+function persistWorkspaceFolder(workspaceFolder: WorkspaceFolderState | null) {
+  if (!workspaceFolder) {
+    window.localStorage.removeItem(workspaceFolderStorageKey)
+    return
+  }
+
+  window.localStorage.setItem(workspaceFolderStorageKey, JSON.stringify(workspaceFolder))
 }
 
 function clampSplitPaneRatio(value: number) {
@@ -1373,6 +1420,9 @@ function App() {
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null)
   const [savedSnapshot, setSavedSnapshot] = useState(initialMarkdownValue)
   const [recentFiles, setRecentFiles] = useState(loadRecentFiles)
+  const [workspaceFolder, setWorkspaceFolder] = useState<WorkspaceFolderState | null>(loadWorkspaceFolder)
+  const [isWorkspaceLoading, setIsWorkspaceLoading] = useState(false)
+  const [workspaceError, setWorkspaceError] = useState<string | null>(null)
   const [isWelcomeVisible, setIsWelcomeVisible] = useState(initialMarkdownValue.trim().length === 0)
   const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>(loadSidebarTab)
   const [splitPaneRatio, setSplitPaneRatio] = useState(loadSplitPaneRatio)
@@ -1475,6 +1525,7 @@ function App() {
     : `${hasUnsavedChanges ? '* ' : ''}${withMarkdownExtension(fileName)} - OpenMark`
   const sidebarTabs: Array<{ value: SidebarTab; label: string; detail: string }> = [
     { value: 'document', label: t.sidebar.document, detail: hasUnsavedChanges ? t.document.unsaved : t.document.saved },
+    { value: 'workspace', label: t.sidebar.workspace, detail: workspaceFolder ? String(workspaceFolder.files.length) : '-' },
     { value: 'outline', label: t.sidebar.outline, detail: String(outline.length) },
     { value: 'recent', label: t.sidebar.recent, detail: String(recentFiles.length) },
   ]
@@ -1675,6 +1726,22 @@ function App() {
       action: () => setActiveSidebarTab('outline'),
     },
     {
+      id: 'workspace-panel',
+      label: t.commands.showWorkspacePanel,
+      group: t.groups.workspace,
+      Icon: FolderOpen,
+      keywords: ['folder', 'files', 'sidebar'],
+      action: () => setActiveSidebarTab('workspace'),
+    },
+    {
+      id: 'open-workspace-folder',
+      label: t.commands.openWorkspaceFolder,
+      group: t.groups.workspace,
+      Icon: FolderOpen,
+      keywords: ['folder', 'project', 'library'],
+      action: () => { void handleSelectWorkspaceFolder() },
+    },
+    {
       id: 'recent-panel',
       label: t.commands.showRecentFilesPanel,
       group: t.groups.workspace,
@@ -1754,6 +1821,10 @@ function App() {
   useEffect(() => {
     persistRecentFiles(recentFiles)
   }, [recentFiles])
+
+  useEffect(() => {
+    persistWorkspaceFolder(workspaceFolder)
+  }, [workspaceFolder])
 
   useEffect(() => {
     if (clipboardCopyKind === null) {
@@ -1954,6 +2025,9 @@ function App() {
           break
         case 'open-document':
           void handleOpenDocument()
+          break
+        case 'open-workspace-folder':
+          void handleSelectWorkspaceFolder()
           break
         case 'save-document':
           void handleSaveMarkdown()
@@ -2173,6 +2247,67 @@ function App() {
     }
 
     applyOpenedDocument(result.content, result.fileName, result.filePath ?? null)
+  }
+
+  function applyWorkspaceFolder(result: OpenMarkWorkspaceFolderResult) {
+    if (result.canceled || !result.folderPath || !result.folderName || !result.files) {
+      if (result.error) {
+        setWorkspaceError(result.error)
+      }
+      return
+    }
+
+    setWorkspaceFolder({
+      folderPath: result.folderPath,
+      folderName: result.folderName,
+      files: result.files,
+      truncated: result.truncated === true,
+    })
+    setWorkspaceError(null)
+    setActiveSidebarTab('workspace')
+  }
+
+  async function handleSelectWorkspaceFolder() {
+    if (!window.openmark) {
+      return
+    }
+
+    setIsWorkspaceLoading(true)
+    setWorkspaceError(null)
+
+    try {
+      applyWorkspaceFolder(await window.openmark.selectWorkspaceFolder())
+    } catch {
+      setWorkspaceError(t.alerts.workspaceFolderOpenFailed)
+    } finally {
+      setIsWorkspaceLoading(false)
+    }
+  }
+
+  async function handleRefreshWorkspaceFolder() {
+    if (!window.openmark || !workspaceFolder) {
+      return
+    }
+
+    setIsWorkspaceLoading(true)
+    setWorkspaceError(null)
+
+    try {
+      applyWorkspaceFolder(await window.openmark.readWorkspaceFolder(workspaceFolder.folderPath))
+    } catch {
+      setWorkspaceError(t.alerts.workspaceFolderOpenFailed)
+    } finally {
+      setIsWorkspaceLoading(false)
+    }
+  }
+
+  function clearWorkspaceFolder() {
+    setWorkspaceFolder(null)
+    setWorkspaceError(null)
+  }
+
+  async function handleOpenWorkspaceFile(filePath: string) {
+    await handleOpenRecentFile(filePath)
   }
 
   async function handleOpenDocument() {
@@ -2985,6 +3120,30 @@ ${getExportStyleCss(exportStyle)}
     )
   }
 
+  function renderWorkspaceFiles() {
+    if (!workspaceFolder) {
+      return null
+    }
+
+    return (
+      <div className="workspace-file-list">
+        {workspaceFolder.files.map((item) => (
+          <button
+            type="button"
+            className={item.filePath === activeFilePath ? 'workspace-file-button active' : 'workspace-file-button'}
+            key={item.filePath}
+            onClick={() => { void handleOpenWorkspaceFile(item.filePath) }}
+            title={item.filePath}
+          >
+            <FileText size={15} aria-hidden="true" />
+            <span>{item.relativePath}</span>
+            <small>{new Date(item.modifiedAt).toLocaleDateString()}</small>
+          </button>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -3277,6 +3436,59 @@ ${getExportStyleCss(exportStyle)}
               <p className="muted">{t.document.noHeadingsYet}</p>
             )}
           </section>
+          )}
+
+          {activeSidebarTab === 'workspace' && (
+            <section className="inspector-section workspace-section">
+              <div className="section-heading-row">
+                <h2>{t.sidebar.workspace}</h2>
+                {workspaceFolder && (
+                  <button type="button" className="text-action" onClick={clearWorkspaceFolder}>
+                    {t.document.clear}
+                  </button>
+                )}
+              </div>
+              {window.openmark ? (
+                <>
+                  <button
+                    type="button"
+                    className="workspace-folder-button"
+                    onClick={() => { void handleSelectWorkspaceFolder() }}
+                    disabled={isWorkspaceLoading}
+                  >
+                    <FolderOpen size={16} aria-hidden="true" />
+                    <span>{workspaceFolder ? t.workspace.changeFolder : t.workspace.openFolder}</span>
+                  </button>
+                  {workspaceFolder ? (
+                    <>
+                      <div className="workspace-folder-summary">
+                        <strong>{workspaceFolder.folderName}</strong>
+                        <span title={workspaceFolder.folderPath}>{workspaceFolder.folderPath}</span>
+                      </div>
+                      <div className="workspace-toolbar-row">
+                        <span>{workspaceFolder.files.length} {t.workspace.files}</span>
+                        <button
+                          type="button"
+                          className="text-action"
+                          onClick={() => { void handleRefreshWorkspaceFolder() }}
+                          disabled={isWorkspaceLoading}
+                        >
+                          {t.workspace.refresh}
+                        </button>
+                      </div>
+                      {workspaceError && <p className="muted">{workspaceError}</p>}
+                      {isWorkspaceLoading && <p className="muted">{t.workspace.loading}</p>}
+                      {workspaceFolder.truncated && <p className="muted">{t.workspace.truncated}</p>}
+                      {workspaceFolder.files.length > 0 ? renderWorkspaceFiles() : <p className="muted">{t.workspace.noFiles}</p>}
+                    </>
+                  ) : (
+                    <p className="muted">{workspaceError ?? t.workspace.noFolder}</p>
+                  )}
+                </>
+              ) : (
+                <p className="muted">{t.workspace.desktopOnly}</p>
+              )}
+            </section>
           )}
 
           {activeSidebarTab === 'recent' && (

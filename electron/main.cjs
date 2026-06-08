@@ -7,6 +7,16 @@ const isDev = !app.isPackaged
 const canUseAutoUpdater = !isDev && (process.platform !== 'linux' || Boolean(process.env.APPIMAGE))
 let mainWindow = null
 let hasScheduledInitialUpdateCheck = false
+const workspaceFileLimit = 120
+const ignoredWorkspaceDirectories = new Set([
+  '.git',
+  '.next',
+  '.vite',
+  'build',
+  'dist',
+  'node_modules',
+  'out',
+])
 
 const updateStatus = {
   state: canUseAutoUpdater ? 'idle' : 'unsupported',
@@ -203,6 +213,7 @@ function createApplicationMenu() {
       submenu: [
         { label: 'New Document', accelerator: 'CmdOrCtrl+N', click: () => sendCommand('new-document') },
         { label: 'Open...', accelerator: 'CmdOrCtrl+O', click: () => sendCommand('open-document') },
+        { label: 'Open Folder...', click: () => sendCommand('open-workspace-folder') },
         { type: 'separator' },
         { label: 'Save', accelerator: 'CmdOrCtrl+S', click: () => sendCommand('save-document') },
         { label: 'Save As...', accelerator: 'CmdOrCtrl+Shift+S', click: () => sendCommand('save-document-as') },
@@ -271,6 +282,85 @@ function isMarkdownLikeFile(filePath) {
   return ['.md', '.markdown', '.mdown', '.txt'].includes(path.extname(filePath).toLowerCase())
 }
 
+function getFolderName(folderPath) {
+  return path.basename(folderPath) || folderPath
+}
+
+async function listWorkspaceFolder(folderPath) {
+  let folderStats
+
+  try {
+    folderStats = await fs.stat(folderPath)
+  } catch {
+    return { canceled: true, error: 'This folder could not be opened.' }
+  }
+
+  if (!folderStats.isDirectory()) {
+    return { canceled: true, error: 'This path is not a folder.' }
+  }
+
+  const files = []
+  const pendingDirectories = [folderPath]
+  let truncated = false
+
+  while (pendingDirectories.length > 0 && files.length < workspaceFileLimit) {
+    const directoryPath = pendingDirectories.shift()
+    let entries
+
+    try {
+      entries = await fs.readdir(directoryPath, { withFileTypes: true })
+    } catch {
+      continue
+    }
+
+    entries.sort((left, right) => left.name.localeCompare(right.name))
+
+    for (const entry of entries) {
+      const entryPath = path.join(directoryPath, entry.name)
+
+      if (entry.isDirectory()) {
+        if (!entry.isSymbolicLink() && !ignoredWorkspaceDirectories.has(entry.name)) {
+          pendingDirectories.push(entryPath)
+        }
+
+        continue
+      }
+
+      if (!entry.isFile() || !isMarkdownLikeFile(entryPath)) {
+        continue
+      }
+
+      let fileStats
+
+      try {
+        fileStats = await fs.stat(entryPath)
+      } catch {
+        continue
+      }
+
+      files.push({
+        filePath: entryPath,
+        fileName: entry.name,
+        relativePath: path.relative(folderPath, entryPath).split(path.sep).join('/'),
+        modifiedAt: fileStats.mtimeMs,
+      })
+
+      if (files.length >= workspaceFileLimit) {
+        truncated = true
+        break
+      }
+    }
+  }
+
+  return {
+    canceled: false,
+    folderPath,
+    folderName: getFolderName(folderPath),
+    files: files.sort((left, right) => left.relativePath.localeCompare(right.relativePath)),
+    truncated: truncated || pendingDirectories.length > 0,
+  }
+}
+
 async function readMarkdownFile(filePath) {
   if (!isMarkdownLikeFile(filePath)) {
     return { canceled: true, error: 'Unsupported file type' }
@@ -316,6 +406,27 @@ ipcMain.handle('openmark:open-recent-file', async (_event, filePath) => {
   }
 
   return readMarkdownFile(filePath)
+})
+
+ipcMain.handle('openmark:select-workspace-folder', async () => {
+  const result = await dialog.showOpenDialog({
+    title: 'Open Workspace Folder',
+    properties: ['openDirectory'],
+  })
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return { canceled: true }
+  }
+
+  return listWorkspaceFolder(result.filePaths[0])
+})
+
+ipcMain.handle('openmark:read-workspace-folder', async (_event, folderPath) => {
+  if (typeof folderPath !== 'string' || folderPath.length === 0) {
+    return { canceled: true, error: 'Invalid folder path' }
+  }
+
+  return listWorkspaceFolder(folderPath)
 })
 
 ipcMain.handle('openmark:select-image-file', async () => {
