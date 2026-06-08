@@ -2,18 +2,18 @@
 
 ## Summary
 
-OpenMark 0.6.0 focuses on export and sharing polish. Upgrade for clipboard sharing, export style presets, printable export preview, and share-friendly metadata in exported documents.
+OpenMark 0.7.0 focuses on workspace polish and localization. Upgrade for pinned recent files, recent-file search, a local workspace browser, quick open, missing-file states, and visible English/Simplified Chinese switching.
 
 ## Highlights
 
-- Copy Markdown or export-ready HTML from the toolbar, command palette, or desktop Edit menu.
-- Choose Reader, Compact, or Manuscript export styling and reuse the same style across HTML export, PDF export, Copy HTML, and export preview.
-- Preview the final export document before saving, then print, export HTML, or export PDF from the preview dialog.
-- Exported documents now include derived titles, descriptions, Open Graph, and Twitter summary metadata for cleaner sharing.
+- Pin important recent files and search the recent list by name or path.
+- Browse Markdown files from a local workspace folder and open them with quick open.
+- Keep unavailable recent and workspace files visible with a clear missing-file state.
+- Switch between English and Simplified Chinese from the toolbar, command palette, settings, or desktop menu.
 
 ## Fixes
 
-- Export HTML now uses export-ready content without interactive preview navigation controls.
+- Workspace and recent-file open failures now mark missing files instead of silently removing entries.
 
 ## Downloads
 
@@ -21,11 +21,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.6.0.exe` | Recommended installer. |
-| Windows | `OpenMark.0.6.0.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.6.0.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.6.0-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.6.0_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.7.0.exe` | Recommended installer. |
+| Windows | `OpenMark.0.7.0.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.7.0.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.7.0-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.7.0_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
