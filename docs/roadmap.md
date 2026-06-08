@@ -60,7 +60,7 @@
 ## Milestone 8: Document Library & Workspace Polish
 
 - Pinned recent files ✅
-- Searchable recent files
+- Searchable recent files ✅
 - Local folder workspace browser
 - Quick open for Markdown files
 - Missing-file state for unavailable recent files

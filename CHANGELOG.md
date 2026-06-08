@@ -7,6 +7,7 @@ All notable changes to OpenMark will be documented in this file.
 ### Workspace
 
 - Added pinned recent files so important local documents stay at the top of the recent list.
+- Added search for recent files by name or path.
 
 ## 0.6.0 - 2026-06-08
 

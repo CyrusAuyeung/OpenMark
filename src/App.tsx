@@ -1388,6 +1388,7 @@ function App() {
   const [isSearchVisible, setIsSearchVisible] = useState(false)
   const [isReplaceVisible, setIsReplaceVisible] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [recentFileQuery, setRecentFileQuery] = useState('')
   const [replaceTerm, setReplaceTerm] = useState('')
   const [isSearchCaseSensitive, setIsSearchCaseSensitive] = useState(false)
   const [isSearchWholeWord, setIsSearchWholeWord] = useState(false)
@@ -1454,6 +1455,13 @@ function App() {
     () => getDocumentStats(markdownValue, outline),
     [markdownValue, outline],
   )
+  const normalizedRecentFileQuery = recentFileQuery.trim().toLowerCase()
+  const filteredRecentFiles = normalizedRecentFileQuery.length === 0
+    ? recentFiles
+    : recentFiles.filter((item) => (
+      item.fileName.toLowerCase().includes(normalizedRecentFileQuery) ||
+      item.filePath.toLowerCase().includes(normalizedRecentFileQuery)
+    ))
   const activeSearchMatchIndex = activeSearchRange
     ? searchMatches.findIndex((match) => match.from === activeSearchRange.from && match.to === activeSearchRange.to)
     : -1
@@ -2089,6 +2097,7 @@ function App() {
   }
 
   function clearRecentFiles() {
+    setRecentFileQuery('')
     setRecentFiles([])
   }
 
@@ -2938,10 +2947,10 @@ ${getExportStyleCss(exportStyle)}
     }
   }
 
-  function renderRecentFiles() {
+  function renderRecentFiles(items = recentFiles) {
     return (
       <div className="recent-list">
-        {recentFiles.map((item) => (
+        {items.map((item) => (
           <div className="recent-file-row" key={item.filePath}>
             <button
               type="button"
@@ -2965,7 +2974,7 @@ ${getExportStyleCss(exportStyle)}
               type="button"
               className="recent-remove-button"
               onClick={() => removeRecentFile(item.filePath)}
-              title="Remove from recent"
+              title={t.document.removeFromRecent}
               aria-label={`${t.document.removeFromRecent}: ${item.fileName}`}
             >
               <X size={14} />
@@ -3281,7 +3290,34 @@ ${getExportStyleCss(exportStyle)}
                 )}
               </div>
               {window.openmark && recentFiles.length > 0 ? (
-                renderRecentFiles()
+                <>
+                  <div className="recent-search">
+                    <SearchIcon size={15} aria-hidden="true" />
+                    <input
+                      type="search"
+                      value={recentFileQuery}
+                      onChange={(event) => setRecentFileQuery(event.target.value)}
+                      placeholder={t.document.searchRecentFilesPlaceholder}
+                      aria-label={t.document.searchRecentFiles}
+                    />
+                    {recentFileQuery.length > 0 && (
+                      <button
+                        type="button"
+                        className="recent-search-clear"
+                        onClick={() => setRecentFileQuery('')}
+                        aria-label={t.document.clearRecentFileSearch}
+                        title={t.document.clearRecentFileSearch}
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                  {filteredRecentFiles.length > 0 ? (
+                    renderRecentFiles(filteredRecentFiles)
+                  ) : (
+                    <p className="muted">{t.document.noRecentFileMatches}</p>
+                  )}
+                </>
               ) : (
                 <p className="muted">{t.document.noRecentFiles}</p>
               )}
