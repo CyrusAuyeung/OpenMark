@@ -46,6 +46,10 @@ import {
   List,
   ListOrdered,
   Moon,
+  PanelBottom,
+  PanelBottomClose,
+  PanelRight,
+  PanelRightClose,
   Quote,
   RefreshCw,
   Replace,
@@ -56,6 +60,7 @@ import {
   Settings2,
   Sun,
   Table,
+  Table2,
   Type,
   WholeWord,
   X,
@@ -77,6 +82,8 @@ type SidebarTab = 'document' | 'outline' | 'recent'
 type InlineFormat = 'bold' | 'italic' | 'link'
 type BlockFormat = 'heading-2' | 'bullet-list' | 'ordered-list' | 'quote' | 'code-block' | 'table'
 type MarkdownFormat = InlineFormat | BlockFormat
+type TableEditAction = 'format' | 'insert-row-below' | 'delete-row' | 'insert-column-right' | 'delete-column'
+type TableTranslationKey = 'formatTable' | 'addRowBelow' | 'deleteRow' | 'addColumnRight' | 'deleteColumn'
 
 type OutlineItem = {
   level: number
@@ -115,6 +122,22 @@ type SearchResult = SearchMatch & {
   contextBefore: string
   matchText: string
   contextAfter: string
+}
+
+type MarkdownTableContext = {
+  from: number
+  to: number
+  rows: string[][]
+  separatorIndex: number
+  activeRowIndex: number
+  activeColumnIndex: number
+  columnCount: number
+}
+
+type TableEditingState = {
+  isInTable: boolean
+  canDeleteRow: boolean
+  canDeleteColumn: boolean
 }
 
 type CommandPaletteItem = {
@@ -164,6 +187,17 @@ const modeOptions: Array<{
 const validViewModes = new Set<ViewMode>(['write', 'split', 'preview'])
 const validSidebarTabs = new Set<SidebarTab>(['document', 'outline', 'recent'])
 const validThemePreferences = new Set<ThemePreference>(['light', 'dark', 'system'])
+const defaultTableEditingState: TableEditingState = {
+  isInTable: false,
+  canDeleteRow: false,
+  canDeleteColumn: false,
+}
+
+function areTableEditingStatesEqual(left: TableEditingState, right: TableEditingState) {
+  return left.isInTable === right.isInTable
+    && left.canDeleteRow === right.canDeleteRow
+    && left.canDeleteColumn === right.canDeleteColumn
+}
 
 const themeOptions: Array<{
   value: ThemePreference
@@ -217,6 +251,18 @@ const markdownToolbarGroups: Array<
     { format: 'code-block', label: 'Code block', title: 'Insert code block', Icon: Code2 },
     { format: 'table', label: 'Table', title: 'Insert or convert table', Icon: Table },
   ],
+]
+
+const tableToolbarActions: Array<{
+  action: TableEditAction
+  translationKey: TableTranslationKey
+  Icon: LucideIcon
+}> = [
+  { action: 'format', translationKey: 'formatTable', Icon: Table2 },
+  { action: 'insert-row-below', translationKey: 'addRowBelow', Icon: PanelBottom },
+  { action: 'delete-row', translationKey: 'deleteRow', Icon: PanelBottomClose },
+  { action: 'insert-column-right', translationKey: 'addColumnRight', Icon: PanelRight },
+  { action: 'delete-column', translationKey: 'deleteColumn', Icon: PanelRightClose },
 ]
 
 function loadStoredValue(key: string, fallback: string) {
@@ -802,6 +848,220 @@ function renderTableRow(cells: string[], columnCount: number) {
   return `| ${normalizedCells.join(' | ')} |`
 }
 
+function isTableSeparatorCell(cell: string) {
+  return /^:?-{3,}:?$/.test(cell.trim())
+}
+
+function isMarkdownTableRow(line: string) {
+  return line.includes('|') && splitTableCells(line).length >= 2
+}
+
+function isTableSeparatorRow(line: string) {
+  const cells = splitTableCells(line)
+
+  return cells.length >= 2 && cells.every(isTableSeparatorCell)
+}
+
+function normalizeTableCells(cells: string[], columnCount: number) {
+  return Array.from({ length: columnCount }, (_item, index) => cells[index]?.trim() || ' ')
+}
+
+function normalizeTableSeparatorCells(cells: string[], columnCount: number) {
+  return Array.from({ length: columnCount }, (_item, index) => {
+    const cell = cells[index]?.trim() ?? ''
+
+    return isTableSeparatorCell(cell) ? cell : '---'
+  })
+}
+
+function renderTableSeparatorRow(cells: string[], columnCount: number) {
+  return `| ${normalizeTableSeparatorCells(cells, columnCount).join(' | ')} |`
+}
+
+function normalizeTableRows(rows: string[][], separatorIndex: number, columnCount: number) {
+  return rows.map((row, rowIndex) => (
+    rowIndex === separatorIndex
+      ? normalizeTableSeparatorCells(row, columnCount)
+      : normalizeTableCells(row, columnCount)
+  ))
+}
+
+function renderMarkdownTableRows(rows: string[][], separatorIndex: number, columnCount: number) {
+  return rows.map((row, rowIndex) => (
+    rowIndex === separatorIndex
+      ? renderTableSeparatorRow(row, columnCount)
+      : renderTableRow(row, columnCount)
+  )).join('\n')
+}
+
+function getTableColumnIndex(line: string, cursorOffset: number, columnCount: number) {
+  const prefix = line.slice(0, Math.max(0, cursorOffset))
+  const pipeCount = [...prefix].filter((character) => character === '|').length
+  const startsWithPipe = line.trimStart().startsWith('|')
+  const columnIndex = startsWithPipe ? pipeCount - 1 : pipeCount
+
+  return Math.max(0, Math.min(columnIndex, columnCount - 1))
+}
+
+function getMarkdownTableContext(view: EditorView): MarkdownTableContext | null {
+  const selection = view.state.selection.main
+  const activeLine = view.state.doc.lineAt(selection.from)
+
+  if (!isMarkdownTableRow(activeLine.text)) {
+    return null
+  }
+
+  let fromLineNumber = activeLine.number
+  let toLineNumber = activeLine.number
+
+  while (fromLineNumber > 1 && isMarkdownTableRow(view.state.doc.line(fromLineNumber - 1).text)) {
+    fromLineNumber -= 1
+  }
+
+  while (toLineNumber < view.state.doc.lines && isMarkdownTableRow(view.state.doc.line(toLineNumber + 1).text)) {
+    toLineNumber += 1
+  }
+
+  const tableLines = Array.from({ length: toLineNumber - fromLineNumber + 1 }, (_item, index) => (
+    view.state.doc.line(fromLineNumber + index)
+  ))
+  const separatorIndex = tableLines.findIndex((line) => isTableSeparatorRow(line.text))
+
+  if (separatorIndex <= 0) {
+    return null
+  }
+
+  const rows = tableLines.map((line) => splitTableCells(line.text))
+  const columnCount = Math.max(2, ...rows.map((row) => row.length))
+  const activeRowIndex = activeLine.number - fromLineNumber
+  const activeColumnIndex = getTableColumnIndex(activeLine.text, selection.from - activeLine.from, columnCount)
+
+  return {
+    from: tableLines[0].from,
+    to: tableLines[tableLines.length - 1].to,
+    rows,
+    separatorIndex,
+    activeRowIndex,
+    activeColumnIndex,
+    columnCount,
+  }
+}
+
+function getRenderedTableCellOffset(
+  rows: string[][],
+  separatorIndex: number,
+  columnCount: number,
+  rowIndex: number,
+  columnIndex: number,
+) {
+  const safeRowIndex = Math.max(0, Math.min(rowIndex, rows.length - 1))
+  const safeColumnIndex = Math.max(0, Math.min(columnIndex, columnCount - 1))
+  const normalizedRows = normalizeTableRows(rows, separatorIndex, columnCount)
+  let offset = 0
+
+  for (let index = 0; index < safeRowIndex; index += 1) {
+    offset += (index === separatorIndex
+      ? renderTableSeparatorRow(normalizedRows[index], columnCount)
+      : renderTableRow(normalizedRows[index], columnCount)
+    ).length + 1
+  }
+
+  offset += 2
+
+  for (let index = 0; index < safeColumnIndex; index += 1) {
+    offset += normalizedRows[safeRowIndex][index].length + 3
+  }
+
+  return offset
+}
+
+function getTableEditingState(view: EditorView): TableEditingState {
+  const context = getMarkdownTableContext(view)
+
+  if (!context) {
+    return defaultTableEditingState
+  }
+
+  return {
+    isInTable: true,
+    canDeleteRow: context.activeRowIndex > context.separatorIndex,
+    canDeleteColumn: context.columnCount > 2,
+  }
+}
+
+function dispatchTableUpdate(
+  view: EditorView,
+  context: MarkdownTableContext,
+  rows: string[][],
+  activeRowIndex: number,
+  activeColumnIndex: number,
+) {
+  const columnCount = Math.max(2, ...rows.map((row) => row.length))
+  const normalizedRows = normalizeTableRows(rows, context.separatorIndex, columnCount)
+  const insertText = renderMarkdownTableRows(normalizedRows, context.separatorIndex, columnCount)
+  const anchor = context.from + getRenderedTableCellOffset(
+    normalizedRows,
+    context.separatorIndex,
+    columnCount,
+    activeRowIndex,
+    activeColumnIndex,
+  )
+
+  view.dispatch({
+    changes: { from: context.from, to: context.to, insert: insertText },
+    selection: { anchor },
+    scrollIntoView: true,
+  })
+  view.focus()
+
+  return true
+}
+
+function applyTableEditAction(view: EditorView, action: TableEditAction) {
+  const context = getMarkdownTableContext(view)
+
+  if (!context) {
+    return false
+  }
+
+  const rows = normalizeTableRows(context.rows, context.separatorIndex, context.columnCount)
+  let activeRowIndex = context.activeRowIndex
+  let activeColumnIndex = context.activeColumnIndex
+
+  if (action === 'insert-row-below') {
+    const insertAfterIndex = activeRowIndex <= context.separatorIndex ? context.separatorIndex : activeRowIndex
+    rows.splice(insertAfterIndex + 1, 0, Array.from({ length: context.columnCount }, () => ' '))
+    activeRowIndex = insertAfterIndex + 1
+  }
+
+  if (action === 'delete-row') {
+    if (activeRowIndex <= context.separatorIndex) {
+      return false
+    }
+
+    rows.splice(activeRowIndex, 1)
+    activeRowIndex = Math.min(activeRowIndex, rows.length - 1)
+  }
+
+  if (action === 'insert-column-right') {
+    rows.forEach((row, rowIndex) => {
+      row.splice(activeColumnIndex + 1, 0, rowIndex === context.separatorIndex ? '---' : ' ')
+    })
+    activeColumnIndex += 1
+  }
+
+  if (action === 'delete-column') {
+    if (context.columnCount <= 2) {
+      return false
+    }
+
+    rows.forEach((row) => row.splice(activeColumnIndex, 1))
+    activeColumnIndex = Math.min(activeColumnIndex, context.columnCount - 2)
+  }
+
+  return dispatchTableUpdate(view, context, rows, activeRowIndex, activeColumnIndex)
+}
+
 function createMarkdownTable(selectedText: string) {
   const selectedLines = selectedText
     .split(/\r\n|\r|\n/)
@@ -945,6 +1205,7 @@ function App() {
   const [isSearchCaseSensitive, setIsSearchCaseSensitive] = useState(false)
   const [isSearchWholeWord, setIsSearchWholeWord] = useState(false)
   const [activeSearchRange, setActiveSearchRange] = useState<SearchMatch | null>(null)
+  const [tableEditingState, setTableEditingState] = useState<TableEditingState>(defaultTableEditingState)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [commandQuery, setCommandQuery] = useState('')
   const [activeCommandIndex, setActiveCommandIndex] = useState(0)
@@ -1104,6 +1365,46 @@ function App() {
       Icon: Table,
       keywords: ['markdown', 'columns', 'rows'],
       action: () => handleMarkdownFormat('table'),
+    },
+    {
+      id: 'format-table',
+      label: t.table.formatTable,
+      group: t.groups.edit,
+      Icon: Table2,
+      keywords: ['markdown', 'table', 'align'],
+      action: () => handleTableEditAction('format'),
+    },
+    {
+      id: 'add-table-row',
+      label: t.table.addRowBelow,
+      group: t.groups.edit,
+      Icon: PanelBottom,
+      keywords: ['markdown', 'table', 'row'],
+      action: () => handleTableEditAction('insert-row-below'),
+    },
+    {
+      id: 'delete-table-row',
+      label: t.table.deleteRow,
+      group: t.groups.edit,
+      Icon: PanelBottomClose,
+      keywords: ['markdown', 'table', 'row'],
+      action: () => handleTableEditAction('delete-row'),
+    },
+    {
+      id: 'add-table-column',
+      label: t.table.addColumnRight,
+      group: t.groups.edit,
+      Icon: PanelRight,
+      keywords: ['markdown', 'table', 'column'],
+      action: () => handleTableEditAction('insert-column-right'),
+    },
+    {
+      id: 'delete-table-column',
+      label: t.table.deleteColumn,
+      group: t.groups.edit,
+      Icon: PanelRightClose,
+      keywords: ['markdown', 'table', 'column'],
+      action: () => handleTableEditAction('delete-column'),
     },
     {
       id: 'write-mode',
@@ -1307,6 +1608,7 @@ function App() {
     editorScrollCleanupRef.current?.()
     editorScrollCleanupRef.current = null
     editorViewRef.current = null
+    setNextTableEditingState(defaultTableEditingState)
   }, [mode, showWelcome])
 
   useEffect(() => {
@@ -1874,6 +2176,40 @@ function App() {
     }
 
     applyMarkdownFormat(editorView, format)
+  }
+
+  function handleTableEditAction(action: TableEditAction) {
+    const editorView = getEditorView()
+
+    if (!editorView) {
+      return
+    }
+
+    if (applyTableEditAction(editorView, action)) {
+      setNextTableEditingState(getTableEditingState(editorView))
+    }
+  }
+
+  function setNextTableEditingState(nextState: TableEditingState) {
+    setTableEditingState((currentState) => (
+      areTableEditingStatesEqual(currentState, nextState) ? currentState : nextState
+    ))
+  }
+
+  function isTableActionDisabled(action: TableEditAction) {
+    if (!tableEditingState.isInTable) {
+      return true
+    }
+
+    if (action === 'delete-row') {
+      return !tableEditingState.canDeleteRow
+    }
+
+    if (action === 'delete-column') {
+      return !tableEditingState.canDeleteColumn
+    }
+
+    return false
   }
 
   function focusCommandInput() {
@@ -2645,6 +2981,22 @@ function App() {
                           <ImagePlus size={15} />
                         </button>
                       </div>
+                      <div className="format-group">
+                        {tableToolbarActions.map(({ action, translationKey, Icon }) => (
+                          <button
+                            key={action}
+                            type="button"
+                            className="format-button"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => handleTableEditAction(action)}
+                            title={t.table[translationKey]}
+                            aria-label={t.table[translationKey]}
+                            disabled={isTableActionDisabled(action)}
+                          >
+                            <Icon size={15} />
+                          </button>
+                        ))}
+                      </div>
                     </div>
                     <span className="panel-file-name">{withMarkdownExtension(fileName)}</span>
                   </div>
@@ -2816,10 +3168,16 @@ function App() {
                       onCreateEditor={(view) => {
                         editorScrollCleanupRef.current?.()
                         editorViewRef.current = view
+                        setNextTableEditingState(getTableEditingState(view))
                         const handleEditorScroll = () => syncPreviewScrollFromEditorRef.current()
                         view.scrollDOM.addEventListener('scroll', handleEditorScroll)
                         editorScrollCleanupRef.current = () => {
                           view.scrollDOM.removeEventListener('scroll', handleEditorScroll)
+                        }
+                      }}
+                      onUpdate={(viewUpdate) => {
+                        if (viewUpdate.docChanged || viewUpdate.selectionSet) {
+                          setNextTableEditingState(getTableEditingState(viewUpdate.view))
                         }
                       }}
                       onChange={(value) => setMarkdownValue(value)}

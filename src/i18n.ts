@@ -110,6 +110,13 @@ const en = {
     resizeSplitView: 'Resize split view',
     wordCountSuffix: 'words',
   },
+  table: {
+    formatTable: 'Format current table',
+    addRowBelow: 'Add row below',
+    deleteRow: 'Delete current row',
+    addColumnRight: 'Add column right',
+    deleteColumn: 'Delete current column',
+  },
   search: {
     findAndReplace: 'Find and replace',
     find: 'Find',
@@ -287,6 +294,13 @@ const zhCN: TranslationCatalog = {
     emptyDocument: '空文档',
     resizeSplitView: '调整分屏宽度',
     wordCountSuffix: '词',
+  },
+  table: {
+    formatTable: '规整当前表格',
+    addRowBelow: '在下方添加行',
+    deleteRow: '删除当前行',
+    addColumnRight: '在右侧添加列',
+    deleteColumn: '删除当前列',
   },
   search: {
     findAndReplace: '查找和替换',
