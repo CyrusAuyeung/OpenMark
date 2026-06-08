@@ -206,6 +206,8 @@ function createApplicationMenu() {
         { type: 'separator' },
         { label: 'Save', accelerator: 'CmdOrCtrl+S', click: () => sendCommand('save-document') },
         { label: 'Save As...', accelerator: 'CmdOrCtrl+Shift+S', click: () => sendCommand('save-document-as') },
+        { type: 'separator' },
+        { label: 'Preview Export...', click: () => sendCommand('preview-export') },
         { label: 'Export HTML...', accelerator: 'CmdOrCtrl+E', click: () => sendCommand('export-html') },
         { label: 'Export PDF...', accelerator: 'CmdOrCtrl+Shift+E', click: () => sendCommand('export-pdf') },
         { type: 'separator' },

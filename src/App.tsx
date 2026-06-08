@@ -51,6 +51,7 @@ import {
   PanelBottomClose,
   PanelRight,
   PanelRightClose,
+  Printer,
   Quote,
   RefreshCw,
   Replace,
@@ -1250,6 +1251,7 @@ function App() {
   const syncPreviewScrollFromEditorRef = useRef<() => void>(() => undefined)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const commandInputRef = useRef<HTMLInputElement | null>(null)
+  const exportPreviewFrameRef = useRef<HTMLIFrameElement | null>(null)
   const previewImageSourcesRef = useRef<PreviewImageSource[]>([])
   const initialMarkdownValue = useMemo(() => loadStoredValue(draftStorageKey, ''), [])
   const [markdownValue, setMarkdownValue] = useState(initialMarkdownValue)
@@ -1283,6 +1285,7 @@ function App() {
   const [commandQuery, setCommandQuery] = useState('')
   const [activeCommandIndex, setActiveCommandIndex] = useState(0)
   const [previewImageSources, setPreviewImageSources] = useState<PreviewImageSource[]>([])
+  const [isExportPreviewOpen, setIsExportPreviewOpen] = useState(false)
   const [isThemeSettingsOpen, setIsThemeSettingsOpen] = useState(false)
   const [updateStatus, setUpdateStatus] = useState<OpenMarkUpdateStatus>(defaultUpdateStatus)
   const [clipboardCopyKind, setClipboardCopyKind] = useState<ClipboardCopyKind | null>(null)
@@ -1308,16 +1311,16 @@ function App() {
     [markdownValue],
   )
   const exportHtml = useMemo(
-    () => sanitizeMarkdownHtml(rawRenderedHtml),
-    [rawRenderedHtml],
+    () => sanitizeMarkdownHtml(rewritePreviewImageSources(rawRenderedHtml, activeFilePath, previewImageSources)),
+    [activeFilePath, previewImageSources, rawRenderedHtml],
   )
   const outline = useMemo(() => getOutline(markdownValue), [markdownValue])
   const renderedHtml = useMemo(
     () => addPreviewHeadingNavigation(
-      sanitizeMarkdownHtml(rewritePreviewImageSources(rawRenderedHtml, activeFilePath, previewImageSources)),
+      exportHtml,
       outline,
     ),
-    [activeFilePath, outline, previewImageSources, rawRenderedHtml],
+    [exportHtml, outline],
   )
 
   const searchMatches = useMemo(
@@ -1387,6 +1390,14 @@ function App() {
       Icon: Save,
       keywords: ['rename', 'copy'],
       action: () => { void handleSaveMarkdown({ forceDialog: true }) },
+    },
+    {
+      id: 'preview-export',
+      label: t.commands.previewExport,
+      group: t.groups.file,
+      Icon: Eye,
+      keywords: ['print', 'publish', 'html', 'pdf'],
+      action: openExportPreview,
     },
     {
       id: 'export-html',
@@ -1823,6 +1834,9 @@ function App() {
         case 'save-document-as':
           void handleSaveMarkdown({ forceDialog: true })
           break
+        case 'preview-export':
+          openExportPreview()
+          break
         case 'export-html':
           void handleExportHtml()
           break
@@ -2208,7 +2222,7 @@ ${getExportStyleCss(exportStyle)}
 
   async function handleExportPdf() {
     const pdfFileName = `${getBaseName(fileName)}.pdf`
-    const htmlContent = buildExportHtml(renderedHtml)
+    const htmlContent = buildExportHtml()
 
     if (window.openmark) {
       const result = await window.openmark.savePdfFile({
@@ -2239,6 +2253,27 @@ ${getExportStyleCss(exportStyle)}
     window.setTimeout(() => {
       printWindow.print()
     }, 250)
+  }
+
+  function openExportPreview() {
+    setIsCommandPaletteOpen(false)
+    setIsExportPreviewOpen(true)
+  }
+
+  function closeExportPreview() {
+    setIsExportPreviewOpen(false)
+    getEditorView()?.focus()
+  }
+
+  function handlePrintExportPreview() {
+    const exportFrameWindow = exportPreviewFrameRef.current?.contentWindow
+
+    if (!exportFrameWindow) {
+      return
+    }
+
+    exportFrameWindow.focus()
+    exportFrameWindow.print()
   }
 
   function copyTextWithTextArea(content: string) {
@@ -2846,6 +2881,15 @@ ${getExportStyleCss(exportStyle)}
             >
               <Save size={17} />
               <span>{t.toolbar.saveAs}</span>
+            </button>
+            <button
+              type="button"
+              className="tool-button"
+              onClick={openExportPreview}
+              title={t.toolbar.previewExport}
+            >
+              <Eye size={17} />
+              <span>{t.toolbar.preview}</span>
             </button>
             <button
               type="button"
@@ -3477,6 +3521,53 @@ ${getExportStyleCss(exportStyle)}
               )}
             </div>
           </form>
+        </div>
+      )}
+
+      {isExportPreviewOpen && (
+        <div className="export-preview-backdrop" role="presentation" onMouseDown={closeExportPreview}>
+          <section
+            className="export-preview-dialog"
+            role="dialog"
+            aria-label={t.exportPreview.preview}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="export-preview-header">
+              <div>
+                <h2>{t.exportPreview.preview}</h2>
+                <span>{t.exportPreview.styleLabel} {t.exportStyles[exportStyle]}</span>
+              </div>
+              <div className="export-preview-actions">
+                <button type="button" className="theme-choice export-preview-action" onClick={handlePrintExportPreview}>
+                  <Printer size={16} />
+                  <span>{t.exportPreview.print}</span>
+                </button>
+                <button type="button" className="theme-choice export-preview-action" onClick={() => { void handleExportHtml() }}>
+                  <Download size={16} />
+                  <span>HTML</span>
+                </button>
+                <button type="button" className="theme-choice export-preview-action" onClick={() => { void handleExportPdf() }}>
+                  <FileDown size={16} />
+                  <span>PDF</span>
+                </button>
+                <button
+                  type="button"
+                  className="icon-button"
+                  onClick={closeExportPreview}
+                  title={t.exportPreview.close}
+                  aria-label={t.exportPreview.close}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+            <iframe
+              ref={exportPreviewFrameRef}
+              className="export-preview-frame"
+              title={t.exportPreview.documentFrame}
+              srcDoc={buildExportHtml()}
+            />
+          </section>
         </div>
       )}
 

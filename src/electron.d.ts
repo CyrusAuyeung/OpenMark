@@ -6,6 +6,7 @@ declare global {
     | 'open-document'
     | 'save-document'
     | 'save-document-as'
+    | 'preview-export'
     | 'export-html'
     | 'export-pdf'
     | 'copy-markdown'

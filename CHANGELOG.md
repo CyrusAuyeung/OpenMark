@@ -8,6 +8,7 @@ All notable changes to OpenMark will be documented in this file.
 
 - Added toolbar, command palette, and desktop menu actions for copying Markdown or export-ready HTML to the clipboard.
 - Added Reader, Compact, and Manuscript export style presets for HTML export, PDF export, and Copy HTML output.
+- Added an export preview dialog with print, HTML export, and PDF export actions using the current export style.
 
 ## 0.5.0 - 2026-06-08
 

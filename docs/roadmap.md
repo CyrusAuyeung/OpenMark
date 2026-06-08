@@ -54,5 +54,5 @@
 
 - Copy Markdown and export-ready HTML to the clipboard ✅
 - Export preset polish ✅
-- Printable preview improvements
+- Printable preview improvements ✅
 - Share-friendly document metadata
