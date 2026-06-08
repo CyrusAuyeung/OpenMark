@@ -1033,6 +1033,23 @@ body.is-resizing-split * {
   font-size: 19px;
 }
 
+.markdown-preview [data-outline-index] {
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.markdown-preview [data-outline-index]:hover {
+  background: var(--accent-soft);
+}
+
+.markdown-preview [data-outline-index]:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
 .markdown-preview p,
 .markdown-preview ul,
 .markdown-preview ol,

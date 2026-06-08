@@ -1,7 +1,7 @@
 import {
   type FormEvent as ReactFormEvent,
-  type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   useEffect,
   useMemo,
@@ -550,6 +550,30 @@ function rewritePreviewImageSources(
   return template.innerHTML
 }
 
+function addPreviewHeadingNavigation(html: string, outline: OutlineItem[]) {
+  if (outline.length === 0 || !/<h[1-6]/i.test(html)) {
+    return html
+  }
+
+  const template = document.createElement('template')
+  template.innerHTML = html
+  const headings = Array.from(template.content.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+
+  headings.forEach((heading, index) => {
+    const outlineItem = outline[index]
+
+    if (!outlineItem) {
+      return
+    }
+
+    heading.setAttribute('data-outline-index', String(index))
+    heading.setAttribute('tabindex', '0')
+    heading.setAttribute('role', 'button')
+  })
+
+  return template.innerHTML
+}
+
 function isSearchWordCharacter(character: string) {
   return /^[A-Za-z0-9_]$/.test(character)
 }
@@ -947,12 +971,15 @@ function App() {
     () => sanitizeMarkdownHtml(rawRenderedHtml),
     [rawRenderedHtml],
   )
+  const outline = useMemo(() => getOutline(markdownValue), [markdownValue])
   const renderedHtml = useMemo(
-    () => sanitizeMarkdownHtml(rewritePreviewImageSources(rawRenderedHtml, activeFilePath, previewImageSources)),
-    [activeFilePath, previewImageSources, rawRenderedHtml],
+    () => addPreviewHeadingNavigation(
+      sanitizeMarkdownHtml(rewritePreviewImageSources(rawRenderedHtml, activeFilePath, previewImageSources)),
+      outline,
+    ),
+    [activeFilePath, outline, previewImageSources, rawRenderedHtml],
   )
 
-  const outline = useMemo(() => getOutline(markdownValue), [markdownValue])
   const searchMatches = useMemo(
     () => getSearchMatches(markdownValue, searchTerm, {
       caseSensitive: isSearchCaseSensitive,
@@ -2108,6 +2135,41 @@ function App() {
     })
   }
 
+  function handlePreviewClick(event: ReactMouseEvent<HTMLElement>) {
+    const heading = (event.target as HTMLElement).closest<HTMLElement>('[data-outline-index]')
+
+    if (!heading) {
+      return
+    }
+
+    const outlineIndex = Number(heading.dataset.outlineIndex)
+    const item = Number.isInteger(outlineIndex) ? outline[outlineIndex] : undefined
+
+    if (item) {
+      handleOutlineJump(item)
+    }
+  }
+
+  function handlePreviewKeyDown(event: ReactKeyboardEvent<HTMLElement>) {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return
+    }
+
+    const heading = (event.target as HTMLElement).closest<HTMLElement>('[data-outline-index]')
+
+    if (!heading) {
+      return
+    }
+
+    event.preventDefault()
+    const outlineIndex = Number(heading.dataset.outlineIndex)
+    const item = Number.isInteger(outlineIndex) ? outline[outlineIndex] : undefined
+
+    if (item) {
+      handleOutlineJump(item)
+    }
+  }
+
   function renderRecentFiles() {
     return (
       <div className="recent-list">
@@ -2697,6 +2759,8 @@ function App() {
                 {markdownValue.trim().length > 0 ? (
                   <article
                     className="markdown-preview"
+                    onClick={handlePreviewClick}
+                    onKeyDown={handlePreviewKeyDown}
                     dangerouslySetInnerHTML={{ __html: renderedHtml }}
                   />
                 ) : (

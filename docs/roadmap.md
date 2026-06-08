@@ -45,7 +45,7 @@
 
 - Current-document search result list with line numbers and context ✅
 - Clickable search results that jump to the editor selection ✅
-- Preview-to-editor heading navigation
+- Preview-to-editor heading navigation ✅
 - Editor and preview scroll synchronization
 - Stronger table editing controls
 - v0.5.0 screenshots, changelog, and release notes
