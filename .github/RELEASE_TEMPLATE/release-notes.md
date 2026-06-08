@@ -41,6 +41,7 @@ Keep these auto-update metadata files attached when generated:
 ## Verification Checklist
 
 - [ ] `npm run lint`
+- [ ] `npm run release:check`
 - [ ] `npm run build`
 - [ ] Windows artifacts built and smoke checked
 - [ ] macOS artifacts built and smoke checked

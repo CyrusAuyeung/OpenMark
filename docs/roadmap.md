@@ -64,3 +64,10 @@
 - Local folder workspace browser ✅
 - Quick open for Markdown files ✅
 - Missing-file state for unavailable recent files ✅
+
+## Milestone 9: Release Reliability
+
+- Release metadata consistency check ✅
+- Version-aware release notes generation
+- Automated post-release verification for GitHub Releases
+- Safer dependency update cadence
