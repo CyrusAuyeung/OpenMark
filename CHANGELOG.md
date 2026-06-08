@@ -2,7 +2,7 @@
 
 All notable changes to OpenMark will be documented in this file.
 
-## Unreleased
+## 0.6.0 - 2026-06-08
 
 ### Export & Sharing
 

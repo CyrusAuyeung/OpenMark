@@ -2,18 +2,18 @@
 
 ## Summary
 
-OpenMark 0.5.0 focuses on navigation inside longer Markdown documents. Upgrade for search results with context, preview-to-editor heading jumps, split-view scroll synchronization, and contextual table editing controls.
+OpenMark 0.6.0 focuses on export and sharing polish. Upgrade for clipboard sharing, export style presets, printable export preview, and share-friendly metadata in exported documents.
 
 ## Highlights
 
-- Search results now show line numbers and context snippets, and each result jumps directly to the editor selection.
-- Split mode keeps the Markdown editor and rendered preview aligned as either side scrolls.
-- Preview headings can be clicked or keyboard-activated to jump back to their source line in the editor.
-- Markdown tables can be formatted in place, with controls for adding/deleting rows and columns when the cursor is inside a table.
+- Copy Markdown or export-ready HTML from the toolbar, command palette, or desktop Edit menu.
+- Choose Reader, Compact, or Manuscript export styling and reuse the same style across HTML export, PDF export, Copy HTML, and export preview.
+- Preview the final export document before saving, then print, export HTML, or export PDF from the preview dialog.
+- Exported documents now include derived titles, descriptions, Open Graph, and Twitter summary metadata for cleaner sharing.
 
 ## Fixes
 
-- Long documents now scroll inside the editor and preview panes instead of stretching the full app shell.
+- Export HTML now uses export-ready content without interactive preview navigation controls.
 
 ## Downloads
 
@@ -21,11 +21,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.5.0.exe` | Recommended installer. |
-| Windows | `OpenMark.0.5.0.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.5.0.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.5.0-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.5.0_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.6.0.exe` | Recommended installer. |
+| Windows | `OpenMark.0.6.0.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.6.0.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.6.0-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.6.0_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
