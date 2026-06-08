@@ -33,6 +33,7 @@
     "lint": "eslint .",
     "release:notes": "node scripts/generate-release-notes.mjs",
     "release:check": "node scripts/check-release.mjs",
+    "release:verify": "node scripts/verify-github-release.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

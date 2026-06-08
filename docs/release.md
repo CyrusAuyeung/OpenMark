@@ -30,6 +30,12 @@ For a specific tag, pass it explicitly:
 npm run release:check -- --tag v0.7.0
 ```
 
+After the release is published, verify the GitHub release body and attached assets:
+
+```bash
+npm run release:verify -- --tag v0.7.0
+```
+
 ```bash
 npm run package
 ```
@@ -67,7 +73,7 @@ Expected Linux artifacts:
 
 Repository: <https://github.com/CyrusAuyeung/OpenMark>
 
-The release workflow runs lint, release notes freshness checks, and release metadata checks in the Windows job, builds the renderer on every platform, packages Windows/macOS/Linux artifacts, uploads workflow artifacts, and can attach all platform files to a GitHub release. If signing secrets are configured, Windows artifacts are signed during packaging.
+The release workflow runs lint, release notes freshness checks, and release metadata checks in the Windows job, builds the renderer on every platform, packages Windows/macOS/Linux artifacts, uploads workflow artifacts, attaches all platform files to a GitHub release, and verifies the published release body and assets. If signing secrets are configured, Windows artifacts are signed during packaging.
 
 Release uploads include Electron auto-update metadata files such as `latest.yml`, `latest-mac.yml`, and Linux update metadata when generated. Keep those files attached to the GitHub release so installed apps can discover new versions.
 

@@ -185,3 +185,9 @@ jobs:
           body_path: .github/RELEASE_TEMPLATE/release-notes.md
           files: |
             release-artifacts/**/*
+
+      - name: Verify GitHub release
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run release:verify
