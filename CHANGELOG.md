@@ -9,6 +9,7 @@ All notable changes to OpenMark will be documented in this file.
 - Added pinned recent files so important local documents stay at the top of the recent list.
 - Added search for recent files by name or path.
 - Added a local workspace folder browser for Markdown files.
+- Added quick open for Markdown files in the active workspace.
 
 ## 0.6.0 - 2026-06-08
 

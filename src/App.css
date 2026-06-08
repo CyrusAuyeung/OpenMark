@@ -594,6 +594,17 @@
   margin-bottom: 10px;
 }
 
+.workspace-toolbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.text-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .workspace-file-list {
   display: grid;
   gap: 7px;
@@ -1349,6 +1360,10 @@ body.is-resizing-split * {
   border-radius: 8px;
   background: var(--surface-1);
   box-shadow: 0 22px 70px rgba(10, 16, 12, 0.28);
+}
+
+.command-palette.quick-open {
+  width: min(720px, 100%);
 }
 
 .command-search-field {

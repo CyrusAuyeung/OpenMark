@@ -62,5 +62,5 @@
 - Pinned recent files ✅
 - Searchable recent files ✅
 - Local folder workspace browser ✅
-- Quick open for Markdown files
+- Quick open for Markdown files ✅
 - Missing-file state for unavailable recent files

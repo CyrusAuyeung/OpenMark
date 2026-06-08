@@ -1410,6 +1410,7 @@ function App() {
   const syncPreviewScrollFromEditorRef = useRef<() => void>(() => undefined)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const commandInputRef = useRef<HTMLInputElement | null>(null)
+  const quickOpenInputRef = useRef<HTMLInputElement | null>(null)
   const exportPreviewFrameRef = useRef<HTMLIFrameElement | null>(null)
   const previewImageSourcesRef = useRef<PreviewImageSource[]>([])
   const initialMarkdownValue = useMemo(() => loadStoredValue(draftStorageKey, ''), [])
@@ -1447,6 +1448,9 @@ function App() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [commandQuery, setCommandQuery] = useState('')
   const [activeCommandIndex, setActiveCommandIndex] = useState(0)
+  const [isQuickOpenOpen, setIsQuickOpenOpen] = useState(false)
+  const [quickOpenQuery, setQuickOpenQuery] = useState('')
+  const [activeQuickOpenIndex, setActiveQuickOpenIndex] = useState(0)
   const [previewImageSources, setPreviewImageSources] = useState<PreviewImageSource[]>([])
   const [isExportPreviewOpen, setIsExportPreviewOpen] = useState(false)
   const [isThemeSettingsOpen, setIsThemeSettingsOpen] = useState(false)
@@ -1512,6 +1516,17 @@ function App() {
       item.fileName.toLowerCase().includes(normalizedRecentFileQuery) ||
       item.filePath.toLowerCase().includes(normalizedRecentFileQuery)
     ))
+  const normalizedQuickOpenQuery = quickOpenQuery.trim().toLowerCase()
+  const filteredQuickOpenFiles = !workspaceFolder
+    ? []
+    : normalizedQuickOpenQuery.length === 0
+      ? workspaceFolder.files
+      : workspaceFolder.files.filter((item) => (
+        item.fileName.toLowerCase().includes(normalizedQuickOpenQuery) ||
+        item.relativePath.toLowerCase().includes(normalizedQuickOpenQuery) ||
+        item.filePath.toLowerCase().includes(normalizedQuickOpenQuery)
+      ))
+  const safeActiveQuickOpenIndex = Math.min(activeQuickOpenIndex, Math.max(filteredQuickOpenFiles.length - 1, 0))
   const activeSearchMatchIndex = activeSearchRange
     ? searchMatches.findIndex((match) => match.from === activeSearchRange.from && match.to === activeSearchRange.to)
     : -1
@@ -1740,6 +1755,14 @@ function App() {
       Icon: FolderOpen,
       keywords: ['folder', 'project', 'library'],
       action: () => { void handleSelectWorkspaceFolder() },
+    },
+    {
+      id: 'quick-open-workspace-file',
+      label: t.commands.quickOpenWorkspaceFile,
+      group: t.groups.workspace,
+      Icon: SearchIcon,
+      keywords: ['quick', 'open', 'file', 'markdown'],
+      action: openQuickOpen,
     },
     {
       id: 'recent-panel',
@@ -2308,6 +2331,69 @@ function App() {
 
   async function handleOpenWorkspaceFile(filePath: string) {
     await handleOpenRecentFile(filePath)
+  }
+
+  function focusQuickOpenInput() {
+    window.requestAnimationFrame(() => {
+      quickOpenInputRef.current?.focus()
+      quickOpenInputRef.current?.select()
+    })
+  }
+
+  function openQuickOpen() {
+    setActiveSidebarTab('workspace')
+    setQuickOpenQuery('')
+    setActiveQuickOpenIndex(0)
+    setIsQuickOpenOpen(true)
+    focusQuickOpenInput()
+  }
+
+  function closeQuickOpen() {
+    setIsQuickOpenOpen(false)
+    setQuickOpenQuery('')
+    setActiveQuickOpenIndex(0)
+    getEditorView()?.focus()
+  }
+
+  function openQuickOpenFile(item: OpenMarkWorkspaceFile | undefined) {
+    if (!item) {
+      return
+    }
+
+    setIsQuickOpenOpen(false)
+    setQuickOpenQuery('')
+    setActiveQuickOpenIndex(0)
+    void handleOpenWorkspaceFile(item.filePath)
+  }
+
+  function handleQuickOpenKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setActiveQuickOpenIndex((currentIndex) => (
+        filteredQuickOpenFiles.length === 0
+          ? 0
+          : (currentIndex + 1) % filteredQuickOpenFiles.length
+      ))
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setActiveQuickOpenIndex((currentIndex) => (
+        filteredQuickOpenFiles.length === 0
+          ? 0
+          : (currentIndex - 1 + filteredQuickOpenFiles.length) % filteredQuickOpenFiles.length
+      ))
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      closeQuickOpen()
+    }
+  }
+
+  function handleQuickOpenSubmit(event: ReactFormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    openQuickOpenFile(filteredQuickOpenFiles[safeActiveQuickOpenIndex])
   }
 
   async function handleOpenDocument() {
@@ -3467,14 +3553,24 @@ ${getExportStyleCss(exportStyle)}
                       </div>
                       <div className="workspace-toolbar-row">
                         <span>{workspaceFolder.files.length} {t.workspace.files}</span>
-                        <button
-                          type="button"
-                          className="text-action"
-                          onClick={() => { void handleRefreshWorkspaceFolder() }}
-                          disabled={isWorkspaceLoading}
-                        >
-                          {t.workspace.refresh}
-                        </button>
+                        <span className="workspace-toolbar-actions">
+                          <button
+                            type="button"
+                            className="text-action"
+                            onClick={openQuickOpen}
+                            disabled={workspaceFolder.files.length === 0}
+                          >
+                            {t.workspace.quickOpen}
+                          </button>
+                          <button
+                            type="button"
+                            className="text-action"
+                            onClick={() => { void handleRefreshWorkspaceFolder() }}
+                            disabled={isWorkspaceLoading}
+                          >
+                            {t.workspace.refresh}
+                          </button>
+                        </span>
                       </div>
                       {workspaceError && <p className="muted">{workspaceError}</p>}
                       {isWorkspaceLoading && <p className="muted">{t.workspace.loading}</p>}
@@ -3911,6 +4007,61 @@ ${getExportStyleCss(exportStyle)}
                 })
               ) : (
                 <div className="command-empty">{t.commandPalette.noCommandsFound}</div>
+              )}
+            </div>
+          </form>
+        </div>
+      )}
+
+      {isQuickOpenOpen && (
+        <div className="command-palette-backdrop" role="presentation" onMouseDown={closeQuickOpen}>
+          <form
+            className="command-palette quick-open"
+            role="dialog"
+            aria-label={t.workspace.quickOpen}
+            onSubmit={handleQuickOpenSubmit}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <label className="command-search-field">
+              <SearchIcon size={17} aria-hidden="true" />
+              <input
+                ref={quickOpenInputRef}
+                type="search"
+                value={quickOpenQuery}
+                placeholder={t.workspace.quickOpenPlaceholder}
+                aria-label={t.workspace.quickOpenSearch}
+                spellCheck={false}
+                onChange={(event) => {
+                  setQuickOpenQuery(event.target.value)
+                  setActiveQuickOpenIndex(0)
+                }}
+                onKeyDown={handleQuickOpenKeyDown}
+              />
+            </label>
+
+            <div className="command-list" aria-label={t.workspace.quickOpenResults}>
+              {!workspaceFolder ? (
+                <div className="command-empty">{t.workspace.noFolder}</div>
+              ) : filteredQuickOpenFiles.length > 0 ? (
+                filteredQuickOpenFiles.slice(0, 10).map((item, index) => (
+                  <button
+                    type="button"
+                    key={item.filePath}
+                    className={index === safeActiveQuickOpenIndex ? 'command-item active' : 'command-item'}
+                    onMouseEnter={() => setActiveQuickOpenIndex(index)}
+                    onClick={() => openQuickOpenFile(item)}
+                    title={item.filePath}
+                  >
+                    <FileText size={16} aria-hidden="true" />
+                    <span className="command-copy">
+                      <strong>{item.relativePath}</strong>
+                      <small>{workspaceFolder.folderName}</small>
+                    </span>
+                    <kbd>{new Date(item.modifiedAt).toLocaleDateString()}</kbd>
+                  </button>
+                ))
+              ) : (
+                <div className="command-empty">{t.workspace.noQuickOpenMatches}</div>
               )}
             </div>
           </form>
