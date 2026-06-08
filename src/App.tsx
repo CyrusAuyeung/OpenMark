@@ -259,7 +259,7 @@ const exportStyleOptions: Array<{
 const defaultUpdateStatus: OpenMarkUpdateStatus = {
   state: 'unsupported',
   message: '',
-  version: '0.7.0',
+  version: '0.8.0',
   updateVersion: null,
   progress: null,
   canCheck: false,

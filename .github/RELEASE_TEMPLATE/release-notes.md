@@ -2,21 +2,21 @@
 
 ## Summary
 
-OpenMark 0.7.0 focuses on workspace and localization. Upgrade for pinned recent files so important local documents stay at the top of the recent list, search for recent files by name or path, and a local workspace folder browser for Markdown files.
+OpenMark 0.8.0 focuses on release reliability and pdf export. Upgrade for release metadata consistency checks for package versions, tags, public docs, release notes, and expected asset names, version-aware release notes generation from `CHANGELOG.md`, and GitHub Release verification for published release bodies and attached assets.
 
 ## Highlights
 
-### Workspace
+### Release Reliability
 
-- Added pinned recent files so important local documents stay at the top of the recent list.
-- Added search for recent files by name or path.
-- Added a local workspace folder browser for Markdown files.
-- Added quick open for Markdown files in the active workspace.
-- Added missing-file states for unavailable recent and workspace files.
+- Added release metadata consistency checks for package versions, tags, public docs, release notes, and expected asset names.
+- Added version-aware release notes generation from `CHANGELOG.md`.
+- Added GitHub Release verification for published release bodies and attached assets.
+- Tightened Dependabot update cadence to monthly grouped pull requests.
 
-### Localization
+### PDF Export
 
-- Added a visible English/Chinese language switcher in the toolbar, command palette, settings, and desktop menu.
+- Fixed desktop PDF export by waiting for Electron `printToPDF` to finish before closing the hidden print window.
+- Switched desktop PDF rendering to a temporary HTML file for more reliable export document loading.
 
 ## Downloads
 
@@ -24,11 +24,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.7.0.exe` | Recommended installer. |
-| Windows | `OpenMark.0.7.0.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.7.0.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.7.0-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.7.0_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.8.0.exe` | Recommended installer. |
+| Windows | `OpenMark.0.8.0.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.8.0.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.8.0-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.8.0_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -62,5 +62,5 @@ Keep these auto-update metadata files attached when generated:
 
 ## Full Changelog
 
-- Release date: 2026-06-08
-- Tag: v0.7.0
+- Release date: 2026-06-09
+- Tag: v0.8.0

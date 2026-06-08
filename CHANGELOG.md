@@ -2,6 +2,20 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.8.0 - 2026-06-09
+
+### Release Reliability
+
+- Added release metadata consistency checks for package versions, tags, public docs, release notes, and expected asset names.
+- Added version-aware release notes generation from `CHANGELOG.md`.
+- Added GitHub Release verification for published release bodies and attached assets.
+- Tightened Dependabot update cadence to monthly grouped pull requests.
+
+### PDF Export
+
+- Fixed desktop PDF export by waiting for Electron `printToPDF` to finish before closing the hidden print window.
+- Switched desktop PDF rendering to a temporary HTML file for more reliable export document loading.
+
 ## 0.7.0 - 2026-06-08
 
 ### Workspace
