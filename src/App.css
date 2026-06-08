@@ -1334,6 +1334,10 @@ body.is-resizing-split * {
   gap: 8px;
 }
 
+.export-style-group {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .theme-choice {
   min-width: 0;
   min-height: 40px;

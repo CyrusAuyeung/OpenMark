@@ -86,6 +86,7 @@ type MarkdownFormat = InlineFormat | BlockFormat
 type TableEditAction = 'format' | 'insert-row-below' | 'delete-row' | 'insert-column-right' | 'delete-column'
 type TableTranslationKey = 'formatTable' | 'addRowBelow' | 'deleteRow' | 'addColumnRight' | 'deleteColumn'
 type ClipboardCopyKind = 'markdown' | 'html'
+type ExportStyle = 'reader' | 'compact' | 'manuscript'
 
 const clipboardWriteTimeoutMs = 1200
 
@@ -159,6 +160,7 @@ const fileNameStorageKey = 'openmark:file-name'
 const themeStorageKey = 'openmark:theme'
 const localeStorageKey = 'openmark:locale'
 const editorFontSizeStorageKey = 'openmark:editor-font-size'
+const exportStyleStorageKey = 'openmark:export-style'
 const recentFilesStorageKey = 'openmark:recent-files'
 const splitPaneRatioStorageKey = 'openmark:split-pane-ratio'
 const viewModeStorageKey = 'openmark:view-mode'
@@ -191,6 +193,7 @@ const modeOptions: Array<{
 const validViewModes = new Set<ViewMode>(['write', 'split', 'preview'])
 const validSidebarTabs = new Set<SidebarTab>(['document', 'outline', 'recent'])
 const validThemePreferences = new Set<ThemePreference>(['light', 'dark', 'system'])
+const validExportStyles = new Set<ExportStyle>(['reader', 'compact', 'manuscript'])
 const defaultTableEditingState: TableEditingState = {
   isInTable: false,
   canDeleteRow: false,
@@ -219,6 +222,15 @@ const localeOptions: Array<{
   { value: 'system', Icon: Laptop },
   { value: 'en', Icon: Languages },
   { value: 'zh-CN', Icon: Languages },
+]
+
+const exportStyleOptions: Array<{
+  value: ExportStyle
+  Icon: LucideIcon
+}> = [
+  { value: 'reader', Icon: FileText },
+  { value: 'compact', Icon: Columns2 },
+  { value: 'manuscript', Icon: Type },
 ]
 
 const defaultUpdateStatus: OpenMarkUpdateStatus = {
@@ -345,6 +357,62 @@ function clampEditorFontSize(value: number) {
 function loadEditorFontSize() {
   const storedSize = Number(window.localStorage.getItem(editorFontSizeStorageKey))
   return Number.isFinite(storedSize) ? clampEditorFontSize(storedSize) : defaultEditorFontSize
+}
+
+function loadExportStyle() {
+  const storedStyle = window.localStorage.getItem(exportStyleStorageKey)
+  return validExportStyles.has(storedStyle as ExportStyle) ? storedStyle as ExportStyle : 'reader'
+}
+
+function getExportStyleCss(style: ExportStyle) {
+  const presetCss = {
+    reader: `
+    @page { margin: 22mm 18mm; }
+    body { background: #f7f8f4; color: #1c241d; font: 17px/1.7 ui-serif, Georgia, serif; }
+    main { max-width: 780px; padding: 56px 28px; }
+    p, ul, ol, blockquote, table, pre { margin-top: 0; margin-bottom: 1.1em; }
+    h1 { font-size: 2.2rem; }
+    h2 { font-size: 1.45rem; }
+`,
+    compact: `
+    @page { margin: 16mm 14mm; }
+    body { background: #ffffff; color: #20251f; font: 15px/1.55 ui-sans-serif, system-ui, sans-serif; }
+    main { max-width: 880px; padding: 36px 22px; }
+    p, ul, ol, blockquote, table, pre { margin-top: 0; margin-bottom: 0.8em; }
+    h1 { font-size: 1.85rem; }
+    h2 { font-size: 1.25rem; }
+`,
+    manuscript: `
+    @page { margin: 25mm 22mm; }
+    body { background: #ffffff; color: #151915; font: 18px/1.9 ui-serif, Georgia, serif; }
+    main { max-width: 720px; padding: 64px 30px; }
+    p, ul, ol, blockquote, table, pre { margin-top: 0; margin-bottom: 1.35em; }
+    h1 { font-size: 2rem; }
+    h2 { font-size: 1.35rem; }
+`,
+  } satisfies Record<ExportStyle, string>
+
+  return `${presetCss[style]}
+    body { margin: 0; }
+    main { margin: 0 auto; }
+    h1, h2, h3 { margin: 1.4em 0 0.55em; line-height: 1.2; font-family: ui-sans-serif, system-ui, sans-serif; }
+    h1:first-child, h2:first-child, h3:first-child { margin-top: 0; }
+    a { color: #2f7a5f; }
+    pre { overflow: auto; padding: 16px; background: #20251f; color: #f4f7ef; border-radius: 8px; }
+    code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    blockquote { margin-left: 0; padding-left: 18px; border-left: 4px solid #75a88f; color: #59675d; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #d9e2d8; padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: rgba(117, 168, 143, 0.12); }
+    img { max-width: 100%; height: auto; }
+    hr { border: 0; border-top: 1px solid #d9e2d8; margin: 2em 0; }
+    @media print {
+      body { background: #ffffff; }
+      main { max-width: none; padding: 0; }
+      pre, blockquote, table, img { break-inside: avoid; }
+      a { color: inherit; }
+    }
+`
 }
 
 function getOutline(markdownValue: string): OutlineItem[] {
@@ -1200,6 +1268,7 @@ function App() {
   const [localePreference, setLocalePreference] = useState<LocalePreference>(loadLocalePreference)
   const [systemLocale, setSystemLocale] = useState<AppLocale>(getSystemLocale)
   const [editorFontSize, setEditorFontSize] = useState(loadEditorFontSize)
+  const [exportStyle, setExportStyle] = useState<ExportStyle>(loadExportStyle)
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const [activeOutlineLine, setActiveOutlineLine] = useState<number | null>(null)
   const [isSearchVisible, setIsSearchVisible] = useState(false)
@@ -1569,6 +1638,10 @@ function App() {
   useEffect(() => {
     window.localStorage.setItem(editorFontSizeStorageKey, editorFontSize.toFixed(0))
   }, [editorFontSize])
+
+  useEffect(() => {
+    window.localStorage.setItem(exportStyleStorageKey, exportStyle)
+  }, [exportStyle])
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -2099,31 +2172,17 @@ function App() {
     const title = escapeHtml(getBaseName(fileName))
 
     return `<!doctype html>
-  <html lang="${locale}">
+<html lang="${locale}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="OpenMark">
   <title>${title}</title>
   <style>
-    @page { margin: 22mm 18mm; }
-    body { margin: 0; background: #f7f8f4; color: #1c241d; font: 17px/1.7 ui-serif, Georgia, serif; }
-    main { max-width: 780px; margin: 0 auto; padding: 56px 28px; }
-    h1, h2, h3 { line-height: 1.2; font-family: ui-sans-serif, system-ui, sans-serif; }
-    pre { overflow: auto; padding: 16px; background: #20251f; color: #f4f7ef; border-radius: 8px; }
-    code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
-    blockquote { margin-left: 0; padding-left: 18px; border-left: 4px solid #75a88f; color: #59675d; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #d9e2d8; padding: 8px 10px; }
-    img { max-width: 100%; }
-    @media print {
-      body { background: #ffffff; }
-      main { max-width: none; padding: 0; }
-      pre, blockquote, table, img { break-inside: avoid; }
-      a { color: inherit; }
-    }
+${getExportStyleCss(exportStyle)}
   </style>
 </head>
-<body>
+<body data-export-style="${exportStyle}">
   <main>${contentHtml}</main>
 </body>
 </html>`
@@ -3505,6 +3564,28 @@ function App() {
                 <strong>{editorFontSize}px</strong>
               </div>
             </label>
+
+            <div className="settings-section">
+              <span className="settings-label">{t.settings.exportStyle}</span>
+              <div className="theme-choice-group export-style-group" aria-label={t.settings.exportStylePreference}>
+                {exportStyleOptions.map(({ value, Icon }) => {
+                  const label = t.exportStyles[value]
+
+                  return (
+                    <button
+                      type="button"
+                      key={value}
+                      className={exportStyle === value ? 'theme-choice active' : 'theme-choice'}
+                      onClick={() => setExportStyle(value)}
+                      aria-label={`${label} ${t.settings.exportStyleSuffix}`}
+                    >
+                      <Icon size={16} />
+                      <span>{label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
 
             <div className="settings-section update-setting">
               <span className="settings-label">{t.settings.updates}</span>

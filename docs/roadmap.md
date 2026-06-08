@@ -53,6 +53,6 @@
 ## Milestone 7: Export & Sharing Polish
 
 - Copy Markdown and export-ready HTML to the clipboard ✅
-- Export preset polish
+- Export preset polish ✅
 - Printable preview improvements
 - Share-friendly document metadata

@@ -44,6 +44,11 @@ const en = {
     en: 'English',
     'zh-CN': 'Simplified Chinese',
   },
+  exportStyles: {
+    reader: 'Reader',
+    compact: 'Compact',
+    manuscript: 'Manuscript',
+  },
   groups: {
     file: 'File',
     edit: 'Edit',
@@ -158,6 +163,9 @@ const en = {
     language: 'Language',
     languagePreference: 'Language preference',
     editorFontSize: 'Editor font size',
+    exportStyle: 'Export style',
+    exportStylePreference: 'Export style preference',
+    exportStyleSuffix: 'export style',
     updates: 'Updates',
     currentVersion: 'Current version',
     latestVersion: 'Latest version',
@@ -235,6 +243,11 @@ const zhCN: TranslationCatalog = {
     system: '跟随系统',
     en: 'English',
     'zh-CN': '简体中文',
+  },
+  exportStyles: {
+    reader: '阅读',
+    compact: '紧凑',
+    manuscript: '文稿',
   },
   groups: {
     file: '文件',
@@ -350,6 +363,9 @@ const zhCN: TranslationCatalog = {
     language: '语言',
     languagePreference: '语言偏好',
     editorFontSize: '编辑器字号',
+    exportStyle: '导出样式',
+    exportStylePreference: '导出样式偏好',
+    exportStyleSuffix: '导出样式',
     updates: '更新',
     currentVersion: '当前版本',
     latestVersion: '最新版本',
