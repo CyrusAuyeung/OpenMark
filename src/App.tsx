@@ -121,6 +121,15 @@ type RecentFile = {
   missing?: boolean
 }
 
+type QuickOpenItem = {
+  id: string
+  filePath: string
+  title: string
+  detail: string
+  timestamp: number
+  source: 'workspace' | 'recent'
+}
+
 type WorkspaceFolderState = {
   folderPath: string
   folderName: string
@@ -1587,16 +1596,48 @@ function App() {
     ))
   const normalizedQuickOpenQuery = quickOpenQuery.trim().toLowerCase()
   const availableWorkspaceFiles = workspaceFolder?.files.filter((item) => !item.missing) ?? []
-  const filteredQuickOpenFiles = !workspaceFolder
-    ? []
-    : normalizedQuickOpenQuery.length === 0
-      ? availableWorkspaceFiles
-      : availableWorkspaceFiles.filter((item) => (
-        item.fileName.toLowerCase().includes(normalizedQuickOpenQuery) ||
-        item.relativePath.toLowerCase().includes(normalizedQuickOpenQuery) ||
-        item.filePath.toLowerCase().includes(normalizedQuickOpenQuery)
-      ))
-  const safeActiveQuickOpenIndex = Math.min(activeQuickOpenIndex, Math.max(filteredQuickOpenFiles.length - 1, 0))
+  const quickOpenItems = (() => {
+    const items: QuickOpenItem[] = []
+    const seenFilePaths = new Set<string>()
+
+    for (const item of availableWorkspaceFiles) {
+      items.push({
+        id: `workspace:${item.filePath}`,
+        filePath: item.filePath,
+        title: item.relativePath,
+        detail: workspaceFolder?.folderName ?? t.sidebar.workspace,
+        timestamp: item.modifiedAt,
+        source: 'workspace',
+      })
+      seenFilePaths.add(item.filePath)
+    }
+
+    for (const item of recentFiles) {
+      if (item.missing || seenFilePaths.has(item.filePath)) {
+        continue
+      }
+
+      items.push({
+        id: `recent:${item.filePath}`,
+        filePath: item.filePath,
+        title: item.fileName,
+        detail: item.filePath,
+        timestamp: item.openedAt,
+        source: 'recent',
+      })
+    }
+
+    return items
+  })()
+  const filteredQuickOpenItems = normalizedQuickOpenQuery.length === 0
+    ? quickOpenItems
+    : quickOpenItems.filter((item) => (
+      item.title.toLowerCase().includes(normalizedQuickOpenQuery) ||
+      item.detail.toLowerCase().includes(normalizedQuickOpenQuery) ||
+      item.filePath.toLowerCase().includes(normalizedQuickOpenQuery)
+    ))
+  const visibleQuickOpenItems = filteredQuickOpenItems.slice(0, 10)
+  const safeActiveQuickOpenIndex = Math.min(activeQuickOpenIndex, Math.max(visibleQuickOpenItems.length - 1, 0))
   const activeSearchMatchIndex = activeSearchRange
     ? searchMatches.findIndex((match) => match.from === activeSearchRange.from && match.to === activeSearchRange.to)
     : -1
@@ -1843,11 +1884,12 @@ function App() {
       action: () => { void handleSelectWorkspaceFolder() },
     },
     {
-      id: 'quick-open-workspace-file',
-      label: t.commands.quickOpenWorkspaceFile,
+      id: 'quick-open-file',
+      label: t.commands.quickOpenFile,
       group: t.groups.workspace,
+      shortcut: 'Ctrl+P',
       Icon: SearchIcon,
-      keywords: ['quick', 'open', 'file', 'markdown'],
+      keywords: ['quick', 'open', 'file', 'markdown', 'recent', 'workspace'],
       action: openQuickOpen,
     },
     {
@@ -2103,6 +2145,13 @@ function App() {
       if (event.shiftKey && event.key.toLowerCase() === 'p') {
         event.preventDefault()
         openCommandPalette()
+        return
+      }
+
+      if (!event.shiftKey && event.key.toLowerCase() === 'p') {
+        event.preventDefault()
+        openQuickOpen()
+        return
       }
 
       if (event.key === ',') {
@@ -2121,9 +2170,9 @@ function App() {
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keydown', handleKeyDown, { capture: true })
 
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true })
   })
 
   useEffect(() => {
@@ -2514,7 +2563,6 @@ function App() {
   }
 
   function openQuickOpen() {
-    setActiveSidebarTab('workspace')
     setQuickOpenQuery('')
     setActiveQuickOpenIndex(0)
     setIsQuickOpenOpen(true)
@@ -2528,7 +2576,7 @@ function App() {
     getEditorView()?.focus()
   }
 
-  function openQuickOpenFile(item: OpenMarkWorkspaceFile | undefined) {
+  function openQuickOpenFile(item: QuickOpenItem | undefined) {
     if (!item) {
       return
     }
@@ -2536,25 +2584,25 @@ function App() {
     setIsQuickOpenOpen(false)
     setQuickOpenQuery('')
     setActiveQuickOpenIndex(0)
-    void handleOpenWorkspaceFile(item.filePath)
+    void handleOpenRecentFile(item.filePath)
   }
 
   function handleQuickOpenKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
     if (event.key === 'ArrowDown') {
       event.preventDefault()
       setActiveQuickOpenIndex((currentIndex) => (
-        filteredQuickOpenFiles.length === 0
+        visibleQuickOpenItems.length === 0
           ? 0
-          : (currentIndex + 1) % filteredQuickOpenFiles.length
+          : (currentIndex + 1) % visibleQuickOpenItems.length
       ))
     }
 
     if (event.key === 'ArrowUp') {
       event.preventDefault()
       setActiveQuickOpenIndex((currentIndex) => (
-        filteredQuickOpenFiles.length === 0
+        visibleQuickOpenItems.length === 0
           ? 0
-          : (currentIndex - 1 + filteredQuickOpenFiles.length) % filteredQuickOpenFiles.length
+          : (currentIndex - 1 + visibleQuickOpenItems.length) % visibleQuickOpenItems.length
       ))
     }
 
@@ -2562,11 +2610,16 @@ function App() {
       event.preventDefault()
       closeQuickOpen()
     }
+
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      openQuickOpenFile(visibleQuickOpenItems[safeActiveQuickOpenIndex])
+    }
   }
 
   function handleQuickOpenSubmit(event: ReactFormEvent<HTMLFormElement>) {
     event.preventDefault()
-    openQuickOpenFile(filteredQuickOpenFiles[safeActiveQuickOpenIndex])
+    openQuickOpenFile(visibleQuickOpenItems[safeActiveQuickOpenIndex])
   }
 
   async function handleOpenDocument() {
@@ -3782,7 +3835,7 @@ ${getExportStyleCss(exportStyle)}
                             type="button"
                             className="text-action"
                             onClick={openQuickOpen}
-                            disabled={workspaceFolder.files.length === 0}
+                            disabled={quickOpenItems.length === 0}
                           >
                             {t.workspace.quickOpen}
                           </button>
@@ -3862,9 +3915,14 @@ ${getExportStyleCss(exportStyle)}
               <div className="section-heading-row">
                 <h2>{t.sidebar.recent}</h2>
                 {recentFiles.length > 0 && (
-                  <button type="button" className="text-action" onClick={clearRecentFiles}>
-                    {t.document.clear}
-                  </button>
+                  <span className="section-heading-actions">
+                    <button type="button" className="text-action" onClick={openQuickOpen} disabled={quickOpenItems.length === 0}>
+                      {t.workspace.quickOpen}
+                    </button>
+                    <button type="button" className="text-action" onClick={clearRecentFiles}>
+                      {t.document.clear}
+                    </button>
+                  </span>
                 )}
               </div>
               {window.openmark && recentFiles.length > 0 ? (
@@ -3931,9 +3989,14 @@ ${getExportStyleCss(exportStyle)}
                   <section className="welcome-recent" aria-label={t.welcome.recentFiles}>
                     <div className="section-heading-row">
                       <h2>{t.sidebar.recent}</h2>
-                      <button type="button" className="text-action" onClick={clearRecentFiles}>
-                        {t.document.clear}
-                      </button>
+                      <span className="section-heading-actions">
+                        <button type="button" className="text-action" onClick={openQuickOpen} disabled={quickOpenItems.length === 0}>
+                          {t.workspace.quickOpen}
+                        </button>
+                        <button type="button" className="text-action" onClick={clearRecentFiles}>
+                          {t.document.clear}
+                        </button>
+                      </span>
                     </div>
                     {renderRecentFiles()}
                   </section>
@@ -4314,13 +4377,11 @@ ${getExportStyleCss(exportStyle)}
             </label>
 
             <div className="command-list" aria-label={t.workspace.quickOpenResults}>
-              {!workspaceFolder ? (
-                <div className="command-empty">{t.workspace.noFolder}</div>
-              ) : filteredQuickOpenFiles.length > 0 ? (
-                filteredQuickOpenFiles.slice(0, 10).map((item, index) => (
+              {visibleQuickOpenItems.length > 0 ? (
+                visibleQuickOpenItems.map((item, index) => (
                   <button
                     type="button"
-                    key={item.filePath}
+                    key={item.id}
                     className={index === safeActiveQuickOpenIndex ? 'command-item active' : 'command-item'}
                     onMouseEnter={() => setActiveQuickOpenIndex(index)}
                     onClick={() => openQuickOpenFile(item)}
@@ -4328,10 +4389,13 @@ ${getExportStyleCss(exportStyle)}
                   >
                     <FileText size={16} aria-hidden="true" />
                     <span className="command-copy">
-                      <strong>{item.relativePath}</strong>
-                      <small>{workspaceFolder.folderName}</small>
+                      <strong>{item.title}</strong>
+                      <small>{item.detail}</small>
                     </span>
-                    <kbd>{fileDateFormatter.format(item.modifiedAt)}</kbd>
+                    <span className="quick-open-meta">
+                      <small>{t.workspace.quickOpenSources[item.source]}</small>
+                      <kbd>{fileDateFormatter.format(item.timestamp)}</kbd>
+                    </span>
                   </button>
                 ))
               ) : (
