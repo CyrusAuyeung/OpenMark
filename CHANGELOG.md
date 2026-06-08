@@ -2,6 +2,15 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.9.0 - 2026-06-09
+
+### Workspace Search & Library Polish
+
+- Added workspace panel filtering with search, clear, and recent/name sorting controls.
+- Added a workspace file state summary with available, missing, and current-file status.
+- Added unified quick open results across workspace and recent files with source labels and duplicate-path handling.
+- Improved recent and workspace file list keyboard navigation with arrow, Home, and End movement.
+
 ## 0.8.0 - 2026-06-09
 
 ### Release Reliability

@@ -2,21 +2,16 @@
 
 ## Summary
 
-OpenMark 0.8.0 focuses on release reliability and pdf export. Upgrade for release metadata consistency checks for package versions, tags, public docs, release notes, and expected asset names, version-aware release notes generation from `CHANGELOG.md`, and GitHub Release verification for published release bodies and attached assets.
+OpenMark 0.9.0 focuses on workspace search & library polish. Upgrade for workspace panel filtering with search, clear, and recent/name sorting controls, a workspace file state summary with available, missing, and current-file status, and unified quick open results across workspace and recent files with source labels and duplicate-path handling.
 
 ## Highlights
 
-### Release Reliability
+### Workspace Search & Library Polish
 
-- Added release metadata consistency checks for package versions, tags, public docs, release notes, and expected asset names.
-- Added version-aware release notes generation from `CHANGELOG.md`.
-- Added GitHub Release verification for published release bodies and attached assets.
-- Tightened Dependabot update cadence to monthly grouped pull requests.
-
-### PDF Export
-
-- Fixed desktop PDF export by waiting for Electron `printToPDF` to finish before closing the hidden print window.
-- Switched desktop PDF rendering to a temporary HTML file for more reliable export document loading.
+- Added workspace panel filtering with search, clear, and recent/name sorting controls.
+- Added a workspace file state summary with available, missing, and current-file status.
+- Added unified quick open results across workspace and recent files with source labels and duplicate-path handling.
+- Improved recent and workspace file list keyboard navigation with arrow, Home, and End movement.
 
 ## Downloads
 
@@ -24,11 +19,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.8.0.exe` | Recommended installer. |
-| Windows | `OpenMark.0.8.0.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.8.0.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.8.0-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.8.0_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.9.0.exe` | Recommended installer. |
+| Windows | `OpenMark.0.9.0.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.9.0.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.9.0-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.9.0_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -63,4 +58,4 @@ Keep these auto-update metadata files attached when generated:
 ## Full Changelog
 
 - Release date: 2026-06-09
-- Tag: v0.8.0
+- Tag: v0.9.0
