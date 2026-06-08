@@ -36,7 +36,9 @@ jobs:
         run: npm run lint
 
       - name: Check release metadata
-        run: npm run release:check
+        run: |
+          npm run release:notes -- --check
+          npm run release:check
 
       - name: Build
         run: npm run build

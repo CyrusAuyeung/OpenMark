@@ -38,6 +38,8 @@ const releaseTemplate = readText('.github/RELEASE_TEMPLATE/release-notes.md')
 
 expectIncludes(readme, expectedTag, 'README release badge')
 expectIncludes(releaseTemplate, `OpenMark ${expectedVersion}`, 'release notes summary')
+expectIncludes(releaseTemplate, '## Full Changelog', 'release notes full changelog')
+expectIncludes(releaseTemplate, `- Tag: ${expectedTag}`, 'release notes tag')
 
 for (const assetName of expectedAssets) {
   expectIncludes(readme, assetName, 'README downloads')

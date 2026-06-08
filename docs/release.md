@@ -8,7 +8,17 @@ Use the [Download Guide](download.md) as the public package-selection reference 
 
 ## Local Packaging
 
-Before tagging or publishing a release, verify package metadata, public docs, release notes, and expected artifact names are aligned with the package version:
+Before tagging or publishing a release, regenerate release notes from [Changelog](../CHANGELOG.md), then verify package metadata, public docs, release notes, and expected artifact names are aligned with the package version:
+
+```bash
+npm run release:notes
+```
+
+To check whether the template is already current without rewriting it:
+
+```bash
+npm run release:notes -- --check
+```
 
 ```bash
 npm run release:check
@@ -57,7 +67,7 @@ Expected Linux artifacts:
 
 Repository: <https://github.com/CyrusAuyeung/OpenMark>
 
-The release workflow runs lint and release metadata checks in the Windows job, builds the renderer on every platform, packages Windows/macOS/Linux artifacts, uploads workflow artifacts, and can attach all platform files to a GitHub release. If signing secrets are configured, Windows artifacts are signed during packaging.
+The release workflow runs lint, release notes freshness checks, and release metadata checks in the Windows job, builds the renderer on every platform, packages Windows/macOS/Linux artifacts, uploads workflow artifacts, and can attach all platform files to a GitHub release. If signing secrets are configured, Windows artifacts are signed during packaging.
 
 Release uploads include Electron auto-update metadata files such as `latest.yml`, `latest-mac.yml`, and Linux update metadata when generated. Keep those files attached to the GitHub release so installed apps can discover new versions.
 
@@ -81,7 +91,7 @@ Use the **Release** workflow from the Actions page when you need a manual build 
 - Manual releases default to draft mode so artifacts and notes can be reviewed before publishing.
 - Enable `prerelease` for preview builds such as `v0.7.0-beta.1`.
 
-Draft notes should start from [.github/RELEASE_TEMPLATE/release-notes.md](../.github/RELEASE_TEMPLATE/release-notes.md), then link to the [Download Guide](download.md) for package-selection details.
+Draft notes should be generated with `npm run release:notes`, reviewed in [.github/RELEASE_TEMPLATE/release-notes.md](../.github/RELEASE_TEMPLATE/release-notes.md), then published by the release workflow.
 
 Release page: <https://github.com/CyrusAuyeung/OpenMark/releases>
 

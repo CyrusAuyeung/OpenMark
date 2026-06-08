@@ -2,18 +2,21 @@
 
 ## Summary
 
-OpenMark 0.7.0 focuses on workspace polish and localization. Upgrade for pinned recent files, recent-file search, a local workspace browser, quick open, missing-file states, and visible English/Simplified Chinese switching.
+OpenMark 0.7.0 focuses on workspace and localization. Upgrade for pinned recent files so important local documents stay at the top of the recent list, search for recent files by name or path, and a local workspace folder browser for Markdown files.
 
 ## Highlights
 
-- Pin important recent files and search the recent list by name or path.
-- Browse Markdown files from a local workspace folder and open them with quick open.
-- Keep unavailable recent and workspace files visible with a clear missing-file state.
-- Switch between English and Simplified Chinese from the toolbar, command palette, settings, or desktop menu.
+### Workspace
 
-## Fixes
+- Added pinned recent files so important local documents stay at the top of the recent list.
+- Added search for recent files by name or path.
+- Added a local workspace folder browser for Markdown files.
+- Added quick open for Markdown files in the active workspace.
+- Added missing-file states for unavailable recent and workspace files.
 
-- Workspace and recent-file open failures now mark missing files instead of silently removing entries.
+### Localization
+
+- Added a visible English/Chinese language switcher in the toolbar, command palette, settings, and desktop menu.
 
 ## Downloads
 
@@ -41,6 +44,7 @@ Keep these auto-update metadata files attached when generated:
 ## Verification Checklist
 
 - [ ] `npm run lint`
+- [ ] `npm run release:notes -- --check`
 - [ ] `npm run release:check`
 - [ ] `npm run build`
 - [ ] Windows artifacts built and smoke checked
@@ -55,3 +59,8 @@ Keep these auto-update metadata files attached when generated:
 - macOS builds are currently unsigned and not notarized.
 - Linux AppImage support is planned after the `.deb` release path is stable.
 - Large renderer bundle warning is expected while CodeMirror is bundled eagerly.
+
+## Full Changelog
+
+- Release date: 2026-06-08
+- Tag: v0.7.0
