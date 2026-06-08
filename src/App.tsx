@@ -1619,6 +1619,11 @@ function App() {
       normalizedWorkspaceFileQuery.length === 0 || matchesWorkspaceFileQuery(item, normalizedWorkspaceFileQuery)
     ))
     .sort((left, right) => compareWorkspaceFiles(left, right, workspaceSortMode, workspaceFileCollator))
+  const workspaceMissingFileCount = workspaceFolder?.files.filter((item) => item.missing).length ?? 0
+  const workspaceAvailableFileCount = Math.max((workspaceFolder?.files.length ?? 0) - workspaceMissingFileCount, 0)
+  const activeWorkspaceFile = activeFilePath && workspaceFolder
+    ? workspaceFolder.files.find((item) => item.filePath === activeFilePath)
+    : undefined
   const sidebarTabs: Array<{ value: SidebarTab; label: string; detail: string }> = [
     { value: 'document', label: t.sidebar.document, detail: hasUnsavedChanges ? t.document.unsaved : t.document.saved },
     { value: 'workspace', label: t.sidebar.workspace, detail: workspaceFolder ? String(workspaceFolder.files.length) : '-' },
@@ -3402,11 +3407,16 @@ ${getExportStyleCss(exportStyle)}
     return (
       <div className="workspace-file-list">
         {items.map((item) => {
+          const isActiveWorkspaceFile = item.filePath === activeFilePath
           const workspaceFileButtonClassName = [
             'workspace-file-button',
-            item.filePath === activeFilePath ? 'active' : '',
+            isActiveWorkspaceFile ? 'active' : '',
             item.missing ? 'missing' : '',
           ].filter(Boolean).join(' ')
+          const workspaceFileMeta = [
+            isActiveWorkspaceFile ? t.workspace.current : '',
+            item.missing ? t.workspace.missing : fileDateFormatter.format(item.modifiedAt),
+          ].filter(Boolean).join(' · ')
 
           return (
             <button
@@ -3418,7 +3428,7 @@ ${getExportStyleCss(exportStyle)}
             >
               <FileText size={15} aria-hidden="true" />
               <span>{item.relativePath}</span>
-              <small>{item.missing ? t.workspace.missing : fileDateFormatter.format(item.modifiedAt)}</small>
+              <small>{workspaceFileMeta}</small>
             </button>
           )
         })}
@@ -3757,6 +3767,11 @@ ${getExportStyleCss(exportStyle)}
                       <div className="workspace-folder-summary">
                         <strong>{workspaceFolder.folderName}</strong>
                         <span title={workspaceFolder.folderPath}>{workspaceFolder.folderPath}</span>
+                      </div>
+                      <div className="workspace-state-strip" aria-label={t.workspace.fileStates}>
+                        <span>{workspaceAvailableFileCount} {t.workspace.available}</span>
+                        <span>{workspaceMissingFileCount} {t.workspace.missingFiles}</span>
+                        <span>{activeWorkspaceFile?.relativePath ?? t.workspace.noCurrentFile}</span>
                       </div>
                       <div className="workspace-toolbar-row">
                         <span>

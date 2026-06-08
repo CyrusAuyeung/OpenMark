@@ -75,6 +75,6 @@
 ## Milestone 10: Workspace Search & Library Polish
 
 - Workspace panel filtering and sorting ✅
-- Richer workspace file states
+- Richer workspace file states ✅
 - Recent/workspace unified quick open polish
 - Library keyboard navigation refinements
