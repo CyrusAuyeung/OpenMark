@@ -109,6 +109,14 @@ type SearchMatch = {
   to: number
 }
 
+type SearchResult = SearchMatch & {
+  index: number
+  lineNumber: number
+  contextBefore: string
+  matchText: string
+  contextAfter: string
+}
+
 type CommandPaletteItem = {
   id: string
   label: string
@@ -575,6 +583,41 @@ function getSearchMatches(
   return matches
 }
 
+function normalizeSearchContext(value: string) {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
+function getLineNumberAtPosition(markdownValue: string, position: number) {
+  let lineNumber = 1
+
+  for (let index = 0; index < position; index += 1) {
+    if (markdownValue[index] === '\n') {
+      lineNumber += 1
+    }
+  }
+
+  return lineNumber
+}
+
+function getSearchResults(markdownValue: string, matches: SearchMatch[]): SearchResult[] {
+  return matches.map((match, index) => {
+    const lineStart = Math.max(markdownValue.lastIndexOf('\n', match.from - 1) + 1, 0)
+    const nextLineBreak = markdownValue.indexOf('\n', match.to)
+    const lineEnd = nextLineBreak === -1 ? markdownValue.length : nextLineBreak
+    const contextStart = Math.max(lineStart, match.from - 42)
+    const contextEnd = Math.min(lineEnd, match.to + 58)
+
+    return {
+      ...match,
+      index,
+      lineNumber: getLineNumberAtPosition(markdownValue, match.from),
+      contextBefore: normalizeSearchContext(markdownValue.slice(contextStart, match.from)),
+      matchText: markdownValue.slice(match.from, match.to),
+      contextAfter: normalizeSearchContext(markdownValue.slice(match.to, contextEnd)),
+    }
+  })
+}
+
 function getCommandPaletteSearchScore(item: CommandPaletteItem, query: string) {
   const label = item.label.toLowerCase()
   const group = item.group.toLowerCase()
@@ -916,6 +959,10 @@ function App() {
       wholeWord: isSearchWholeWord,
     }),
     [isSearchCaseSensitive, isSearchWholeWord, markdownValue, searchTerm],
+  )
+  const searchResults = useMemo(
+    () => getSearchResults(markdownValue, searchMatches),
+    [markdownValue, searchMatches],
   )
   const stats = useMemo(
     () => getDocumentStats(markdownValue, outline),
@@ -1894,6 +1941,26 @@ function App() {
     }
   }
 
+  function jumpToSearchResult(result: SearchResult) {
+    const editorView = getEditorView()
+
+    if (!editorView) {
+      return
+    }
+
+    if (mode === 'preview') {
+      setMode('split')
+    }
+
+    editorView.dispatch({
+      selection: { anchor: result.from, head: result.to },
+      effects: EditorView.scrollIntoView(result.from, { y: 'center' }),
+      scrollIntoView: true,
+    })
+    editorView.focus()
+    setActiveSearchRange({ from: result.from, to: result.to })
+  }
+
   function replaceCurrentSearchMatch() {
     const editorView = getEditorView()
 
@@ -2547,6 +2614,39 @@ function App() {
                             <ReplaceAllIcon size={14} />
                             <span>{t.search.all}</span>
                           </button>
+                        </div>
+                      )}
+                      {searchTerm.length > 0 && (
+                        <div className="search-results" aria-label={t.search.searchResults}>
+                          {searchResults.length > 0 ? (
+                            searchResults.slice(0, 12).map((result) => {
+                              const isActiveResult = activeSearchRange?.from === result.from && activeSearchRange.to === result.to
+
+                              return (
+                                <button
+                                  type="button"
+                                  key={`${result.from}-${result.to}`}
+                                  className={isActiveResult ? 'search-result active' : 'search-result'}
+                                  onMouseDown={(event) => event.preventDefault()}
+                                  onClick={() => jumpToSearchResult(result)}
+                                >
+                                  <span className="search-result-line">{t.search.line} {result.lineNumber}</span>
+                                  <span className="search-result-context">
+                                    {result.contextBefore && <span>{result.contextBefore} </span>}
+                                    <mark>{result.matchText}</mark>
+                                    {result.contextAfter && <span> {result.contextAfter}</span>}
+                                  </span>
+                                </button>
+                              )
+                            })
+                          ) : (
+                            <div className="search-result-empty">{t.search.noResults}</div>
+                          )}
+                          {searchResults.length > 12 && (
+                            <div className="search-result-more">
+                              {t.search.moreResults.replace('{count}', String(searchResults.length - 12))}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

@@ -127,6 +127,10 @@ const en = {
     all: 'All',
     noQuery: 'No query',
     of: 'of',
+    searchResults: 'Search results',
+    line: 'Line',
+    noResults: 'No results found',
+    moreResults: '{count} more results',
   },
   commandPalette: {
     typeCommand: 'Type a command',
@@ -301,6 +305,10 @@ const zhCN: TranslationCatalog = {
     all: '全部',
     noQuery: '未输入查询',
     of: '/',
+    searchResults: '搜索结果',
+    line: '行',
+    noResults: '没有找到结果',
+    moreResults: '还有 {count} 个结果',
   },
   commandPalette: {
     typeCommand: '输入命令',
