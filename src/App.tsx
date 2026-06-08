@@ -90,6 +90,7 @@ type TableEditAction = 'format' | 'insert-row-below' | 'delete-row' | 'insert-co
 type TableTranslationKey = 'formatTable' | 'addRowBelow' | 'deleteRow' | 'addColumnRight' | 'deleteColumn'
 type ClipboardCopyKind = 'markdown' | 'html'
 type ExportStyle = 'reader' | 'compact' | 'manuscript'
+type WorkspaceSortMode = 'modified-desc' | 'name-asc'
 
 const clipboardWriteTimeoutMs = 1200
 
@@ -184,6 +185,7 @@ const editorFontSizeStorageKey = 'openmark:editor-font-size'
 const exportStyleStorageKey = 'openmark:export-style'
 const recentFilesStorageKey = 'openmark:recent-files'
 const workspaceFolderStorageKey = 'openmark:workspace-folder'
+const workspaceSortStorageKey = 'openmark:workspace-sort'
 const splitPaneRatioStorageKey = 'openmark:split-pane-ratio'
 const viewModeStorageKey = 'openmark:view-mode'
 const sidebarTabStorageKey = 'openmark:sidebar-tab'
@@ -217,6 +219,7 @@ const validViewModes = new Set<ViewMode>(['write', 'split', 'preview'])
 const validSidebarTabs = new Set<SidebarTab>(['document', 'outline', 'recent', 'workspace'])
 const validThemePreferences = new Set<ThemePreference>(['light', 'dark', 'system'])
 const validExportStyles = new Set<ExportStyle>(['reader', 'compact', 'manuscript'])
+const validWorkspaceSortModes = new Set<WorkspaceSortMode>(['modified-desc', 'name-asc'])
 const defaultTableEditingState: TableEditingState = {
   isInTable: false,
   canDeleteRow: false,
@@ -254,6 +257,14 @@ const exportStyleOptions: Array<{
   { value: 'reader', Icon: FileText },
   { value: 'compact', Icon: Columns2 },
   { value: 'manuscript', Icon: Type },
+]
+
+const workspaceSortOptions: Array<{
+  value: WorkspaceSortMode
+  Icon: LucideIcon
+}> = [
+  { value: 'modified-desc', Icon: RefreshCw },
+  { value: 'name-asc', Icon: List },
 ]
 
 const defaultUpdateStatus: OpenMarkUpdateStatus = {
@@ -470,6 +481,36 @@ function loadEditorFontSize() {
 function loadExportStyle() {
   const storedStyle = window.localStorage.getItem(exportStyleStorageKey)
   return validExportStyles.has(storedStyle as ExportStyle) ? storedStyle as ExportStyle : 'reader'
+}
+
+function loadWorkspaceSortMode() {
+  const storedSortMode = window.localStorage.getItem(workspaceSortStorageKey)
+  return validWorkspaceSortModes.has(storedSortMode as WorkspaceSortMode)
+    ? storedSortMode as WorkspaceSortMode
+    : 'modified-desc'
+}
+
+function matchesWorkspaceFileQuery(item: OpenMarkWorkspaceFile, query: string) {
+  return item.fileName.toLowerCase().includes(query) ||
+    item.relativePath.toLowerCase().includes(query) ||
+    item.filePath.toLowerCase().includes(query)
+}
+
+function compareWorkspaceFiles(
+  left: OpenMarkWorkspaceFile,
+  right: OpenMarkWorkspaceFile,
+  sortMode: WorkspaceSortMode,
+  collator: Intl.Collator,
+) {
+  if (left.missing !== right.missing) {
+    return left.missing ? 1 : -1
+  }
+
+  if (sortMode === 'name-asc') {
+    return collator.compare(left.relativePath, right.relativePath)
+  }
+
+  return right.modifiedAt - left.modifiedAt || collator.compare(left.relativePath, right.relativePath)
 }
 
 function getExportStyleCss(style: ExportStyle) {
@@ -1464,6 +1505,8 @@ function App() {
   const [isReplaceVisible, setIsReplaceVisible] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [recentFileQuery, setRecentFileQuery] = useState('')
+  const [workspaceFileQuery, setWorkspaceFileQuery] = useState('')
+  const [workspaceSortMode, setWorkspaceSortMode] = useState<WorkspaceSortMode>(loadWorkspaceSortMode)
   const [replaceTerm, setReplaceTerm] = useState('')
   const [isSearchCaseSensitive, setIsSearchCaseSensitive] = useState(false)
   const [isSearchWholeWord, setIsSearchWholeWord] = useState(false)
@@ -1566,6 +1609,16 @@ function App() {
     ? 'OpenMark'
     : `${hasUnsavedChanges ? '* ' : ''}${withMarkdownExtension(fileName)} - OpenMark`
   const fileDateFormatter = useMemo(() => new Intl.DateTimeFormat(locale), [locale])
+  const workspaceFileCollator = useMemo(
+    () => new Intl.Collator(locale, { numeric: true, sensitivity: 'base' }),
+    [locale],
+  )
+  const normalizedWorkspaceFileQuery = workspaceFileQuery.trim().toLowerCase()
+  const filteredWorkspaceFiles = [...(workspaceFolder?.files ?? [])]
+    .filter((item) => (
+      normalizedWorkspaceFileQuery.length === 0 || matchesWorkspaceFileQuery(item, normalizedWorkspaceFileQuery)
+    ))
+    .sort((left, right) => compareWorkspaceFiles(left, right, workspaceSortMode, workspaceFileCollator))
   const sidebarTabs: Array<{ value: SidebarTab; label: string; detail: string }> = [
     { value: 'document', label: t.sidebar.document, detail: hasUnsavedChanges ? t.document.unsaved : t.document.saved },
     { value: 'workspace', label: t.sidebar.workspace, detail: workspaceFolder ? String(workspaceFolder.files.length) : '-' },
@@ -1930,6 +1983,10 @@ function App() {
   useEffect(() => {
     window.localStorage.setItem(exportStyleStorageKey, exportStyle)
   }, [exportStyle])
+
+  useEffect(() => {
+    window.localStorage.setItem(workspaceSortStorageKey, workspaceSortMode)
+  }, [workspaceSortMode])
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -2395,6 +2452,7 @@ function App() {
       files: result.files,
       truncated: result.truncated === true,
     })
+    setWorkspaceFileQuery('')
     setWorkspaceError(null)
     setActiveSidebarTab('workspace')
   }
@@ -2435,6 +2493,7 @@ function App() {
 
   function clearWorkspaceFolder() {
     setWorkspaceFolder(null)
+    setWorkspaceFileQuery('')
     setWorkspaceError(null)
   }
 
@@ -3335,14 +3394,14 @@ ${getExportStyleCss(exportStyle)}
     )
   }
 
-  function renderWorkspaceFiles() {
+  function renderWorkspaceFiles(items = filteredWorkspaceFiles) {
     if (!workspaceFolder) {
       return null
     }
 
     return (
       <div className="workspace-file-list">
-        {workspaceFolder.files.map((item) => {
+        {items.map((item) => {
           const workspaceFileButtonClassName = [
             'workspace-file-button',
             item.filePath === activeFilePath ? 'active' : '',
@@ -3700,7 +3759,9 @@ ${getExportStyleCss(exportStyle)}
                         <span title={workspaceFolder.folderPath}>{workspaceFolder.folderPath}</span>
                       </div>
                       <div className="workspace-toolbar-row">
-                        <span>{workspaceFolder.files.length} {t.workspace.files}</span>
+                        <span>
+                          {filteredWorkspaceFiles.length} {t.workspace.of} {workspaceFolder.files.length} {t.workspace.files}
+                        </span>
                         <span className="workspace-toolbar-actions">
                           <button
                             type="button"
@@ -3720,10 +3781,56 @@ ${getExportStyleCss(exportStyle)}
                           </button>
                         </span>
                       </div>
+                      <div className="workspace-filter-panel">
+                        <label className="workspace-search">
+                          <SearchIcon size={15} aria-hidden="true" />
+                          <input
+                            type="search"
+                            value={workspaceFileQuery}
+                            onChange={(event) => setWorkspaceFileQuery(event.target.value)}
+                            placeholder={t.workspace.searchPlaceholder}
+                            aria-label={t.workspace.searchFiles}
+                          />
+                          {workspaceFileQuery.length > 0 && (
+                            <button
+                              type="button"
+                              className="workspace-search-clear"
+                              onClick={() => setWorkspaceFileQuery('')}
+                              title={t.workspace.clearSearch}
+                              aria-label={t.workspace.clearSearch}
+                            >
+                              <X size={14} />
+                            </button>
+                          )}
+                        </label>
+                        <div className="workspace-sort-control" role="group" aria-label={t.workspace.sortFiles}>
+                          {workspaceSortOptions.map(({ value, Icon }) => {
+                            const label = t.workspace.sortModes[value]
+
+                            return (
+                              <button
+                                type="button"
+                                key={value}
+                                className={workspaceSortMode === value ? 'active' : ''}
+                                onClick={() => setWorkspaceSortMode(value)}
+                                title={label}
+                                aria-label={label}
+                              >
+                                <Icon size={14} />
+                                <span>{label}</span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
                       {workspaceError && <p className="muted">{workspaceError}</p>}
                       {isWorkspaceLoading && <p className="muted">{t.workspace.loading}</p>}
                       {workspaceFolder.truncated && <p className="muted">{t.workspace.truncated}</p>}
-                      {workspaceFolder.files.length > 0 ? renderWorkspaceFiles() : <p className="muted">{t.workspace.noFiles}</p>}
+                      {workspaceFolder.files.length > 0
+                        ? filteredWorkspaceFiles.length > 0
+                          ? renderWorkspaceFiles()
+                          : <p className="muted">{t.workspace.noFileMatches}</p>
+                        : <p className="muted">{t.workspace.noFiles}</p>}
                     </>
                   ) : (
                     <p className="muted">{workspaceError ?? t.workspace.noFolder}</p>

@@ -504,7 +504,8 @@
   color: var(--ink);
 }
 
-.recent-search {
+.recent-search,
+.workspace-search {
   min-width: 0;
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr) 24px;
@@ -518,12 +519,14 @@
   background: var(--surface-0);
 }
 
-.recent-search:focus-within {
+.recent-search:focus-within,
+.workspace-search:focus-within {
   border-color: var(--accent-border);
   box-shadow: 0 0 0 2px var(--focus);
 }
 
-.recent-search input {
+.recent-search input,
+.workspace-search input {
   min-width: 0;
   border: 0;
   color: var(--ink);
@@ -532,11 +535,13 @@
   outline: 0;
 }
 
-.recent-search input::placeholder {
+.recent-search input::placeholder,
+.workspace-search input::placeholder {
   color: var(--muted);
 }
 
-.recent-search-clear {
+.recent-search-clear,
+.workspace-search-clear {
   width: 24px;
   height: 24px;
   display: inline-flex;
@@ -548,11 +553,13 @@
   cursor: pointer;
 }
 
-.recent-search-clear:hover {
+.recent-search-clear:hover,
+.workspace-search-clear:hover {
   color: var(--ink);
 }
 
-.recent-search-clear:focus-visible {
+.recent-search-clear:focus-visible,
+.workspace-search-clear:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
@@ -630,6 +637,56 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.workspace-filter-panel {
+  display: grid;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+
+.workspace-sort-control {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.workspace-sort-control button {
+  min-width: 0;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 1px solid var(--button-border);
+  border-radius: 7px;
+  color: var(--muted);
+  background: var(--button-bg);
+  cursor: pointer;
+}
+
+.workspace-sort-control button:hover {
+  border-color: var(--accent-border);
+  background: var(--button-hover);
+}
+
+.workspace-sort-control button.active {
+  color: var(--accent);
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+
+.workspace-sort-control button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.workspace-sort-control span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .text-action:disabled {
