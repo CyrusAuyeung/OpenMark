@@ -105,6 +105,11 @@ type DocumentStats = {
   headings: number
 }
 
+type ExportDocumentMetadata = {
+  title: string
+  description: string
+}
+
 type RecentFile = {
   filePath: string
   fileName: string
@@ -175,6 +180,7 @@ const minEditorFontSize = 14
 const maxEditorFontSize = 22
 const invalidFileNameCharacters = new Set(['<', '>', ':', '"', '/', '\\', '|', '?', '*'])
 const imageFileExtensions = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'])
+const exportDescriptionMaxLength = 180
 
 const markdownRenderer = new MarkdownIt({
   html: false,
@@ -463,6 +469,10 @@ function getDocumentStats(markdownValue: string, outline: OutlineItem[]): Docume
 
 function getBaseName(fileName: string) {
   return fileName.replace(/\.(md|markdown|txt|html)$/i, '') || 'document'
+}
+
+function getReadableBaseName(fileName: string) {
+  return getBaseName(fileName).replace(/[-_]+/g, ' ').trim() || 'document'
 }
 
 function sanitizeFileNameInput(fileName: string) {
@@ -808,6 +818,72 @@ function escapeHtml(value: string) {
   }
 
   return value.replace(/[&<>"']/g, (character) => entities[character])
+}
+
+function normalizeMetadataText(value: string) {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
+function truncateMetadataText(value: string, maxLength = exportDescriptionMaxLength) {
+  if (value.length <= maxLength) {
+    return value
+  }
+
+  const clippedValue = value.slice(0, maxLength + 1)
+  const lastSpaceIndex = clippedValue.lastIndexOf(' ')
+  const safeClipIndex = lastSpaceIndex >= 90 ? lastSpaceIndex : maxLength
+
+  return `${clippedValue.slice(0, safeClipIndex).trim()}...`
+}
+
+function getExportTextCandidates(contentHtml: string, selector: string) {
+  if (typeof document === 'undefined') {
+    return []
+  }
+
+  const template = document.createElement('template')
+  template.innerHTML = contentHtml
+
+  return Array.from(template.content.querySelectorAll(selector))
+    .map((element) => normalizeMetadataText(element.textContent ?? ''))
+    .filter(Boolean)
+}
+
+function getExportDocumentMetadata(contentHtml: string, fileName: string): ExportDocumentMetadata {
+  const headingTitle = getExportTextCandidates(contentHtml, 'h1, h2, h3, h4, h5, h6')[0]
+  const title = truncateMetadataText(headingTitle || getReadableBaseName(fileName), 90)
+  const descriptionCandidate = getExportTextCandidates(contentHtml, 'p, blockquote, li, td, th')
+    .find((candidate) => candidate !== title)
+
+  return {
+    title,
+    description: descriptionCandidate ? truncateMetadataText(descriptionCandidate) : '',
+  }
+}
+
+function getOpenGraphLocale(locale: AppLocale) {
+  return locale === 'zh-CN' ? 'zh_CN' : 'en_US'
+}
+
+function getExportMetadataTags(metadata: ExportDocumentMetadata, locale: AppLocale) {
+  const title = escapeHtml(metadata.title)
+  const description = escapeHtml(metadata.description)
+  const descriptionTags = description
+    ? `
+  <meta name="description" content="${description}">
+  <meta property="og:description" content="${description}">
+  <meta name="twitter:description" content="${description}">`
+    : ''
+
+  return `  <meta name="generator" content="OpenMark">
+  <meta name="application-name" content="OpenMark">
+  <meta name="title" content="${title}">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="OpenMark">
+  <meta property="og:locale" content="${getOpenGraphLocale(locale)}">
+  <meta property="og:title" content="${title}">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="${title}">${descriptionTags}`
 }
 
 function downloadFile(content: string, fileName: string, mimeType: string) {
@@ -1313,6 +1389,10 @@ function App() {
   const exportHtml = useMemo(
     () => sanitizeMarkdownHtml(rewritePreviewImageSources(rawRenderedHtml, activeFilePath, previewImageSources)),
     [activeFilePath, previewImageSources, rawRenderedHtml],
+  )
+  const exportMetadata = useMemo(
+    () => getExportDocumentMetadata(exportHtml, fileName),
+    [exportHtml, fileName],
   )
   const outline = useMemo(() => getOutline(markdownValue), [markdownValue])
   const renderedHtml = useMemo(
@@ -2183,14 +2263,17 @@ function App() {
   }
 
   function buildExportHtml(contentHtml = exportHtml) {
-    const title = escapeHtml(getBaseName(fileName))
+    const metadata = contentHtml === exportHtml
+      ? exportMetadata
+      : getExportDocumentMetadata(contentHtml, fileName)
+    const title = escapeHtml(metadata.title)
 
     return `<!doctype html>
 <html lang="${locale}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="generator" content="OpenMark">
+${getExportMetadataTags(metadata, locale)}
   <title>${title}</title>
   <style>
 ${getExportStyleCss(exportStyle)}
