@@ -3,34 +3,22 @@ updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 3
+      interval: monthly
+    open-pull-requests-limit: 1
+    commit-message:
+      prefix: "chore(deps)"
     groups:
-      type-definitions:
+      npm-dependencies:
         patterns:
-          - "@types/*"
-      editor-dependencies:
-        patterns:
-          - "@codemirror/*"
-          - "@uiw/*"
-          - markdown-it
-          - dompurify
-      desktop-dependencies:
-        patterns:
-          - electron
-          - electron-builder
-      react-dependencies:
-        patterns:
-          - react
-          - react-dom
-          - "@vitejs/*"
-          - vite
+          - "*"
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
     open-pull-requests-limit: 1
+    commit-message:
+      prefix: "chore(actions)"
     groups:
       github-actions:
         patterns:

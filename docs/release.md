@@ -120,6 +120,10 @@ OpenMark uses `electron-updater` with GitHub Releases as the update provider.
 - The update channel follows the release version: stable builds use stable releases, prerelease builds can receive prereleases.
 - Auto-update is designed for installer builds. Development builds and unsupported package formats show a disabled update state.
 
+## Dependency Updates
+
+Dependabot runs monthly and groups npm updates into a single PR and GitHub Actions updates into a single PR. Review grouped dependency PRs before release hardening instead of merging package bumps during active feature work.
+
 ## Notes
 
 - macOS first launch may require user approval until Developer ID signing and notarization are configured.
