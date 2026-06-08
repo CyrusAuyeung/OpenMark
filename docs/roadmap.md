@@ -77,4 +77,4 @@
 - Workspace panel filtering and sorting ✅
 - Richer workspace file states ✅
 - Recent/workspace unified quick open polish ✅
-- Library keyboard navigation refinements
+- Library keyboard navigation refinements ✅

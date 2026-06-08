@@ -115,6 +115,7 @@ const en = {
     searchRecentFilesPlaceholder: 'Search recent files',
     clearRecentFileSearch: 'Clear recent file search',
     noRecentFileMatches: 'No matching recent files',
+    recentFileList: 'Recent file list',
     clear: 'Clear',
     removeFromRecent: 'Remove from recent',
     pinRecentFile: 'Pin recent file',
@@ -136,6 +137,7 @@ const en = {
     quickOpenPlaceholder: 'Search workspace and recent files',
     quickOpenSearch: 'Search workspace and recent files',
     quickOpenResults: 'Workspace and recent file results',
+    fileList: 'Workspace file list',
     quickOpenSources: {
       workspace: 'Workspace',
       recent: 'Recent',
@@ -408,6 +410,7 @@ const zhCN: TranslationCatalog = {
     searchRecentFilesPlaceholder: '搜索最近文件',
     clearRecentFileSearch: '清除最近文件搜索',
     noRecentFileMatches: '没有匹配的最近文件',
+    recentFileList: '最近文件列表',
     clear: '清空',
     removeFromRecent: '从最近文件中移除',
     pinRecentFile: '置顶最近文件',
@@ -429,6 +432,7 @@ const zhCN: TranslationCatalog = {
     quickOpenPlaceholder: '搜索工作区和最近文件',
     quickOpenSearch: '搜索工作区和最近文件',
     quickOpenResults: '工作区和最近文件结果',
+    fileList: '工作区文件列表',
     quickOpenSources: {
       workspace: '工作区',
       recent: '最近',

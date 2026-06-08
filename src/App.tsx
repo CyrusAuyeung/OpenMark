@@ -208,6 +208,8 @@ const maxEditorFontSize = 22
 const invalidFileNameCharacters = new Set(['<', '>', ':', '"', '/', '\\', '|', '?', '*'])
 const imageFileExtensions = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'])
 const exportDescriptionMaxLength = 180
+const libraryItemSelector = '[data-library-item="true"]'
+const libraryRowSelector = '[data-library-row="true"]'
 
 const markdownRenderer = new MarkdownIt({
   html: false,
@@ -3401,9 +3403,53 @@ ${getExportStyleCss(exportStyle)}
     }
   }
 
+  function handleLibraryListKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp' && event.key !== 'Home' && event.key !== 'End') {
+      return
+    }
+
+    const container = event.currentTarget
+    const libraryItems = Array.from(container.querySelectorAll<HTMLButtonElement>(libraryItemSelector))
+      .filter((button) => !button.disabled)
+
+    if (libraryItems.length === 0) {
+      return
+    }
+
+    const target = event.target as HTMLElement
+    const currentItem = target.closest<HTMLButtonElement>(libraryItemSelector)
+    const currentRow = target.closest<HTMLElement>(libraryRowSelector)
+    const rows = Array.from(container.querySelectorAll<HTMLElement>(libraryRowSelector))
+    const currentRowIndex = currentRow ? rows.indexOf(currentRow) : -1
+    const currentItemIndex = currentItem ? libraryItems.indexOf(currentItem) : -1
+    const currentIndex = currentItemIndex >= 0
+      ? currentItemIndex
+      : Math.min(Math.max(currentRowIndex, 0), libraryItems.length - 1)
+    let nextIndex = currentIndex
+
+    if (event.key === 'ArrowDown') {
+      nextIndex = Math.min(currentIndex + 1, libraryItems.length - 1)
+    }
+
+    if (event.key === 'ArrowUp') {
+      nextIndex = Math.max(currentIndex - 1, 0)
+    }
+
+    if (event.key === 'Home') {
+      nextIndex = 0
+    }
+
+    if (event.key === 'End') {
+      nextIndex = libraryItems.length - 1
+    }
+
+    event.preventDefault()
+    libraryItems[nextIndex]?.focus()
+  }
+
   function renderRecentFiles(items = recentFiles) {
     return (
-      <div className="recent-list">
+      <div className="recent-list" aria-label={t.document.recentFileList} onKeyDown={handleLibraryListKeyDown}>
         {items.map((item) => {
           const recentOpenButtonClassName = [
             'recent-open-button',
@@ -3417,7 +3463,7 @@ ${getExportStyleCss(exportStyle)}
           ].filter(Boolean).join(' · ')
 
           return (
-          <div className="recent-file-row" key={item.filePath}>
+          <div className="recent-file-row" key={item.filePath} data-library-row="true">
             <button
               type="button"
               className={item.pinned ? 'recent-pin-button active' : 'recent-pin-button'}
@@ -3430,6 +3476,7 @@ ${getExportStyleCss(exportStyle)}
             <button
               type="button"
               className={recentOpenButtonClassName}
+              data-library-item="true"
               onClick={() => handleOpenRecentFile(item.filePath)}
               title={item.filePath}
             >
@@ -3458,7 +3505,7 @@ ${getExportStyleCss(exportStyle)}
     }
 
     return (
-      <div className="workspace-file-list">
+      <div className="workspace-file-list" aria-label={t.workspace.fileList} onKeyDown={handleLibraryListKeyDown}>
         {items.map((item) => {
           const isActiveWorkspaceFile = item.filePath === activeFilePath
           const workspaceFileButtonClassName = [
@@ -3476,6 +3523,8 @@ ${getExportStyleCss(exportStyle)}
               type="button"
               className={workspaceFileButtonClassName}
               key={item.filePath}
+              data-library-item="true"
+              data-library-row="true"
               onClick={() => { void handleOpenWorkspaceFile(item.filePath) }}
               title={item.filePath}
             >
