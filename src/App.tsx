@@ -908,9 +908,14 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const imageInputRef = useRef<HTMLInputElement | null>(null)
   const editorWorkbenchRef = useRef<HTMLElement | null>(null)
+  const previewScrollRef = useRef<HTMLDivElement | null>(null)
   const editorRef = useRef<ReactCodeMirrorRef | null>(null)
   const editorViewRef = useRef<EditorView | null>(null)
+  const editorScrollCleanupRef = useRef<(() => void) | null>(null)
   const pendingOutlineJumpRef = useRef<OutlineItem | null>(null)
+  const scrollSyncSourceRef = useRef<'editor' | 'preview' | null>(null)
+  const scrollSyncTimerRef = useRef<number | null>(null)
+  const syncPreviewScrollFromEditorRef = useRef<() => void>(() => undefined)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const commandInputRef = useRef<HTMLInputElement | null>(null)
   const previewImageSourcesRef = useRef<PreviewImageSource[]>([])
@@ -1279,6 +1284,30 @@ function App() {
       }
     })
   }, [])
+
+  useEffect(() => () => {
+    if (scrollSyncTimerRef.current !== null) {
+      window.clearTimeout(scrollSyncTimerRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    syncPreviewScrollFromEditorRef.current = syncPreviewScrollFromEditor
+  })
+
+  useEffect(() => () => {
+    editorScrollCleanupRef.current?.()
+  }, [])
+
+  useEffect(() => {
+    if (!showWelcome && mode !== 'preview') {
+      return
+    }
+
+    editorScrollCleanupRef.current?.()
+    editorScrollCleanupRef.current = null
+    editorViewRef.current = null
+  }, [mode, showWelcome])
 
   useEffect(() => {
     editorWorkbenchRef.current?.style.setProperty('--editor-pane-size', `${splitPaneRatio}%`)
@@ -1911,6 +1940,64 @@ function App() {
 
   function getEditorView() {
     return editorViewRef.current ?? editorRef.current?.view ?? null
+  }
+
+  function getScrollableRatio(element: HTMLElement) {
+    const scrollableDistance = element.scrollHeight - element.clientHeight
+
+    return scrollableDistance <= 0 ? 0 : element.scrollTop / scrollableDistance
+  }
+
+  function setScrollableRatio(element: HTMLElement, ratio: number) {
+    const scrollableDistance = element.scrollHeight - element.clientHeight
+
+    element.scrollTop = scrollableDistance <= 0 ? 0 : scrollableDistance * ratio
+  }
+
+  function withScrollSyncLock(source: 'editor' | 'preview', syncScroll: () => void) {
+    scrollSyncSourceRef.current = source
+    syncScroll()
+
+    if (scrollSyncTimerRef.current !== null) {
+      window.clearTimeout(scrollSyncTimerRef.current)
+    }
+
+    scrollSyncTimerRef.current = window.setTimeout(() => {
+      scrollSyncSourceRef.current = null
+      scrollSyncTimerRef.current = null
+    }, 80)
+  }
+
+  function syncPreviewScrollFromEditor() {
+    if (mode !== 'split' || scrollSyncSourceRef.current === 'preview') {
+      return
+    }
+
+    const editorScroller = getEditorView()?.scrollDOM
+    const previewScroller = previewScrollRef.current
+
+    if (!editorScroller || !previewScroller) {
+      return
+    }
+
+    const ratio = getScrollableRatio(editorScroller)
+    withScrollSyncLock('editor', () => setScrollableRatio(previewScroller, ratio))
+  }
+
+  function syncEditorScrollFromPreview() {
+    if (mode !== 'split' || scrollSyncSourceRef.current === 'editor') {
+      return
+    }
+
+    const editorScroller = getEditorView()?.scrollDOM
+    const previewScroller = previewScrollRef.current
+
+    if (!editorScroller || !previewScroller) {
+      return
+    }
+
+    const ratio = getScrollableRatio(previewScroller)
+    withScrollSyncLock('preview', () => setScrollableRatio(editorScroller, ratio))
   }
 
   function getSelectedSearchRange(editorView: EditorView): SearchMatch | null {
@@ -2727,7 +2814,13 @@ function App() {
                       extensions={editorExtensions}
                       theme={theme === 'dark' ? oneDark : 'light'}
                       onCreateEditor={(view) => {
+                        editorScrollCleanupRef.current?.()
                         editorViewRef.current = view
+                        const handleEditorScroll = () => syncPreviewScrollFromEditorRef.current()
+                        view.scrollDOM.addEventListener('scroll', handleEditorScroll)
+                        editorScrollCleanupRef.current = () => {
+                          view.scrollDOM.removeEventListener('scroll', handleEditorScroll)
+                        }
                       }}
                       onChange={(value) => setMarkdownValue(value)}
                     />
@@ -2755,7 +2848,7 @@ function App() {
                 <span>{t.editor.preview}</span>
                 <span>{stats.words} {t.editor.wordCountSuffix}</span>
               </div>
-              <div className="preview-scroll">
+              <div className="preview-scroll" ref={previewScrollRef} onScroll={syncEditorScrollFromPreview}>
                 {markdownValue.trim().length > 0 ? (
                   <article
                     className="markdown-preview"
