@@ -229,6 +229,7 @@ const viewModeStorageKey = 'openmark:view-mode'
 const sidebarTabStorageKey = 'openmark:sidebar-tab'
 const maxRecentFiles = 6
 const quickOpenResultLimit = 10
+const searchResultWindowSize = 12
 const defaultSplitPaneRatio = 50
 const minSplitPaneRatio = 30
 const maxSplitPaneRatio = 70
@@ -1886,6 +1887,15 @@ function App() {
   const activeSearchMatchIndex = activeSearchRange
     ? searchMatches.findIndex((match) => match.from === activeSearchRange.from && match.to === activeSearchRange.to)
     : -1
+  const searchResultWindowStart = searchResults.length <= searchResultWindowSize || activeSearchMatchIndex < 0
+    ? 0
+    : Math.min(
+      Math.max(activeSearchMatchIndex - Math.floor(searchResultWindowSize / 2), 0),
+      searchResults.length - searchResultWindowSize,
+    )
+  const visibleSearchResults = searchResults.slice(searchResultWindowStart, searchResultWindowStart + searchResultWindowSize)
+  const hiddenSearchResultsBefore = searchResultWindowStart
+  const hiddenSearchResultsAfter = Math.max(searchResults.length - searchResultWindowStart - visibleSearchResults.length, 0)
   const searchStatusLabel = searchTerm.length === 0
     ? t.search.noQuery
     : `${activeSearchMatchIndex >= 0 ? activeSearchMatchIndex + 1 : 0} ${t.search.of} ${searchMatches.length}`
@@ -4724,33 +4734,40 @@ ${getExportStyleCss(exportStyle)}
                       {searchTerm.length > 0 && (
                         <div className="search-results" aria-label={t.search.searchResults}>
                           {searchResults.length > 0 ? (
-                            searchResults.slice(0, 12).map((result) => {
-                              const isActiveResult = activeSearchRange?.from === result.from && activeSearchRange.to === result.to
+                            <>
+                              {hiddenSearchResultsBefore > 0 && (
+                                <div className="search-result-more">
+                                  {t.search.previousResults.replace('{count}', String(hiddenSearchResultsBefore))}
+                                </div>
+                              )}
+                              {visibleSearchResults.map((result) => {
+                                const isActiveResult = activeSearchRange?.from === result.from && activeSearchRange.to === result.to
 
-                              return (
-                                <button
-                                  type="button"
-                                  key={`${result.from}-${result.to}`}
-                                  className={isActiveResult ? 'search-result active' : 'search-result'}
-                                  onMouseDown={(event) => event.preventDefault()}
-                                  onClick={() => jumpToSearchResult(result)}
-                                >
-                                  <span className="search-result-line">{t.search.line} {result.lineNumber}</span>
-                                  <span className="search-result-context">
-                                    {result.contextBefore && <span>{result.contextBefore} </span>}
-                                    <mark>{result.matchText}</mark>
-                                    {result.contextAfter && <span> {result.contextAfter}</span>}
-                                  </span>
-                                </button>
-                              )
-                            })
+                                return (
+                                  <button
+                                    type="button"
+                                    key={`${result.from}-${result.to}`}
+                                    className={isActiveResult ? 'search-result active' : 'search-result'}
+                                    onMouseDown={(event) => event.preventDefault()}
+                                    onClick={() => jumpToSearchResult(result)}
+                                  >
+                                    <span className="search-result-line">{t.search.line} {result.lineNumber}</span>
+                                    <span className="search-result-context">
+                                      {result.contextBefore && <span>{result.contextBefore} </span>}
+                                      <mark>{result.matchText}</mark>
+                                      {result.contextAfter && <span> {result.contextAfter}</span>}
+                                    </span>
+                                  </button>
+                                )
+                              })}
+                              {hiddenSearchResultsAfter > 0 && (
+                                <div className="search-result-more">
+                                  {t.search.moreResults.replace('{count}', String(hiddenSearchResultsAfter))}
+                                </div>
+                              )}
+                            </>
                           ) : (
                             <div className="search-result-empty">{t.search.noResults}</div>
-                          )}
-                          {searchResults.length > 12 && (
-                            <div className="search-result-more">
-                              {t.search.moreResults.replace('{count}', String(searchResults.length - 12))}
-                            </div>
                           )}
                         </div>
                       )}

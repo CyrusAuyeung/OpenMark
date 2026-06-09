@@ -234,6 +234,7 @@ const en = {
     searchResults: 'Search results',
     line: 'Line',
     noResults: 'No results found',
+    previousResults: '{count} previous results',
     moreResults: '{count} more results',
   },
   goToLine: {
@@ -544,6 +545,7 @@ const zhCN: TranslationCatalog = {
     searchResults: '搜索结果',
     line: '行',
     noResults: '没有找到结果',
+    previousResults: '前面还有 {count} 个结果',
     moreResults: '还有 {count} 个结果',
   },
   goToLine: {
