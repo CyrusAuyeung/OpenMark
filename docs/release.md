@@ -36,6 +36,8 @@ After the release is published, verify the GitHub release body and attached asse
 npm run release:verify -- --tag v0.10.0
 ```
 
+When running release verification behind a local proxy, set the standard `HTTPS_PROXY` or `HTTP_PROXY` environment variable first. The verification script honors those variables for GitHub API requests.
+
 ```bash
 npm run package
 ```
