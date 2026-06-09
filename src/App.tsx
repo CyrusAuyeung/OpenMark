@@ -128,7 +128,12 @@ type QuickOpenItem = {
   detail: string
   timestamp: number
   source: 'workspace' | 'recent'
+  group: 'workspace' | 'recent'
 }
+
+type QuickOpenListEntry =
+  | { type: 'group'; id: string; source: QuickOpenItem['group'] }
+  | { type: 'item'; item: QuickOpenItem; index: number }
 
 type WorkspaceFolderState = {
   folderPath: string
@@ -218,6 +223,7 @@ const splitPaneRatioStorageKey = 'openmark:split-pane-ratio'
 const viewModeStorageKey = 'openmark:view-mode'
 const sidebarTabStorageKey = 'openmark:sidebar-tab'
 const maxRecentFiles = 6
+const quickOpenResultLimit = 10
 const defaultSplitPaneRatio = 50
 const minSplitPaneRatio = 30
 const maxSplitPaneRatio = 70
@@ -1065,6 +1071,86 @@ function getCommandPaletteSearchScore(item: CommandPaletteItem, query: string) {
   return Number.POSITIVE_INFINITY
 }
 
+function getQuickOpenSearchScore(item: QuickOpenItem, query: string) {
+  const title = item.title.toLowerCase()
+  const fileName = getPathFileName(item.filePath).toLowerCase()
+  const detail = item.detail.toLowerCase()
+  const filePath = item.filePath.toLowerCase()
+  const pathSegments = normalizePathSeparators(item.filePath).toLowerCase().split('/').filter(Boolean)
+
+  if (title === query || fileName === query) {
+    return 0
+  }
+
+  if (title.startsWith(query) || fileName.startsWith(query)) {
+    return 1
+  }
+
+  if (title.includes(query) || fileName.includes(query)) {
+    return 2
+  }
+
+  if (pathSegments.some((segment) => segment.startsWith(query))) {
+    return 3
+  }
+
+  if (detail.includes(query)) {
+    return 4
+  }
+
+  if (filePath.includes(query)) {
+    return 5
+  }
+
+  return Number.POSITIVE_INFINITY
+}
+
+function getQuickOpenGroupPriority(item: QuickOpenItem) {
+  return item.group === 'recent' ? 0 : 1
+}
+
+function compareQuickOpenItems(
+  left: QuickOpenItem,
+  right: QuickOpenItem,
+  query: string,
+  collator: Intl.Collator,
+) {
+  if (query.length > 0) {
+    const leftScore = getQuickOpenSearchScore(left, query)
+    const rightScore = getQuickOpenSearchScore(right, query)
+
+    if (leftScore !== rightScore) {
+      return leftScore - rightScore
+    }
+  }
+
+  const groupPriority = getQuickOpenGroupPriority(left) - getQuickOpenGroupPriority(right)
+
+  if (groupPriority !== 0) {
+    return groupPriority
+  }
+
+  return right.timestamp - left.timestamp || collator.compare(left.title, right.title)
+}
+
+function getQuickOpenListEntries(items: QuickOpenItem[]) {
+  const entries: QuickOpenListEntry[] = []
+  const seenGroups = new Set<QuickOpenItem['group']>()
+  let itemIndex = 0
+
+  for (const item of items) {
+    if (!seenGroups.has(item.group)) {
+      seenGroups.add(item.group)
+      entries.push({ type: 'group', id: `group:${item.group}`, source: item.group })
+    }
+
+    entries.push({ type: 'item', item, index: itemIndex })
+    itemIndex += 1
+  }
+
+  return entries
+}
+
 function escapeHtml(value: string) {
   const entities: Record<string, string> = {
     '&': '&amp;',
@@ -1701,6 +1787,11 @@ function App() {
     () => getDocumentStats(markdownValue, outline),
     [markdownValue, outline],
   )
+  const fileDateFormatter = useMemo(() => new Intl.DateTimeFormat(locale), [locale])
+  const workspaceFileCollator = useMemo(
+    () => new Intl.Collator(locale, { numeric: true, sensitivity: 'base' }),
+    [locale],
+  )
   const normalizedRecentFileQuery = recentFileQuery.trim().toLowerCase()
   const filteredRecentFiles = normalizedRecentFileQuery.length === 0
     ? recentFiles
@@ -1713,15 +1804,21 @@ function App() {
   const quickOpenItems = (() => {
     const items: QuickOpenItem[] = []
     const seenFilePaths = new Set<string>()
+    const recentFilesByPath = new Map(recentFiles
+      .filter((item) => !item.missing)
+      .map((item) => [item.filePath, item]))
 
     for (const item of availableWorkspaceFiles) {
+      const recentFile = recentFilesByPath.get(item.filePath)
+
       items.push({
         id: `workspace:${item.filePath}`,
         filePath: item.filePath,
         title: item.relativePath,
         detail: workspaceFolder?.folderName ?? t.sidebar.workspace,
-        timestamp: item.modifiedAt,
+        timestamp: recentFile?.openedAt ?? item.modifiedAt,
         source: 'workspace',
+        group: recentFile ? 'recent' : 'workspace',
       })
       seenFilePaths.add(item.filePath)
     }
@@ -1738,19 +1835,20 @@ function App() {
         detail: item.filePath,
         timestamp: item.openedAt,
         source: 'recent',
+        group: 'recent',
       })
     }
 
     return items
   })()
-  const filteredQuickOpenItems = normalizedQuickOpenQuery.length === 0
-    ? quickOpenItems
-    : quickOpenItems.filter((item) => (
-      item.title.toLowerCase().includes(normalizedQuickOpenQuery) ||
-      item.detail.toLowerCase().includes(normalizedQuickOpenQuery) ||
-      item.filePath.toLowerCase().includes(normalizedQuickOpenQuery)
+  const rankedQuickOpenItems = quickOpenItems
+    .filter((item) => (
+      normalizedQuickOpenQuery.length === 0 ||
+      Number.isFinite(getQuickOpenSearchScore(item, normalizedQuickOpenQuery))
     ))
-  const visibleQuickOpenItems = filteredQuickOpenItems.slice(0, 10)
+    .sort((left, right) => compareQuickOpenItems(left, right, normalizedQuickOpenQuery, workspaceFileCollator))
+  const visibleQuickOpenItems = rankedQuickOpenItems.slice(0, quickOpenResultLimit)
+  const visibleQuickOpenEntries = getQuickOpenListEntries(visibleQuickOpenItems)
   const safeActiveQuickOpenIndex = Math.min(activeQuickOpenIndex, Math.max(visibleQuickOpenItems.length - 1, 0))
   const activeSearchMatchIndex = activeSearchRange
     ? searchMatches.findIndex((match) => match.from === activeSearchRange.from && match.to === activeSearchRange.to)
@@ -1763,11 +1861,6 @@ function App() {
   const appTitle = showWelcome
     ? 'OpenMark'
     : `${hasUnsavedChanges ? '* ' : ''}${withMarkdownExtension(fileName)} - OpenMark`
-  const fileDateFormatter = useMemo(() => new Intl.DateTimeFormat(locale), [locale])
-  const workspaceFileCollator = useMemo(
-    () => new Intl.Collator(locale, { numeric: true, sensitivity: 'base' }),
-    [locale],
-  )
   const normalizedWorkspaceFileQuery = workspaceFileQuery.trim().toLowerCase()
   const filteredWorkspaceFiles = [...(workspaceFolder?.files ?? [])]
     .filter((item) => (
@@ -4725,28 +4818,40 @@ ${getExportStyleCss(exportStyle)}
               />
             </label>
 
-            <div className="command-list" aria-label={t.workspace.quickOpenResults}>
+            <div className="command-list quick-open-list" aria-label={t.workspace.quickOpenResults}>
               {visibleQuickOpenItems.length > 0 ? (
-                visibleQuickOpenItems.map((item, index) => (
-                  <button
-                    type="button"
-                    key={item.id}
-                    className={index === safeActiveQuickOpenIndex ? 'command-item active' : 'command-item'}
-                    onMouseEnter={() => setActiveQuickOpenIndex(index)}
-                    onClick={() => openQuickOpenFile(item)}
-                    title={item.filePath}
-                  >
-                    <FileText size={16} aria-hidden="true" />
-                    <span className="command-copy">
-                      <strong>{item.title}</strong>
-                      <small>{item.detail}</small>
-                    </span>
-                    <span className="quick-open-meta">
-                      <small>{t.workspace.quickOpenSources[item.source]}</small>
-                      <kbd>{fileDateFormatter.format(item.timestamp)}</kbd>
-                    </span>
-                  </button>
-                ))
+                visibleQuickOpenEntries.map((entry) => {
+                  if (entry.type === 'group') {
+                    return (
+                      <div key={entry.id} className="quick-open-group-label">
+                        {t.workspace.quickOpenSources[entry.source]}
+                      </div>
+                    )
+                  }
+
+                  const { item, index } = entry
+
+                  return (
+                    <button
+                      type="button"
+                      key={item.id}
+                      className={index === safeActiveQuickOpenIndex ? 'command-item active' : 'command-item'}
+                      onMouseEnter={() => setActiveQuickOpenIndex(index)}
+                      onClick={() => openQuickOpenFile(item)}
+                      title={item.filePath}
+                    >
+                      <FileText size={16} aria-hidden="true" />
+                      <span className="command-copy">
+                        <strong>{item.title}</strong>
+                        <small>{item.detail}</small>
+                      </span>
+                      <span className="quick-open-meta">
+                        <small>{t.workspace.quickOpenSources[item.source]}</small>
+                        <kbd>{fileDateFormatter.format(item.timestamp)}</kbd>
+                      </span>
+                    </button>
+                  )
+                })
               ) : (
                 <div className="command-empty">{t.workspace.noQuickOpenMatches}</div>
               )}

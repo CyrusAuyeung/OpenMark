@@ -1562,6 +1562,20 @@ body.is-resizing-split * {
   padding: 8px;
 }
 
+.quick-open-list {
+  display: grid;
+  gap: 3px;
+}
+
+.quick-open-group-label {
+  padding: 8px 9px 3px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
 .command-item {
   width: 100%;
   min-height: 50px;
