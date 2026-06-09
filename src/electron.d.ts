@@ -96,6 +96,7 @@ declare global {
         canceled: boolean
         filePath?: string
         fileName?: string
+        error?: string
       }>
       saveHtmlFile: (payload: {
         content: string

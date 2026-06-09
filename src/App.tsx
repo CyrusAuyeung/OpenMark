@@ -149,6 +149,11 @@ type EditorSessionState = EditorSessionDocument & {
   scrollLeft: number
 }
 
+type DocumentOperationStatus = {
+  tone: 'success' | 'error'
+  message: string
+}
+
 type PreviewImageSource = {
   markdownPath: string
   previewSrc: string
@@ -530,6 +535,13 @@ function restoreEditorScrollPosition(element: HTMLElement, editorSession: Editor
 
   element.scrollTop = Math.min(editorSession.scrollTop, maxScrollTop)
   element.scrollLeft = Math.min(editorSession.scrollLeft, maxScrollLeft)
+}
+
+function formatTranslation(template: string, replacements: Record<string, string>) {
+  return Object.entries(replacements).reduce(
+    (message, [key, value]) => message.replaceAll(`{${key}}`, value),
+    template,
+  )
 }
 
 function clampSplitPaneRatio(value: number) {
@@ -1599,6 +1611,7 @@ function App() {
   const [workspaceFolder, setWorkspaceFolder] = useState<WorkspaceFolderState | null>(loadWorkspaceFolder)
   const [isWorkspaceLoading, setIsWorkspaceLoading] = useState(false)
   const [workspaceError, setWorkspaceError] = useState<string | null>(null)
+  const [documentOperationStatus, setDocumentOperationStatus] = useState<DocumentOperationStatus | null>(null)
   const [isWelcomeVisible, setIsWelcomeVisible] = useState(initialMarkdownValue.trim().length === 0)
   const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>(loadSidebarTab)
   const [splitPaneRatio, setSplitPaneRatio] = useState(loadSplitPaneRatio)
@@ -2083,6 +2096,7 @@ function App() {
     : clipboardCopyKind === 'markdown'
       ? t.status.copiedMarkdown
       : t.status.copiedHtml
+  const footerStatusLabel = documentOperationStatus?.message ?? clipboardStatusLabel ?? draftStatusLabel
   scheduleEditorSessionPersistRef.current = scheduleEditorSessionPersist
   flushEditorSessionPersistRef.current = flushEditorSessionPersist
 
@@ -2125,6 +2139,19 @@ function App() {
 
     return () => window.clearTimeout(clearTimer)
   }, [clipboardCopyKind])
+
+  useEffect(() => {
+    if (documentOperationStatus === null) {
+      return undefined
+    }
+
+    const clearTimer = window.setTimeout(
+      () => setDocumentOperationStatus(null),
+      documentOperationStatus.tone === 'success' ? 4200 : 9000,
+    )
+
+    return () => window.clearTimeout(clearTimer)
+  }, [documentOperationStatus])
 
   useEffect(() => {
     window.localStorage.setItem(themeStorageKey, themePreference)
@@ -2548,6 +2575,30 @@ function App() {
     return window.confirm(`${t.alerts.unsavedChanges} ${action}`)
   }
 
+  function showDocumentOperationStatus(tone: DocumentOperationStatus['tone'], message: string) {
+    setDocumentOperationStatus({ tone, message })
+  }
+
+  function showOpenedDocumentStatus(nextFileName: string) {
+    showDocumentOperationStatus('success', formatTranslation(t.status.openedDocument, { fileName: nextFileName }))
+  }
+
+  function showSavedDocumentStatus(nextFileName: string) {
+    showDocumentOperationStatus('success', formatTranslation(t.status.savedDocument, { fileName: nextFileName }))
+  }
+
+  function showDownloadedDocumentStatus(nextFileName: string) {
+    showDocumentOperationStatus('success', formatTranslation(t.status.downloadedDocument, { fileName: nextFileName }))
+  }
+
+  function showOpenFailedStatus(message = t.alerts.fileOpenFailed) {
+    showDocumentOperationStatus('error', message)
+  }
+
+  function showSaveFailedStatus(message = t.alerts.fileSaveFailed) {
+    showDocumentOperationStatus('error', message)
+  }
+
   function handleNewDocument() {
     if (!confirmDiscardChanges(t.alerts.startNewDocument)) {
       return
@@ -2560,6 +2611,7 @@ function App() {
     setFileName('untitled.md')
     setActiveFilePath(null)
     setSavedSnapshot(nextMarkdown)
+    setDocumentOperationStatus(null)
     setIsWelcomeVisible(false)
     clearPreviewImageSources()
   }
@@ -2573,6 +2625,7 @@ function App() {
     rememberRecentFile(nextFilePath, nextFileName)
     clearWorkspaceFileMissing(nextFilePath)
     setLastSavedAt(new Date())
+    showOpenedDocumentStatus(nextFileName)
     setIsWelcomeVisible(false)
     clearPreviewImageSources()
   }
@@ -2582,9 +2635,21 @@ function App() {
       return
     }
 
-    const result = await window.openmark?.openMarkdownFile()
+    let result
+
+    try {
+      result = await window.openmark?.openMarkdownFile()
+    } catch {
+      showOpenFailedStatus()
+      return
+    }
 
     if (!result || result.canceled || typeof result.content !== 'string' || !result.fileName) {
+      if (result?.error) {
+        showOpenFailedStatus(result.error)
+      } else if (result && !result.canceled) {
+        showOpenFailedStatus()
+      }
       return
     }
 
@@ -2602,12 +2667,16 @@ function App() {
       result = await window.openmark?.openRecentFile(filePath)
     } catch {
       markFileMissing(filePath)
+      showOpenFailedStatus(t.alerts.recentFileOpenFailed)
       return
     }
 
     if (!result || result.canceled || typeof result.content !== 'string' || !result.fileName) {
       if (result?.error) {
         markFileMissing(filePath)
+        showOpenFailedStatus(result.error)
+      } else if (result && !result.canceled) {
+        showOpenFailedStatus(t.alerts.recentFileOpenFailed)
       }
       return
     }
@@ -2765,16 +2834,17 @@ function App() {
       return
     }
 
-    const fileText = await selectedFile.text()
+    let fileText: string
 
-    clearEditorSessionState()
-    setMarkdownValue(fileText)
-    setFileName(selectedFile.name)
-    setActiveFilePath(null)
-    setSavedSnapshot(fileText)
-    setLastSavedAt(new Date())
-    setIsWelcomeVisible(false)
-    clearPreviewImageSources()
+    try {
+      fileText = await selectedFile.text()
+    } catch {
+      showOpenFailedStatus()
+      event.target.value = ''
+      return
+    }
+
+    applyOpenedDocument(fileText, selectedFile.name, null)
     event.target.value = ''
   }
 
@@ -2868,12 +2938,24 @@ function App() {
     )
 
     if (window.openmark) {
-      const result = await window.openmark.saveMarkdownFile({
-        content: markdownValue,
-        filePath: activeFilePath,
-        fileName: targetFileName,
-        forceDialog: shouldForceDialog,
-      })
+      let result
+
+      try {
+        result = await window.openmark.saveMarkdownFile({
+          content: markdownValue,
+          filePath: activeFilePath,
+          fileName: targetFileName,
+          forceDialog: shouldForceDialog,
+        })
+      } catch {
+        showSaveFailedStatus()
+        return
+      }
+
+      if (result.error) {
+        showSaveFailedStatus(result.error)
+        return
+      }
 
       if (!result.canceled && result.filePath) {
         setActiveFilePath(result.filePath)
@@ -2881,6 +2963,9 @@ function App() {
         setSavedSnapshot(markdownValue)
         rememberRecentFile(result.filePath, result.fileName ?? targetFileName)
         setLastSavedAt(new Date())
+        showSavedDocumentStatus(result.fileName ?? targetFileName)
+      } else if (!result.canceled) {
+        showSaveFailedStatus()
       }
 
       return
@@ -2893,6 +2978,7 @@ function App() {
     )
     setFileName(targetFileName)
     setSavedSnapshot(markdownValue)
+    showDownloadedDocumentStatus(targetFileName)
   }
 
   function buildExportHtml(contentHtml = exportHtml) {
@@ -3976,6 +4062,16 @@ ${getExportStyleCss(exportStyle)}
               <span className={hasUnsavedChanges ? 'state-dot dirty' : 'state-dot saved'}></span>
               <span>{hasUnsavedChanges ? t.document.unsavedChanges : t.document.saved}</span>
             </div>
+            {documentOperationStatus?.tone === 'error' && (
+              <p className="operation-status error" role="alert">
+                {documentOperationStatus.message}
+              </p>
+            )}
+            {documentOperationStatus?.tone === 'success' && (
+              <p className="operation-status success" role="status">
+                {documentOperationStatus.message}
+              </p>
+            )}
             {window.openmark && (
               <p className="file-path" title={activeFilePath ?? t.document.unsavedDesktopDocument}>
                 {activeFilePath ?? t.document.unsavedDesktopDocument}
@@ -4542,7 +4638,9 @@ ${getExportStyleCss(exportStyle)}
         <span>{fileName}</span>
         <span>{t.viewModes[mode]}</span>
         <span>{hasUnsavedChanges ? t.document.unsaved : t.document.saved}</span>
-        <span>{clipboardStatusLabel ?? draftStatusLabel}</span>
+        <span className={documentOperationStatus ? `status-message ${documentOperationStatus.tone}` : undefined}>
+          {footerStatusLabel}
+        </span>
       </footer>
 
       {isCommandPaletteOpen && (

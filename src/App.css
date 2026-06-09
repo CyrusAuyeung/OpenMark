@@ -355,6 +355,27 @@
   background: var(--warning);
 }
 
+.operation-status {
+  margin: 9px 0 0;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-0);
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.operation-status.success {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+
+.operation-status.error {
+  border-color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 10%, var(--surface-0));
+}
+
 .file-path {
   margin: 9px 0 0;
   overflow: hidden;
@@ -1470,6 +1491,16 @@ body.is-resizing-split * {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.status-message.success {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.status-message.error {
+  color: var(--warning);
+  font-weight: 700;
 }
 
 .command-palette-backdrop {
