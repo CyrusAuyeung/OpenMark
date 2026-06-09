@@ -534,7 +534,8 @@
 }
 
 .recent-search,
-.workspace-search {
+.workspace-search,
+.outline-search {
   min-width: 0;
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr) 24px;
@@ -549,13 +550,15 @@
 }
 
 .recent-search:focus-within,
-.workspace-search:focus-within {
+.workspace-search:focus-within,
+.outline-search:focus-within {
   border-color: var(--accent-border);
   box-shadow: 0 0 0 2px var(--focus);
 }
 
 .recent-search input,
-.workspace-search input {
+.workspace-search input,
+.outline-search input {
   min-width: 0;
   border: 0;
   color: var(--ink);
@@ -565,12 +568,14 @@
 }
 
 .recent-search input::placeholder,
-.workspace-search input::placeholder {
+.workspace-search input::placeholder,
+.outline-search input::placeholder {
   color: var(--muted);
 }
 
 .recent-search-clear,
-.workspace-search-clear {
+.workspace-search-clear,
+.outline-search-clear {
   width: 24px;
   height: 24px;
   display: inline-flex;
@@ -583,14 +588,28 @@
 }
 
 .recent-search-clear:hover,
-.workspace-search-clear:hover {
+.workspace-search-clear:hover,
+.outline-search-clear:hover {
   color: var(--ink);
 }
 
 .recent-search-clear:focus-visible,
-.workspace-search-clear:focus-visible {
+.workspace-search-clear:focus-visible,
+.outline-search-clear:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
+}
+
+.outline-count {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.outline-more {
+  margin-top: 8px;
+  text-align: center;
 }
 
 .workspace-folder-button {

@@ -230,6 +230,7 @@ const sidebarTabStorageKey = 'openmark:sidebar-tab'
 const maxRecentFiles = 6
 const quickOpenResultLimit = 10
 const searchResultWindowSize = 12
+const outlineResultLimit = 16
 const defaultSplitPaneRatio = 50
 const minSplitPaneRatio = 30
 const maxSplitPaneRatio = 70
@@ -1743,6 +1744,7 @@ function App() {
   const [isSearchVisible, setIsSearchVisible] = useState(false)
   const [isReplaceVisible, setIsReplaceVisible] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [outlineQuery, setOutlineQuery] = useState('')
   const [recentFileQuery, setRecentFileQuery] = useState('')
   const [workspaceFileQuery, setWorkspaceFileQuery] = useState('')
   const [workspaceSortMode, setWorkspaceSortMode] = useState<WorkspaceSortMode>(loadWorkspaceSortMode)
@@ -1832,6 +1834,15 @@ function App() {
       item.fileName.toLowerCase().includes(normalizedRecentFileQuery) ||
       item.filePath.toLowerCase().includes(normalizedRecentFileQuery)
     ))
+  const normalizedOutlineQuery = outlineQuery.trim().toLowerCase()
+  const filteredOutline = normalizedOutlineQuery.length === 0
+    ? outline
+    : outline.filter((item) => (
+      item.title.toLowerCase().includes(normalizedOutlineQuery) ||
+      String(item.lineNumber).includes(normalizedOutlineQuery)
+    ))
+  const visibleOutlineItems = filteredOutline.slice(0, outlineResultLimit)
+  const hiddenOutlineCount = Math.max(filteredOutline.length - visibleOutlineItems.length, 0)
   const normalizedQuickOpenQuery = quickOpenQuery.trim().toLowerCase()
   const availableWorkspaceFiles = workspaceFolder?.files.filter((item) => !item.missing) ?? []
   const quickOpenItems = (() => {
@@ -4311,35 +4322,76 @@ ${getExportStyleCss(exportStyle)}
 
           {activeSidebarTab === 'outline' && (
           <section className="inspector-section outline-section">
-            <h2>{t.sidebar.outline}</h2>
+            <div className="section-heading-row">
+              <h2>{t.sidebar.outline}</h2>
+              {outline.length > 0 && (
+                <small className="outline-count">
+                  {filteredOutline.length} {t.workspace.of} {outline.length}
+                </small>
+              )}
+            </div>
             {outline.length > 0 ? (
-              <ol className="outline-list">
-                {outline.slice(0, 12).map((item, index) => (
-                  <li
-                    key={`${item.title}-${index}`}
-                    className={`outline-level-${Math.min(item.level, 3)}`}
-                  >
+              <>
+                <label className="outline-search">
+                  <SearchIcon size={15} aria-hidden="true" />
+                  <input
+                    type="search"
+                    value={outlineQuery}
+                    onChange={(event) => setOutlineQuery(event.target.value)}
+                    placeholder={t.document.searchOutlinePlaceholder}
+                    aria-label={t.document.searchOutline}
+                  />
+                  {outlineQuery.length > 0 && (
                     <button
                       type="button"
-                      className={activeOutlineLine === item.lineNumber ? 'active' : ''}
-                      aria-current={activeOutlineLine === item.lineNumber ? 'location' : undefined}
-                      onPointerDown={(event) => {
-                        event.preventDefault()
-                        handleOutlineJump(item)
-                      }}
-                      onClick={(event) => {
-                        if (event.detail === 0) {
-                          handleOutlineJump(item)
-                        }
-                      }}
-                      title={`${t.document.goToLine} ${item.lineNumber}`}
+                      className="outline-search-clear"
+                      onClick={() => setOutlineQuery('')}
+                      aria-label={t.document.clearOutlineSearch}
+                      title={t.document.clearOutlineSearch}
                     >
-                      <span>{item.title}</span>
-                      <small>:{item.lineNumber}</small>
+                      <X size={14} />
                     </button>
-                  </li>
-                ))}
-              </ol>
+                  )}
+                </label>
+                {filteredOutline.length > 0 ? (
+                  <>
+                    <ol className="outline-list">
+                      {visibleOutlineItems.map((item, index) => (
+                        <li
+                          key={`${item.title}-${item.lineNumber}-${index}`}
+                          className={`outline-level-${Math.min(item.level, 3)}`}
+                        >
+                          <button
+                            type="button"
+                            className={activeOutlineLine === item.lineNumber ? 'active' : ''}
+                            aria-current={activeOutlineLine === item.lineNumber ? 'location' : undefined}
+                            onPointerDown={(event) => {
+                              event.preventDefault()
+                              handleOutlineJump(item)
+                            }}
+                            onClick={(event) => {
+                              if (event.detail === 0) {
+                                handleOutlineJump(item)
+                              }
+                            }}
+                            title={`${t.document.goToLine} ${item.lineNumber}`}
+                          >
+                            <span>{item.title}</span>
+                            <small>:{item.lineNumber}</small>
+                          </button>
+                        </li>
+                      ))}
+                    </ol>
+                    {hiddenOutlineCount > 0 && (
+                      <p className="outline-more muted">
+                        {t.document.moreOutlineMatches.replace('{count}', String(hiddenOutlineCount))}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="muted">{t.document.noOutlineMatches}</p>
+                )}
+              </>
             ) : (
               <p className="muted">{t.document.noHeadingsYet}</p>
             )}
