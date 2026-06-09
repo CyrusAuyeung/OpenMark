@@ -2,16 +2,16 @@
 
 ## Summary
 
-OpenMark 0.9.0 focuses on workspace search & library polish. Upgrade for workspace panel filtering with search, clear, and recent/name sorting controls, a workspace file state summary with available, missing, and current-file status, and unified quick open results across workspace and recent files with source labels and duplicate-path handling.
+OpenMark 0.10.0 focuses on editor workflow polish. It includes restoring the active desktop file path between sessions so saved documents reopen with their local identity intact, restoring editor cursor and scroll position between sessions for the active document, and improvements to save and open error visibility with clearer document status and footer feedback.
 
 ## Highlights
 
-### Workspace Search & Library Polish
+### Editor Workflow Polish
 
-- Added workspace panel filtering with search, clear, and recent/name sorting controls.
-- Added a workspace file state summary with available, missing, and current-file status.
-- Added unified quick open results across workspace and recent files with source labels and duplicate-path handling.
-- Improved recent and workspace file list keyboard navigation with arrow, Home, and End movement.
+- Restored the active desktop file path between sessions so saved documents reopen with their local identity intact.
+- Restored editor cursor and scroll position between sessions for the active document.
+- Improved save and open error visibility with clearer document status and footer feedback.
+- Refined quick open ranking and grouping across recent and workspace files.
 
 ## Downloads
 
@@ -19,11 +19,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.9.0.exe` | Recommended installer. |
-| Windows | `OpenMark.0.9.0.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.9.0.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.9.0-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.9.0_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.10.0.exe` | Recommended installer. |
+| Windows | `OpenMark.0.10.0.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.10.0.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.10.0-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.10.0_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -58,4 +58,4 @@ Keep these auto-update metadata files attached when generated:
 ## Full Changelog
 
 - Release date: 2026-06-09
-- Tag: v0.9.0
+- Tag: v0.10.0

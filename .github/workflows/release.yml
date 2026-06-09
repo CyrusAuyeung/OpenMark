@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag to publish, for example v0.9.0. Leave empty to build artifacts only.'
+        description: 'Release tag to publish, for example v0.10.0. Leave empty to build artifacts only.'
         required: false
         type: string
       draft:

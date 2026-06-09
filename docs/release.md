@@ -27,13 +27,13 @@ npm run release:check
 For a specific tag, pass it explicitly:
 
 ```bash
-npm run release:check -- --tag v0.9.0
+npm run release:check -- --tag v0.10.0
 ```
 
 After the release is published, verify the GitHub release body and attached assets:
 
 ```bash
-npm run release:verify -- --tag v0.9.0
+npm run release:verify -- --tag v0.10.0
 ```
 
 ```bash
@@ -54,20 +54,20 @@ Windows artifacts are unsigned unless a signing certificate is provided through 
 
 Expected Windows artifacts:
 
-- `OpenMark.Setup.0.9.0.exe`
-- `OpenMark.0.9.0.exe`
-- `OpenMark.Setup.0.9.0.exe.blockmap`
+- `OpenMark.Setup.0.10.0.exe`
+- `OpenMark.0.10.0.exe`
+- `OpenMark.Setup.0.10.0.exe.blockmap`
 
 Expected macOS artifacts:
 
-- `OpenMark-0.9.0.dmg`
-- `OpenMark-0.9.0-arm64.dmg`
-- `OpenMark-0.9.0-mac.zip`
-- `OpenMark-0.9.0-arm64-mac.zip`
+- `OpenMark-0.10.0.dmg`
+- `OpenMark-0.10.0-arm64.dmg`
+- `OpenMark-0.10.0-mac.zip`
+- `OpenMark-0.10.0-arm64-mac.zip`
 
 Expected Linux artifacts:
 
-- `openmark-editor_0.9.0_amd64.deb`
+- `openmark-editor_0.10.0_amd64.deb`
 
 ## Automated GitHub Release
 
@@ -82,8 +82,8 @@ Release uploads include Electron auto-update metadata files such as `latest.yml`
 Push a version tag that starts with `v`:
 
 ```bash
-git tag v0.9.0
-git push origin v0.9.0
+git tag v0.10.0
+git push origin v0.10.0
 ```
 
 The workflow publishes the GitHub release automatically with the checked release notes template.
@@ -93,9 +93,9 @@ The workflow publishes the GitHub release automatically with the checked release
 Use the **Release** workflow from the Actions page when you need a manual build or draft release.
 
 - Leave `tag` empty to build and upload Windows, macOS, and Linux artifacts only.
-- Enter a tag like `v0.9.0` to publish a GitHub release from the workflow run. The tag is validated as semantic version style and points at the workflow commit.
+- Enter a tag like `v0.10.0` to publish a GitHub release from the workflow run. The tag is validated as semantic version style and points at the workflow commit.
 - Manual releases default to draft mode so artifacts and notes can be reviewed before publishing.
-- Enable `prerelease` for preview builds such as `v0.9.0-beta.1`.
+- Enable `prerelease` for preview builds such as `v0.10.0-beta.1`.
 
 Draft notes should be generated with `npm run release:notes`, reviewed in [.github/RELEASE_TEMPLATE/release-notes.md](../.github/RELEASE_TEMPLATE/release-notes.md), then published by the release workflow.
 

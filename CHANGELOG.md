@@ -2,6 +2,15 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.10.0 - 2026-06-09
+
+### Editor Workflow Polish
+
+- Restored the active desktop file path between sessions so saved documents reopen with their local identity intact.
+- Restored editor cursor and scroll position between sessions for the active document.
+- Improved save and open error visibility with clearer document status and footer feedback.
+- Refined quick open ranking and grouping across recent and workspace files.
+
 ## 0.9.0 - 2026-06-09
 
 ### Workspace Search & Library Polish

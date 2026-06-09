@@ -187,7 +187,7 @@ function getSummary(targetVersion, sections) {
   const sectionNames = sections.map((section) => section.title)
   const focusText = formatList(sectionNames.map((sectionName) => sectionName.toLowerCase()))
   const firstItems = sections.flatMap((section) => section.items).slice(0, 3)
-  const upgradeText = firstItems.length > 0 ? ` Upgrade for ${formatList(firstItems.map(toSummaryPhrase))}.` : ''
+  const upgradeText = firstItems.length > 0 ? ` It includes ${formatList(firstItems.map(toSummaryPhrase))}.` : ''
 
   return `OpenMark ${targetVersion} focuses on ${focusText}.${upgradeText}`
 }
@@ -196,6 +196,9 @@ function toSummaryPhrase(item) {
   return item
     .replace(/^Added\s+/i, '')
     .replace(/^Fixed\s+/i, 'fixes for ')
+    .replace(/^Restored\s+/i, 'restoring ')
+    .replace(/^Improved\s+/i, 'improvements to ')
+    .replace(/^Refined\s+/i, 'refinements to ')
     .replace(/\.$/, '')
 }
 
