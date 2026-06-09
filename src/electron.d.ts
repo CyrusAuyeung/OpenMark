@@ -22,6 +22,7 @@ declare global {
     | 'open-theme-settings'
     | 'find-document'
     | 'replace-document'
+    | 'go-to-line'
     | 'open-command-palette'
     | 'insert-image'
     | 'check-for-updates'

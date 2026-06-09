@@ -85,3 +85,10 @@
 - Restore editor cursor and scroll position between sessions ✅
 - Improve save/open error visibility ✅
 - Refine quick open ranking and grouping ✅
+
+## Milestone 12: Long Document Navigation
+
+- Add Go to Line command and shortcut ✅
+- Improve search result navigation feedback
+- Add outline filtering for dense documents
+- Add document position indicators

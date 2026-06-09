@@ -101,6 +101,11 @@ type OutlineItem = {
   lineStart: number
 }
 
+type LineJumpTarget = {
+  lineNumber: number
+  lineStart: number
+}
+
 type DocumentStats = {
   words: number
   characters: number
@@ -1015,6 +1020,28 @@ function getLineNumberAtPosition(markdownValue: string, position: number) {
   return lineNumber
 }
 
+function getLineJumpTarget(markdownValue: string, lineNumber: number): LineJumpTarget {
+  const lines = markdownValue.split('\n')
+  const safeLineNumber = Math.min(Math.max(lineNumber, 1), Math.max(lines.length, 1))
+  let lineStart = 0
+
+  for (let index = 0; index < safeLineNumber - 1; index += 1) {
+    lineStart += lines[index].length + 1
+  }
+
+  return { lineNumber: safeLineNumber, lineStart }
+}
+
+function parseLineNumberInput(value: string) {
+  const normalizedValue = value.trim()
+
+  if (!/^\d+$/.test(normalizedValue)) {
+    return null
+  }
+
+  return Number(normalizedValue)
+}
+
 function getSearchResults(markdownValue: string, matches: SearchMatch[]): SearchResult[] {
   return matches.map((match, index) => {
     const lineStart = Math.max(markdownValue.lastIndexOf('\n', match.from - 1) + 1, 0)
@@ -1675,12 +1702,14 @@ function App() {
   const scheduleEditorSessionPersistRef = useRef<() => void>(() => undefined)
   const flushEditorSessionPersistRef = useRef<() => void>(() => undefined)
   const pendingOutlineJumpRef = useRef<OutlineItem | null>(null)
+  const pendingLineJumpRef = useRef<LineJumpTarget | null>(null)
   const scrollSyncSourceRef = useRef<'editor' | 'preview' | null>(null)
   const scrollSyncTimerRef = useRef<number | null>(null)
   const syncPreviewScrollFromEditorRef = useRef<() => void>(() => undefined)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const commandInputRef = useRef<HTMLInputElement | null>(null)
   const quickOpenInputRef = useRef<HTMLInputElement | null>(null)
+  const lineNumberInputRef = useRef<HTMLInputElement | null>(null)
   const exportPreviewFrameRef = useRef<HTMLIFrameElement | null>(null)
   const previewImageSourcesRef = useRef<PreviewImageSource[]>([])
   const initialMarkdownValue = useMemo(() => loadStoredValue(draftStorageKey, ''), [])
@@ -1724,6 +1753,9 @@ function App() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [commandQuery, setCommandQuery] = useState('')
   const [activeCommandIndex, setActiveCommandIndex] = useState(0)
+  const [isGoToLineOpen, setIsGoToLineOpen] = useState(false)
+  const [lineNumberInput, setLineNumberInput] = useState('')
+  const [lineNumberError, setLineNumberError] = useState('')
   const [isQuickOpenOpen, setIsQuickOpenOpen] = useState(false)
   const [quickOpenQuery, setQuickOpenQuery] = useState('')
   const [activeQuickOpenIndex, setActiveQuickOpenIndex] = useState(0)
@@ -1850,6 +1882,7 @@ function App() {
   const visibleQuickOpenItems = rankedQuickOpenItems.slice(0, quickOpenResultLimit)
   const visibleQuickOpenEntries = getQuickOpenListEntries(visibleQuickOpenItems)
   const safeActiveQuickOpenIndex = Math.min(activeQuickOpenIndex, Math.max(visibleQuickOpenItems.length - 1, 0))
+  const lineJumpMaxLine = Math.max(stats.lines, 1)
   const activeSearchMatchIndex = activeSearchRange
     ? searchMatches.findIndex((match) => match.from === activeSearchRange.from && match.to === activeSearchRange.to)
     : -1
@@ -1974,6 +2007,15 @@ function App() {
       Icon: Replace,
       keywords: ['search'],
       action: () => openSearchBar('replace'),
+    },
+    {
+      id: 'go-to-line',
+      label: t.commands.goToLine,
+      group: t.groups.edit,
+      shortcut: 'Ctrl+G',
+      Icon: ListOrdered,
+      keywords: ['line', 'jump', 'navigate'],
+      action: openGoToLineDialog,
     },
     {
       id: 'insert-image',
@@ -2407,6 +2449,11 @@ function App() {
         event.preventDefault()
         openSearchBar('replace')
       }
+
+      if (event.key.toLowerCase() === 'g') {
+        event.preventDefault()
+        openGoToLineDialog()
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown, { capture: true })
@@ -2432,15 +2479,23 @@ function App() {
   }, [hasUnsavedChanges])
 
   useEffect(() => {
-    const pendingJump = pendingOutlineJumpRef.current
+    const pendingOutlineJump = pendingOutlineJumpRef.current
+    const pendingLineJump = pendingLineJumpRef.current
 
-    if (!pendingJump || mode === 'preview') {
+    if ((!pendingOutlineJump && !pendingLineJump) || mode === 'preview') {
       return
     }
 
     window.requestAnimationFrame(() => {
-      jumpToEditorLine(pendingJump)
-      pendingOutlineJumpRef.current = null
+      if (pendingOutlineJump) {
+        jumpToEditorLine(pendingOutlineJump)
+        pendingOutlineJumpRef.current = null
+      }
+
+      if (pendingLineJump) {
+        jumpToEditorLine(pendingLineJump)
+        pendingLineJumpRef.current = null
+      }
     })
   }, [mode])
 
@@ -2510,6 +2565,9 @@ function App() {
           break
         case 'replace-document':
           openSearchBar('replace')
+          break
+        case 'go-to-line':
+          openGoToLineDialog()
           break
         case 'open-command-palette':
           openCommandPalette()
@@ -3355,6 +3413,77 @@ ${getExportStyleCss(exportStyle)}
     item.action()
   }
 
+  function openGoToLineDialog() {
+    if (showWelcome) {
+      setIsWelcomeVisible(false)
+    }
+
+    setLineNumberInput('')
+    setLineNumberError('')
+    setIsCommandPaletteOpen(false)
+    setIsQuickOpenOpen(false)
+    setIsGoToLineOpen(true)
+    window.requestAnimationFrame(() => {
+      lineNumberInputRef.current?.focus()
+      lineNumberInputRef.current?.select()
+    })
+  }
+
+  function closeGoToLineDialog() {
+    setIsGoToLineOpen(false)
+    setLineNumberInput('')
+    setLineNumberError('')
+    getEditorView()?.focus()
+  }
+
+  function jumpToEditorLine(target: LineJumpTarget) {
+    const editorView = editorViewRef.current ?? editorRef.current?.view
+
+    if (!editorView) {
+      return false
+    }
+
+    editorView.dispatch({
+      selection: { anchor: target.lineStart },
+      effects: EditorView.scrollIntoView(target.lineStart, { y: 'center' }),
+      scrollIntoView: true,
+    })
+
+    const editorLines = editorView.dom.querySelectorAll('.cm-line')
+
+    editorLines[target.lineNumber - 1]?.scrollIntoView({ block: 'center' })
+    editorView.focus()
+
+    return true
+  }
+
+  function handleGoToLineSubmit(event: ReactFormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const lineNumber = parseLineNumberInput(lineNumberInput)
+
+    if (!lineNumber || lineNumber < 1 || lineNumber > lineJumpMaxLine) {
+      setLineNumberError(formatTranslation(t.goToLine.invalidLine, { max: String(lineJumpMaxLine) }))
+      return
+    }
+
+    const target = getLineJumpTarget(markdownValue, lineNumber)
+
+    pendingLineJumpRef.current = target
+    setActiveOutlineLine(target.lineNumber)
+    setIsGoToLineOpen(false)
+    setLineNumberInput('')
+    setLineNumberError('')
+
+    if (mode === 'preview') {
+      setMode('split')
+      return
+    }
+
+    jumpToEditorLine(target)
+    pendingLineJumpRef.current = null
+  }
+
   function handleCommandPaletteKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
     if (event.key === 'ArrowDown') {
       event.preventDefault()
@@ -3704,27 +3833,6 @@ ${getExportStyleCss(exportStyle)}
       event.preventDefault()
       setSplitPaneRatio(defaultSplitPaneRatio)
     }
-  }
-
-  function jumpToEditorLine(item: OutlineItem) {
-    const editorView = editorViewRef.current ?? editorRef.current?.view
-
-    if (!editorView) {
-      return false
-    }
-
-    editorView.dispatch({
-      selection: { anchor: item.lineStart },
-      effects: EditorView.scrollIntoView(item.lineStart, { y: 'center' }),
-      scrollIntoView: true,
-    })
-
-    const editorLines = editorView.dom.querySelectorAll('.cm-line')
-
-    editorLines[item.lineNumber - 1]?.scrollIntoView({ block: 'center' })
-    editorView.focus()
-
-    return true
   }
 
   function handleOutlineJump(item: OutlineItem) {
@@ -4788,6 +4896,60 @@ ${getExportStyleCss(exportStyle)}
                 <div className="command-empty">{t.commandPalette.noCommandsFound}</div>
               )}
             </div>
+          </form>
+        </div>
+      )}
+
+      {isGoToLineOpen && (
+        <div className="command-palette-backdrop" role="presentation" onMouseDown={closeGoToLineDialog}>
+          <form
+            className="command-palette go-to-line-dialog"
+            role="dialog"
+            aria-label={t.goToLine.title}
+            onSubmit={handleGoToLineSubmit}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <label className="command-search-field">
+              <ListOrdered size={17} aria-hidden="true" />
+              <input
+                ref={lineNumberInputRef}
+                type="text"
+                inputMode="numeric"
+                value={lineNumberInput}
+                placeholder={t.goToLine.placeholder}
+                aria-label={t.goToLine.lineNumber}
+                aria-describedby="go-to-line-range go-to-line-error"
+                spellCheck={false}
+                onChange={(event) => {
+                  setLineNumberInput(event.target.value)
+                  setLineNumberError('')
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    event.preventDefault()
+                    closeGoToLineDialog()
+                  }
+                }}
+              />
+            </label>
+            <div className="go-to-line-footer">
+              <span id="go-to-line-range" className="go-to-line-range">
+                {formatTranslation(t.goToLine.range, { max: String(lineJumpMaxLine) })}
+              </span>
+              <div className="go-to-line-actions">
+                <button type="button" className="search-action-button" onClick={closeGoToLineDialog}>
+                  <span>{t.goToLine.cancel}</span>
+                </button>
+                <button type="submit" className="search-action-button primary">
+                  <span>{t.goToLine.go}</span>
+                </button>
+              </div>
+            </div>
+            {lineNumberError && (
+              <p id="go-to-line-error" className="go-to-line-error" role="alert">
+                {lineNumberError}
+              </p>
+            )}
           </form>
         </div>
       )}
