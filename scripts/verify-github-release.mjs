@@ -30,6 +30,12 @@ const expectedAssets = [
   'latest-linux.yml',
 ]
 
+const updateMetadataAssets = [
+  'latest.yml',
+  'latest-mac.yml',
+  'latest-linux.yml',
+]
+
 const expectedBodyMarkers = [
   '## Summary',
   '## Highlights',
@@ -55,6 +61,8 @@ for (const marker of expectedBodyMarkers) {
 for (const assetName of expectedAssets) {
   expect(assetNames.includes(assetName), `release assets must include ${assetName}`)
 }
+
+await verifyUpdateMetadataReferences(release.assets, assetNames)
 
 const failedChecks = checks.filter((check) => !check.passed)
 
@@ -158,6 +166,115 @@ function githubRequest(path) {
 
     apiRequest.on('error', rejectRequest)
     apiRequest.end()
+  })
+}
+
+async function verifyUpdateMetadataReferences(assets, assetNames) {
+  for (const metadataAssetName of updateMetadataAssets) {
+    const metadataAsset = assets.find((asset) => asset.name === metadataAssetName)
+
+    if (!metadataAsset) {
+      continue
+    }
+
+    const metadata = await downloadReleaseAssetText(metadataAsset)
+    const referencedAssets = getUpdateMetadataAssetReferences(metadata)
+
+    expect(referencedAssets.length > 0, `${metadataAssetName} must reference at least one update asset`)
+
+    for (const referencedAsset of referencedAssets) {
+      expect(
+        assetNames.includes(referencedAsset),
+        `${metadataAssetName} must reference published asset ${referencedAsset}`,
+      )
+    }
+  }
+}
+
+function getUpdateMetadataAssetReferences(metadata) {
+  return Array.from(metadata.matchAll(/^\s*(?:url|path):\s*(.+?)\s*$/gm))
+    .map((match) => getAssetNameFromMetadataValue(match[1]))
+    .filter(Boolean)
+    .filter((value, index, values) => values.indexOf(value) === index)
+}
+
+function getAssetNameFromMetadataValue(value) {
+  const cleanedValue = value.trim().replace(/^['"]|['"]$/g, '')
+
+  try {
+    const parsedUrl = new URL(cleanedValue)
+    return decodeURIComponent(parsedUrl.pathname.split('/').pop() ?? '')
+  } catch {
+    return cleanedValue.split('/').pop()
+  }
+}
+
+function downloadReleaseAssetText(asset, redirectCount = 0) {
+  const downloadUrl = asset.browser_download_url ?? asset.url
+
+  if (!downloadUrl) {
+    throw new Error(`Release asset ${asset.name} does not expose a download URL.`)
+  }
+
+  return downloadText(downloadUrl, redirectCount)
+}
+
+function downloadText(downloadUrl, redirectCount = 0) {
+  if (redirectCount > 5) {
+    throw new Error(`Too many redirects while downloading ${downloadUrl}`)
+  }
+
+  return new Promise((resolveDownload, rejectDownload) => {
+    const parsedUrl = new URL(downloadUrl)
+    const headers = {
+      Accept: 'application/octet-stream',
+      'User-Agent': 'OpenMark-release-verify',
+    }
+
+    if (token && parsedUrl.hostname === githubApiHostname) {
+      headers.Authorization = `Bearer ${token}`
+    }
+
+    const downloadRequest = request(
+      {
+        createConnection: createProxyConnection(parsedUrl.hostname),
+        hostname: parsedUrl.hostname,
+        method: 'GET',
+        path: `${parsedUrl.pathname}${parsedUrl.search}`,
+        port: 443,
+        headers,
+      },
+      (response) => {
+        const location = response.headers.location
+
+        if (
+          response.statusCode &&
+          [301, 302, 303, 307, 308].includes(response.statusCode) &&
+          location
+        ) {
+          response.resume()
+          resolveDownload(downloadText(new URL(location, parsedUrl).toString(), redirectCount + 1))
+          return
+        }
+
+        let body = ''
+        response.setEncoding('utf8')
+        response.on('data', (chunk) => {
+          body += chunk
+        })
+        response.on('end', () => {
+          if (response.statusCode && response.statusCode >= 200 && response.statusCode < 300) {
+            resolveDownload(body)
+            return
+          }
+
+          rejectDownload(new Error(`Release asset download returned ${response.statusCode}: ${body}`))
+        })
+      },
+    )
+
+    downloadRequest.on('error', rejectDownload)
+    downloadRequest.end()
   })
 }
 

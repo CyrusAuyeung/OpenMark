@@ -63,10 +63,14 @@ module.exports = {
     ],
   },
   nsis: {
+    artifactName: 'OpenMark.Setup.${version}.${ext}',
     oneClick: false,
     allowToChangeInstallationDirectory: true,
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
     shortcutName: 'OpenMark',
+  },
+  portable: {
+    artifactName: 'OpenMark.${version}.${ext}',
   },
 }
