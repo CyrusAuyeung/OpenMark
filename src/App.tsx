@@ -210,6 +210,12 @@ type MarkdownToolbarTranslationKey = keyof TranslationCatalog['markdownToolbar']
 
 type MarkdownPlaceholderCatalog = TranslationCatalog['markdownPlaceholders']
 
+type MarkdownListMatch = {
+  indent: string
+  marker: string
+  body: string
+}
+
 type CommandPaletteItem = {
   id: string
   label: string
@@ -255,6 +261,9 @@ const imageFileExtensions = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']
 const exportDescriptionMaxLength = 180
 const libraryItemSelector = '[data-library-item="true"]'
 const libraryRowSelector = '[data-library-row="true"]'
+const taskListLinePattern = /^(\s*)([-*+])\s+\[([ xX])\]\s*(.*)$/
+const bulletListLinePattern = /^(\s*)([-*+])\s+(.*)$/
+const orderedListLinePattern = /^(\s*)(\d+)([.)])\s+(.*)$/
 
 const markdownRenderer = new MarkdownIt({
   html: false,
@@ -1699,6 +1708,111 @@ function stripListMarker(line: string) {
   return line.replace(/^(-\s+\[[ xX]\]\s+|[-*+]\s+|\d+\.\s+)/, '')
 }
 
+function getMarkdownListMatch(line: string): MarkdownListMatch | null {
+  const taskMatch = line.match(taskListLinePattern)
+
+  if (taskMatch) {
+    return {
+      indent: taskMatch[1],
+      marker: `${taskMatch[2]} [ ]`,
+      body: taskMatch[4],
+    }
+  }
+
+  const orderedMatch = line.match(orderedListLinePattern)
+
+  if (orderedMatch) {
+    return {
+      indent: orderedMatch[1],
+      marker: `${Number(orderedMatch[2]) + 1}${orderedMatch[3]}`,
+      body: orderedMatch[4],
+    }
+  }
+
+  const bulletMatch = line.match(bulletListLinePattern)
+
+  if (bulletMatch) {
+    return {
+      indent: bulletMatch[1],
+      marker: bulletMatch[2],
+      body: bulletMatch[3],
+    }
+  }
+
+  return null
+}
+
+function continueMarkdownList(view: EditorView) {
+  const selection = view.state.selection.main
+
+  if (!selection.empty) {
+    return false
+  }
+
+  const line = view.state.doc.lineAt(selection.from)
+  const lineText = line.text
+  const listMatch = getMarkdownListMatch(lineText)
+
+  if (!listMatch) {
+    return false
+  }
+
+  if (listMatch.body.trim().length === 0) {
+    const anchor = line.from + listMatch.indent.length
+
+    view.dispatch({
+      changes: { from: line.from, to: line.to, insert: listMatch.indent },
+      selection: { anchor },
+      scrollIntoView: true,
+    })
+
+    return true
+  }
+
+  const insertText = `\n${listMatch.indent}${listMatch.marker} `
+
+  view.dispatch({
+    changes: { from: selection.from, to: selection.to, insert: insertText },
+    selection: { anchor: selection.from + insertText.length },
+    scrollIntoView: true,
+  })
+
+  return true
+}
+
+function toggleTaskCheckbox(view: EditorView) {
+  const selection = view.state.selection.main
+  const lineEndPosition = selection.empty ? selection.to : Math.max(selection.from, selection.to - 1)
+  const fromLine = view.state.doc.lineAt(selection.from)
+  const toLine = view.state.doc.lineAt(lineEndPosition)
+  const changes: Array<{ from: number, to: number, insert: string }> = []
+
+  for (let lineNumber = fromLine.number; lineNumber <= toLine.number; lineNumber += 1) {
+    const line = view.state.doc.line(lineNumber)
+    const taskMatch = line.text.match(/^(\s*[-*+]\s+\[)([ xX])(\]\s*)/)
+
+    if (!taskMatch) {
+      continue
+    }
+
+    const checkboxPosition = line.from + taskMatch[1].length
+    changes.push({
+      from: checkboxPosition,
+      to: checkboxPosition + 1,
+      insert: taskMatch[2].trim().length === 0 ? 'x' : ' ',
+    })
+  }
+
+  if (changes.length === 0) {
+    return false
+  }
+
+  view.dispatch({ changes, scrollIntoView: true })
+  view.focus()
+
+  return true
+}
+
 function formatBlockLine(
   line: string,
   index: number,
@@ -1860,9 +1974,11 @@ function App() {
       markdown({ base: markdownLanguage }),
       search({ top: true }),
       keymap.of([
+        { key: 'Enter', run: continueMarkdownList },
         { key: 'Mod-b', run: (view) => applyInlineFormat(view, 'bold') },
         { key: 'Mod-i', run: (view) => applyInlineFormat(view, 'italic') },
         { key: 'Mod-k', run: (view) => applyInlineFormat(view, 'link') },
+        { key: 'Mod-Shift-x', run: toggleTaskCheckbox },
       ]),
     ],
     [],
@@ -2143,6 +2259,15 @@ function App() {
       Icon: List,
       keywords: ['markdown', 'checkbox', 'todo', 'checklist'],
       action: () => handleMarkdownFormat('task-list'),
+    },
+    {
+      id: 'toggle-task-checkbox',
+      label: t.commands.toggleTaskCheckbox,
+      group: t.groups.edit,
+      shortcut: 'Ctrl+Shift+X',
+      Icon: List,
+      keywords: ['markdown', 'checkbox', 'todo', 'done', 'checklist'],
+      action: handleToggleTaskCheckbox,
     },
     {
       id: 'insert-horizontal-rule',
@@ -3470,6 +3595,16 @@ ${getExportStyleCss(exportStyle)}
     }
 
     applyMarkdownFormat(editorView, format, t.markdownPlaceholders)
+  }
+
+  function handleToggleTaskCheckbox() {
+    const editorView = getEditorView()
+
+    if (!editorView) {
+      return
+    }
+
+    toggleTaskCheckbox(editorView)
   }
 
   function handleTableEditAction(action: TableEditAction) {
