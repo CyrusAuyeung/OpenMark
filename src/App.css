@@ -160,7 +160,7 @@
   justify-content: center;
   gap: 7px;
   padding: 0 11px;
-  font-weight: 650;
+  font-weight: 700;
 }
 
 .compact-tool {
@@ -290,7 +290,7 @@
   line-height: 1.2;
   color: var(--muted);
   text-transform: uppercase;
-  font-weight: 750;
+  font-weight: 800;
 }
 
 .file-chip {
@@ -490,6 +490,7 @@
   background: var(--warning-soft);
   text-align: left;
   cursor: pointer;
+  box-shadow: var(--shadow-xs);
 }
 
 .diagnostic-button:hover {
@@ -557,7 +558,7 @@
 .outline-list button.active {
   border-color: var(--accent-border);
   color: var(--ink);
-  background: var(--accent-soft);
+  background: var(--button-active);
   box-shadow: var(--shadow-xs);
 }
 
@@ -599,6 +600,28 @@
   color: var(--muted);
   font-size: 13px;
   line-height: 1.45;
+}
+
+.panel-state {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 10px 11px;
+  border: 1px solid var(--border-muted);
+  border-radius: 8px;
+  background: var(--surface-1);
+  box-shadow: var(--shadow-xs);
+}
+
+.panel-state-success {
+  border-color: var(--accent-border);
+  background: var(--success-soft);
+}
+
+.panel-state-warning {
+  border-color: var(--warning-border);
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 
 .recent-list {
@@ -753,6 +776,7 @@
 .workspace-folder-button:disabled {
   cursor: wait;
   opacity: 0.68;
+  transform: none;
 }
 
 .workspace-folder-button:focus-visible,
@@ -917,6 +941,7 @@
 .workspace-file-button.active {
   border-color: var(--accent-border);
   background: var(--button-active);
+  box-shadow: inset 3px 0 0 var(--accent), var(--shadow-xs);
 }
 
 .workspace-file-button span {
@@ -963,6 +988,7 @@
 .recent-open-button.pinned {
   border-color: var(--accent-border);
   background: var(--button-active);
+  box-shadow: inset 3px 0 0 var(--accent), var(--shadow-xs);
 }
 
 .workspace-file-button.missing,
@@ -1286,6 +1312,7 @@ body.is-resizing-split * {
   color: var(--disabled-ink);
   background: transparent;
   cursor: not-allowed;
+  opacity: 0.72;
 }
 
 .format-button:focus-visible {

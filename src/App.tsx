@@ -4905,7 +4905,7 @@ ${getExportStyleCss(exportStyle)}
                   ))}
                 </ol>
               ) : (
-                <p className="muted">{t.diagnostics.none}</p>
+                <p className="muted panel-state panel-state-success">{t.diagnostics.none}</p>
               )}
             </section>
           </section>
@@ -4980,11 +4980,11 @@ ${getExportStyleCss(exportStyle)}
                     )}
                   </>
                 ) : (
-                  <p className="muted">{t.document.noOutlineMatches}</p>
+                  <p className="muted panel-state">{t.document.noOutlineMatches}</p>
                 )}
               </>
             ) : (
-              <p className="muted">{t.document.noHeadingsYet}</p>
+              <p className="muted panel-state">{t.document.noHeadingsYet}</p>
             )}
           </section>
           )}
@@ -5086,21 +5086,23 @@ ${getExportStyleCss(exportStyle)}
                           })}
                         </div>
                       </div>
-                      {workspaceError && <p className="muted">{workspaceError}</p>}
-                      {isWorkspaceLoading && <p className="muted">{t.workspace.loading}</p>}
-                      {workspaceFolder.truncated && <p className="muted">{t.workspace.truncated}</p>}
+                      {workspaceError && <p className="muted panel-state panel-state-warning" role="alert">{workspaceError}</p>}
+                      {isWorkspaceLoading && <p className="muted panel-state" role="status">{t.workspace.loading}</p>}
+                      {workspaceFolder.truncated && <p className="muted panel-state panel-state-warning">{t.workspace.truncated}</p>}
                       {workspaceFolder.files.length > 0
                         ? filteredWorkspaceFiles.length > 0
                           ? renderWorkspaceFiles()
-                          : <p className="muted">{t.workspace.noFileMatches}</p>
-                        : <p className="muted">{t.workspace.noFiles}</p>}
+                          : <p className="muted panel-state">{t.workspace.noFileMatches}</p>
+                        : <p className="muted panel-state">{t.workspace.noFiles}</p>}
                     </>
                   ) : (
-                    <p className="muted">{workspaceError ?? t.workspace.noFolder}</p>
+                    <p className={`muted panel-state${workspaceError ? ' panel-state-warning' : ''}`}>
+                      {workspaceError ?? t.workspace.noFolder}
+                    </p>
                   )}
                 </>
               ) : (
-                <p className="muted">{t.workspace.desktopOnly}</p>
+                <p className="muted panel-state">{t.workspace.desktopOnly}</p>
               )}
             </section>
           )}
@@ -5146,11 +5148,11 @@ ${getExportStyleCss(exportStyle)}
                   {filteredRecentFiles.length > 0 ? (
                     renderRecentFiles(filteredRecentFiles)
                   ) : (
-                    <p className="muted">{t.document.noRecentFileMatches}</p>
+                    <p className="muted panel-state">{t.document.noRecentFileMatches}</p>
                   )}
                 </>
               ) : (
-                <p className="muted">{t.document.noRecentFiles}</p>
+                <p className="muted panel-state">{t.document.noRecentFiles}</p>
               )}
             </section>
           )}
