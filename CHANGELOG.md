@@ -2,6 +2,15 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.11.0 - 2026-06-10
+
+### Long Document Navigation
+
+- Added a Go to Line command and shortcut for jumping directly to a Markdown line.
+- Improved search result navigation feedback with active result context and hidden-result counts.
+- Added outline filtering for dense documents with result counts, clear actions, and empty states.
+- Added document position indicators for current line, column, and editor scroll progress.
+
 ## 0.10.0 - 2026-06-09
 
 ### Editor Workflow Polish

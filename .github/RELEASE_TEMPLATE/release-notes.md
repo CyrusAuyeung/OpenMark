@@ -2,16 +2,16 @@
 
 ## Summary
 
-OpenMark 0.10.0 focuses on editor workflow polish. It includes restoring the active desktop file path between sessions so saved documents reopen with their local identity intact, restoring editor cursor and scroll position between sessions for the active document, and improvements to save and open error visibility with clearer document status and footer feedback.
+OpenMark 0.11.0 focuses on long document navigation. It includes a Go to Line command and shortcut for jumping directly to a Markdown line, improvements to search result navigation feedback with active result context and hidden-result counts, and outline filtering for dense documents with result counts, clear actions, and empty states.
 
 ## Highlights
 
-### Editor Workflow Polish
+### Long Document Navigation
 
-- Restored the active desktop file path between sessions so saved documents reopen with their local identity intact.
-- Restored editor cursor and scroll position between sessions for the active document.
-- Improved save and open error visibility with clearer document status and footer feedback.
-- Refined quick open ranking and grouping across recent and workspace files.
+- Added a Go to Line command and shortcut for jumping directly to a Markdown line.
+- Improved search result navigation feedback with active result context and hidden-result counts.
+- Added outline filtering for dense documents with result counts, clear actions, and empty states.
+- Added document position indicators for current line, column, and editor scroll progress.
 
 ## Downloads
 
@@ -19,11 +19,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.10.0.exe` | Recommended installer. |
-| Windows | `OpenMark.0.10.0.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.10.0.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.10.0-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.10.0_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.11.0.exe` | Recommended installer. |
+| Windows | `OpenMark.0.11.0.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.11.0.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.11.0-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.11.0_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -57,5 +57,5 @@ Keep these auto-update metadata files attached when generated:
 
 ## Full Changelog
 
-- Release date: 2026-06-09
-- Tag: v0.10.0
+- Release date: 2026-06-10
+- Tag: v0.11.0
