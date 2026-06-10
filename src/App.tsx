@@ -186,6 +186,12 @@ type EditorSessionState = EditorSessionDocument & {
   scrollLeft: number
 }
 
+type RecoverySnapshot = EditorSessionDocument & {
+  markdownValue: string
+  savedSnapshot: string
+  updatedAt: number
+}
+
 type DocumentOperationStatus = {
   tone: 'success' | 'error'
   message: string
@@ -260,6 +266,7 @@ const workspaceSortStorageKey = 'openmark:workspace-sort'
 const splitPaneRatioStorageKey = 'openmark:split-pane-ratio'
 const viewModeStorageKey = 'openmark:view-mode'
 const sidebarTabStorageKey = 'openmark:sidebar-tab'
+const recoverySnapshotStorageKey = 'openmark:recovery-snapshot'
 const maxRecentFiles = 6
 const quickOpenResultLimit = 10
 const searchResultWindowSize = 12
@@ -621,6 +628,46 @@ function persistEditorSessionState(editorSession: EditorSessionState) {
 
 function clearPersistedEditorSessionState() {
   window.localStorage.removeItem(editorSessionStorageKey)
+}
+
+function loadRecoverySnapshot(): RecoverySnapshot | null {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(recoverySnapshotStorageKey) ?? 'null') as Partial<RecoverySnapshot> | null
+
+    if (
+      !parsed ||
+      typeof parsed.markdownValue !== 'string' ||
+      parsed.markdownValue.trim().length === 0 ||
+      typeof parsed.savedSnapshot !== 'string' ||
+      typeof parsed.fileName !== 'string'
+    ) {
+      return null
+    }
+
+    const updatedAt = Number(parsed.updatedAt)
+
+    if (!Number.isFinite(updatedAt)) {
+      return null
+    }
+
+    return {
+      markdownValue: parsed.markdownValue,
+      savedSnapshot: parsed.savedSnapshot,
+      fileName: parsed.fileName,
+      filePath: typeof parsed.filePath === 'string' ? parsed.filePath : null,
+      updatedAt,
+    }
+  } catch {
+    return null
+  }
+}
+
+function persistRecoverySnapshot(recoverySnapshot: RecoverySnapshot) {
+  window.localStorage.setItem(recoverySnapshotStorageKey, JSON.stringify(recoverySnapshot))
+}
+
+function clearPersistedRecoverySnapshot() {
+  window.localStorage.removeItem(recoverySnapshotStorageKey)
 }
 
 function isEditorSessionForDocument(editorSession: EditorSessionState, document: EditorSessionDocument) {
@@ -2241,6 +2288,7 @@ function App() {
   const lineNumberInputRef = useRef<HTMLInputElement | null>(null)
   const exportPreviewFrameRef = useRef<HTMLIFrameElement | null>(null)
   const previewImageSourcesRef = useRef<PreviewImageSource[]>([])
+  const initialRecoverySnapshot = useMemo(loadRecoverySnapshot, [])
   const initialMarkdownValue = useMemo(() => loadStoredValue(draftStorageKey, ''), [])
   const initialEditorSessionState = useMemo(loadEditorSessionState, [])
   const pendingEditorSessionRef = useRef<EditorSessionState | null>(initialEditorSessionState)
@@ -2250,7 +2298,12 @@ function App() {
   )
   const [activeFilePath, setActiveFilePath] = useState<string | null>(loadStoredFilePath)
   editorSessionDocumentRef.current = { filePath: activeFilePath, fileName }
-  const [savedSnapshot, setSavedSnapshot] = useState(initialMarkdownValue)
+  const [savedSnapshot, setSavedSnapshot] = useState(() => (
+    initialRecoverySnapshot?.markdownValue === initialMarkdownValue
+      ? initialRecoverySnapshot.savedSnapshot
+      : initialMarkdownValue
+  ))
+  const [recoverySnapshot, setRecoverySnapshot] = useState<RecoverySnapshot | null>(initialRecoverySnapshot)
   const [recentFiles, setRecentFiles] = useState(loadRecentFiles)
   const [workspaceFolder, setWorkspaceFolder] = useState<WorkspaceFolderState | null>(loadWorkspaceFolder)
   const [isWorkspaceLoading, setIsWorkspaceLoading] = useState(false)
@@ -2815,23 +2868,58 @@ function App() {
     : clipboardCopyKind === 'markdown'
       ? t.status.copiedMarkdown
       : t.status.copiedHtml
-  const footerStatusLabel = documentOperationStatus?.message ?? clipboardStatusLabel ?? draftStatusLabel
   const footerPositionLabel = `${formatTranslation(t.status.editorPosition, {
     line: String(editorPosition.line),
     column: String(editorPosition.column),
   })} · ${formatTranslation(t.status.documentProgress, { progress: String(editorPosition.progress) })}`
+  const recoverySnapshotSavedLabel = recoverySnapshot
+    ? new Intl.DateTimeFormat(locale, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(recoverySnapshot.updatedAt)
+    : ''
+  const recoveryStatusLabel = hasUnsavedChanges && recoverySnapshot
+    ? `${t.status.recoverySnapshotSaved} ${recoverySnapshotSavedLabel}`
+    : null
+  const footerStatusLabel = documentOperationStatus?.message ?? clipboardStatusLabel ?? recoveryStatusLabel ?? draftStatusLabel
   scheduleEditorSessionPersistRef.current = scheduleEditorSessionPersist
   flushEditorSessionPersistRef.current = flushEditorSessionPersist
 
   useEffect(() => {
     const saveTimer = window.setTimeout(() => {
+      const savedAt = Date.now()
+
       window.localStorage.setItem(draftStorageKey, markdownValue)
       window.localStorage.setItem(fileNameStorageKey, fileName)
-      setLastSavedAt(new Date())
+
+      if (showWelcome && recoverySnapshot && markdownValue.trim().length === 0) {
+        setLastSavedAt(new Date(savedAt))
+        return
+      }
+
+      if (markdownValue.trim().length > 0 && markdownValue !== savedSnapshot) {
+        const nextRecoverySnapshot: RecoverySnapshot = {
+          markdownValue,
+          savedSnapshot,
+          fileName,
+          filePath: activeFilePath,
+          updatedAt: savedAt,
+        }
+
+        persistRecoverySnapshot(nextRecoverySnapshot)
+        setRecoverySnapshot(nextRecoverySnapshot)
+      } else {
+        clearPersistedRecoverySnapshot()
+        setRecoverySnapshot(null)
+      }
+
+      setLastSavedAt(new Date(savedAt))
     }, 250)
 
     return () => window.clearTimeout(saveTimer)
-  }, [fileName, markdownValue])
+  }, [activeFilePath, fileName, markdownValue, recoverySnapshot, savedSnapshot, showWelcome])
 
   useEffect(() => {
     persistRecentFiles(recentFiles)
@@ -3340,6 +3428,35 @@ function App() {
     showDocumentOperationStatus('error', message)
   }
 
+  function clearRecoverySnapshot() {
+    clearPersistedRecoverySnapshot()
+    setRecoverySnapshot(null)
+  }
+
+  function restoreRecoverySnapshot() {
+    if (!recoverySnapshot || !confirmDiscardChanges(t.alerts.restoreRecoverySnapshot)) {
+      return
+    }
+
+    clearEditorSessionState()
+    setMarkdownValue(recoverySnapshot.markdownValue)
+    setFileName(recoverySnapshot.fileName)
+    setActiveFilePath(window.openmark ? recoverySnapshot.filePath : null)
+    setSavedSnapshot(recoverySnapshot.savedSnapshot)
+    setLastSavedAt(new Date(recoverySnapshot.updatedAt))
+    showDocumentOperationStatus('success', formatTranslation(t.status.restoredRecoverySnapshot, {
+      fileName: recoverySnapshot.fileName,
+    }))
+    setIsWelcomeVisible(false)
+    setEditorPosition(defaultEditorPosition)
+    clearPreviewImageSources()
+  }
+
+  function discardRecoverySnapshot() {
+    clearRecoverySnapshot()
+    showDocumentOperationStatus('success', t.status.discardedRecoverySnapshot)
+  }
+
   function handleNewDocument() {
     if (!confirmDiscardChanges(t.alerts.startNewDocument)) {
       return
@@ -3352,6 +3469,7 @@ function App() {
     setFileName('untitled.md')
     setActiveFilePath(null)
     setSavedSnapshot(nextMarkdown)
+    clearRecoverySnapshot()
     setDocumentOperationStatus(null)
     setIsWelcomeVisible(false)
     setEditorPosition(defaultEditorPosition)
@@ -3364,6 +3482,7 @@ function App() {
     setFileName(nextFileName)
     setActiveFilePath(nextFilePath)
     setSavedSnapshot(content)
+    clearRecoverySnapshot()
     rememberRecentFile(nextFilePath, nextFileName)
     clearWorkspaceFileMissing(nextFilePath)
     setLastSavedAt(new Date())
@@ -3704,6 +3823,7 @@ function App() {
         setActiveFilePath(result.filePath)
         setFileName(result.fileName ?? targetFileName)
         setSavedSnapshot(markdownValue)
+        clearRecoverySnapshot()
         rememberRecentFile(result.filePath, result.fileName ?? targetFileName)
         setLastSavedAt(new Date())
         showSavedDocumentStatus(result.fileName ?? targetFileName)
@@ -3721,6 +3841,7 @@ function App() {
     )
     setFileName(targetFileName)
     setSavedSnapshot(markdownValue)
+    clearRecoverySnapshot()
     showDownloadedDocumentStatus(targetFileName)
   }
 
@@ -5249,6 +5370,28 @@ ${getExportStyleCss(exportStyle)}
                     <span>{t.welcome.openFile}</span>
                   </button>
                 </div>
+                {recoverySnapshot && (
+                  <section className="welcome-recovery" aria-label={t.welcome.recoverySnapshot}>
+                    <div className="welcome-recovery-copy">
+                      <h2>{t.welcome.recoverySnapshot}</h2>
+                      <p>
+                        {formatTranslation(t.welcome.recoveryDescription, {
+                          fileName: recoverySnapshot.fileName,
+                          time: recoverySnapshotSavedLabel,
+                        })}
+                      </p>
+                    </div>
+                    <div className="welcome-recovery-actions">
+                      <button type="button" className="welcome-action" onClick={restoreRecoverySnapshot}>
+                        <RotateCcw size={18} />
+                        <span>{t.welcome.restoreRecovery}</span>
+                      </button>
+                      <button type="button" className="text-action" onClick={discardRecoverySnapshot}>
+                        {t.welcome.discardRecovery}
+                      </button>
+                    </div>
+                  </section>
+                )}
                 {window.openmark && recentFiles.length > 0 && (
                   <section className="welcome-recent" aria-label={t.welcome.recentFiles}>
                     <div className="section-heading-row">

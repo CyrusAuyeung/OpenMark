@@ -113,3 +113,10 @@
 - Support match case and whole-word search options during replacement ✅
 - Expose find and replace through toolbar buttons, keyboard shortcuts, command palette, and desktop menus ✅
 - Improve replacement feedback and disabled states when no matches are available ✅
+
+## Milestone 16: Document Safety & Recovery
+
+- Add local recovery snapshots for unsaved document changes ✅
+- Show a welcome-screen recovery entry for available snapshots ✅
+- Restore or discard recovery snapshots without touching saved files ✅
+- Surface recovery snapshot status in the footer ✅
