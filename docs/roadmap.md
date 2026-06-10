@@ -99,3 +99,10 @@
 - Improve list continuation and checkbox editing ✅
 - Improve paste handling for URLs and plain text ✅
 - Add lightweight document diagnostics for broken links and images ✅
+
+## Milestone 14: Product UI Polish
+
+- Refine the app shell visual hierarchy for a more finished desktop-product feel
+- Polish toolbar, panels, and inspector spacing, density, and active states
+- Improve empty, loading, error, and unsaved states with clearer product-grade presentation
+- Refresh light and dark theme surfaces, borders, shadows, and focus states for consistency
