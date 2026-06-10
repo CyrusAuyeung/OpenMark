@@ -113,6 +113,12 @@ type DocumentStats = {
   headings: number
 }
 
+type EditorPositionState = {
+  line: number
+  column: number
+  progress: number
+}
+
 type ExportDocumentMetadata = {
   title: string
   description: string
@@ -231,6 +237,11 @@ const maxRecentFiles = 6
 const quickOpenResultLimit = 10
 const searchResultWindowSize = 12
 const outlineResultLimit = 16
+const defaultEditorPosition: EditorPositionState = {
+  line: 1,
+  column: 1,
+  progress: 0,
+}
 const defaultSplitPaneRatio = 50
 const minSplitPaneRatio = 30
 const maxSplitPaneRatio = 70
@@ -1034,6 +1045,27 @@ function getLineJumpTarget(markdownValue: string, lineNumber: number): LineJumpT
   return { lineNumber: safeLineNumber, lineStart }
 }
 
+function getEditorPositionState(view: EditorView): EditorPositionState {
+  const selection = view.state.selection.main
+  const line = view.state.doc.lineAt(selection.head)
+  const scrollableDistance = view.scrollDOM.scrollHeight - view.scrollDOM.clientHeight
+  const progress = scrollableDistance <= 0
+    ? 0
+    : Math.round((view.scrollDOM.scrollTop / scrollableDistance) * 100)
+
+  return {
+    line: line.number,
+    column: selection.head - line.from + 1,
+    progress: Math.min(100, Math.max(0, progress)),
+  }
+}
+
+function areEditorPositionsEqual(left: EditorPositionState, right: EditorPositionState) {
+  return left.line === right.line &&
+    left.column === right.column &&
+    left.progress === right.progress
+}
+
 function parseLineNumberInput(value: string) {
   const normalizedValue = value.trim()
 
@@ -1741,6 +1773,7 @@ function App() {
   const [exportStyle, setExportStyle] = useState<ExportStyle>(loadExportStyle)
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const [activeOutlineLine, setActiveOutlineLine] = useState<number | null>(null)
+  const [editorPosition, setEditorPosition] = useState<EditorPositionState>(defaultEditorPosition)
   const [isSearchVisible, setIsSearchVisible] = useState(false)
   const [isReplaceVisible, setIsReplaceVisible] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -2253,6 +2286,10 @@ function App() {
       ? t.status.copiedMarkdown
       : t.status.copiedHtml
   const footerStatusLabel = documentOperationStatus?.message ?? clipboardStatusLabel ?? draftStatusLabel
+  const footerPositionLabel = `${formatTranslation(t.status.editorPosition, {
+    line: String(editorPosition.line),
+    column: String(editorPosition.column),
+  })} · ${formatTranslation(t.status.documentProgress, { progress: String(editorPosition.progress) })}`
   scheduleEditorSessionPersistRef.current = scheduleEditorSessionPersist
   flushEditorSessionPersistRef.current = flushEditorSessionPersist
 
@@ -2785,6 +2822,7 @@ function App() {
     setSavedSnapshot(nextMarkdown)
     setDocumentOperationStatus(null)
     setIsWelcomeVisible(false)
+    setEditorPosition(defaultEditorPosition)
     clearPreviewImageSources()
   }
 
@@ -2799,6 +2837,7 @@ function App() {
     setLastSavedAt(new Date())
     showOpenedDocumentStatus(nextFileName)
     setIsWelcomeVisible(false)
+    setEditorPosition(defaultEditorPosition)
     clearPreviewImageSources()
   }
 
@@ -3539,6 +3578,14 @@ ${getExportStyleCss(exportStyle)}
     return editorViewRef.current ?? editorRef.current?.view ?? null
   }
 
+  function syncEditorPosition(view: EditorView) {
+    const nextPosition = getEditorPositionState(view)
+
+    setEditorPosition((currentPosition) => (
+      areEditorPositionsEqual(currentPosition, nextPosition) ? currentPosition : nextPosition
+    ))
+  }
+
   function clearEditorSessionSaveTimer() {
     if (editorSessionSaveTimerRef.current === null) {
       return
@@ -3610,7 +3657,10 @@ ${getExportStyleCss(exportStyle)}
       selection: { anchor: selectionAnchor, head: selectionHead },
     })
 
-    window.requestAnimationFrame(() => restoreEditorScrollPosition(editorView.scrollDOM, editorSession))
+    window.requestAnimationFrame(() => {
+      restoreEditorScrollPosition(editorView.scrollDOM, editorSession)
+      syncEditorPosition(editorView)
+    })
   }
 
   function getScrollableRatio(element: HTMLElement) {
@@ -4842,9 +4892,11 @@ ${getExportStyleCss(exportStyle)}
                         editorScrollCleanupRef.current?.()
                         editorViewRef.current = view
                         restoreEditorSessionState(view)
+                        syncEditorPosition(view)
                         setNextTableEditingState(getTableEditingState(view))
                         const handleEditorScroll = () => {
                           syncPreviewScrollFromEditorRef.current()
+                          syncEditorPosition(view)
                           scheduleEditorSessionPersist()
                         }
                         view.scrollDOM.addEventListener('scroll', handleEditorScroll)
@@ -4855,6 +4907,7 @@ ${getExportStyleCss(exportStyle)}
                       }}
                       onUpdate={(viewUpdate) => {
                         if (viewUpdate.docChanged || viewUpdate.selectionSet) {
+                          syncEditorPosition(viewUpdate.view)
                           setNextTableEditingState(getTableEditingState(viewUpdate.view))
                           scheduleEditorSessionPersist()
                         }
@@ -4907,6 +4960,7 @@ ${getExportStyleCss(exportStyle)}
       <footer className="status-bar">
         <span>{fileName}</span>
         <span>{t.viewModes[mode]}</span>
+        <span className="status-position">{footerPositionLabel}</span>
         <span>{hasUnsavedChanges ? t.document.unsaved : t.document.saved}</span>
         <span className={documentOperationStatus ? `status-message ${documentOperationStatus.tone}` : undefined}>
           {footerStatusLabel}

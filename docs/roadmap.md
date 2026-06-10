@@ -91,4 +91,4 @@
 - Add Go to Line command and shortcut ✅
 - Improve search result navigation feedback ✅
 - Add outline filtering for dense documents ✅
-- Add document position indicators
+- Add document position indicators ✅

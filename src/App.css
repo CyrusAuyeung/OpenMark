@@ -1517,6 +1517,12 @@ body.is-resizing-split * {
   white-space: nowrap;
 }
 
+.status-position {
+  flex: 0 0 auto;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
 .status-message.success {
   color: var(--accent);
   font-weight: 700;
