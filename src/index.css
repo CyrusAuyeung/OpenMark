@@ -18,6 +18,9 @@
   --accent-strong: #215f4b;
   --accent-soft: #e4f4ed;
   --accent-border: #a1ccb6;
+  --info: #315f9f;
+  --info-soft: #e8f0fb;
+  --info-border: #b8c9ea;
   --warning: #b66b2e;
   --warning-soft: #fff2e6;
   --warning-border: #e2b37d;
@@ -72,6 +75,9 @@
   --accent-strong: #b3dec8;
   --accent-soft: #233d31;
   --accent-border: #4b8067;
+  --info: #9bbcf2;
+  --info-soft: #1e2b3d;
+  --info-border: #486b99;
   --warning: #dda15e;
   --warning-soft: #3f3022;
   --warning-border: #8a6134;

@@ -28,6 +28,8 @@ import {
   CaseSensitive,
   ChevronDown,
   ChevronUp,
+  CircleAlert,
+  CircleCheckBig,
   Code2,
   Columns2,
   Command as CommandIcon,
@@ -40,6 +42,7 @@ import {
   FolderOpen,
   Heading2,
   ImagePlus,
+  Info,
   Italic,
   Languages,
   Laptop,
@@ -92,6 +95,7 @@ type TableTranslationKey = 'formatTable' | 'addRowBelow' | 'deleteRow' | 'addCol
 type ClipboardCopyKind = 'markdown' | 'html'
 type ExportStyle = 'reader' | 'compact' | 'manuscript'
 type WorkspaceSortMode = 'modified-desc' | 'name-asc'
+type UpdatePanelTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger'
 
 const clipboardWriteTimeoutMs = 1200
 
@@ -309,6 +313,50 @@ const defaultTableEditingState: TableEditingState = {
   isInTable: false,
   canDeleteRow: false,
   canDeleteColumn: false,
+}
+
+function getUpdatePanelTone(state: OpenMarkUpdateState): UpdatePanelTone {
+  if (state === 'error') {
+    return 'danger'
+  }
+
+  if (state === 'downloaded' || state === 'not-available') {
+    return 'success'
+  }
+
+  if (state === 'unsupported') {
+    return 'warning'
+  }
+
+  if (state === 'checking' || state === 'available' || state === 'downloading') {
+    return 'info'
+  }
+
+  return 'neutral'
+}
+
+function UpdateStatusGlyph({ state }: { state: OpenMarkUpdateState }) {
+  if (state === 'error') {
+    return <CircleAlert size={18} />
+  }
+
+  if (state === 'downloaded' || state === 'not-available') {
+    return <CircleCheckBig size={18} />
+  }
+
+  if (state === 'checking' || state === 'available' || state === 'downloading') {
+    return <Download size={18} />
+  }
+
+  return <Info size={18} />
+}
+
+function getUpdateProgressValue(progress: number | null) {
+  if (typeof progress !== 'number' || !Number.isFinite(progress)) {
+    return null
+  }
+
+  return Math.min(100, Math.max(0, Math.round(progress)))
 }
 
 function areTableEditingStatesEqual(left: TableEditingState, right: TableEditingState) {
@@ -3146,8 +3194,10 @@ function App() {
   }, [])
 
   const updateMessage = t.updateStates[updateStatus.state]
-  const updateProgressLabel = typeof updateStatus.progress === 'number'
-    ? `${Math.round(updateStatus.progress)}%`
+  const updatePanelTone = getUpdatePanelTone(updateStatus.state)
+  const updateProgressValue = getUpdateProgressValue(updateStatus.progress)
+  const updateProgressLabel = updateProgressValue !== null
+    ? `${updateProgressValue}%`
     : null
 
   function clearPreviewImageSources() {
@@ -5844,18 +5894,31 @@ ${getExportStyleCss(exportStyle)}
 
             <div className="settings-section update-setting">
               <span className="settings-label">{t.settings.updates}</span>
-              <div className="update-panel">
-                <div className="update-copy">
-                  <strong>{updateMessage}</strong>
-                  <span>
-                    {t.settings.currentVersion} {updateStatus.version}
-                    {updateStatus.updateVersion ? ` · ${t.settings.latestVersion} ${updateStatus.updateVersion}` : ''}
+              <div className={`update-panel update-panel-${updatePanelTone}`}>
+                <div className="update-status-row">
+                  <span className="update-status-icon" aria-hidden="true">
+                    <UpdateStatusGlyph state={updateStatus.state} />
                   </span>
-                  {updateProgressLabel && (
-                    <span>{t.settings.updateProgress} {updateProgressLabel}</span>
-                  )}
-                  {updateStatus.error && <span className="update-error">{updateStatus.error}</span>}
+                  <div className="update-copy">
+                    <strong>{updateMessage}</strong>
+                    <span>
+                      {t.settings.currentVersion} {updateStatus.version}
+                      {updateStatus.updateVersion ? ` · ${t.settings.latestVersion} ${updateStatus.updateVersion}` : ''}
+                    </span>
+                    {updateStatus.error && <span className="update-error">{updateStatus.error}</span>}
+                  </div>
                 </div>
+                {updateProgressLabel && updateProgressValue !== null && (
+                  <div className="update-progress-wrap">
+                    <span>{t.settings.updateProgress} {updateProgressLabel}</span>
+                    <progress
+                      className="update-progress"
+                      aria-label={t.settings.updateProgress}
+                      max={100}
+                      value={updateProgressValue}
+                    />
+                  </div>
+                )}
                 <div className="update-actions">
                   {updateStatus.canInstall && (
                     <button type="button" className="theme-choice update-action" onClick={handleInstallUpdate}>
