@@ -114,6 +114,22 @@ type DocumentStats = {
   headings: number
 }
 
+type DocumentDiagnosticKind =
+  | 'emptyLink'
+  | 'unsafeLink'
+  | 'missingHeading'
+  | 'emptyImage'
+  | 'unsavedRelativeImage'
+  | 'unsupportedImage'
+
+type DocumentDiagnostic = {
+  id: string
+  kind: DocumentDiagnosticKind
+  lineNumber: number
+  lineStart: number
+  target: string
+}
+
 type EditorPositionState = {
   line: number
   column: number
@@ -266,6 +282,8 @@ const bulletListLinePattern = /^(\s*)([-*+])\s+(.*)$/
 const orderedListLinePattern = /^(\s*)(\d+)([.)])\s+(.*)$/
 const zeroWidthPasteCharactersPattern = /[\u200B-\u200D\uFEFF]/g
 const supportedPasteUrlProtocols = new Set(['http:', 'https:'])
+const safeLinkProtocols = new Set(['http:', 'https:', 'mailto:', 'tel:', 'file:'])
+const markdownReferencePattern = /(!?)\[([^\]\n]*)\]\(([^)\n]*)\)/g
 
 const markdownRenderer = new MarkdownIt({
   html: false,
@@ -764,6 +782,195 @@ function getDocumentStats(markdownValue: string, outline: OutlineItem[]): Docume
   }
 }
 
+function getMarkdownCodeFenceRanges(markdownValue: string) {
+  const ranges: Array<{ from: number, to: number }> = []
+  const fencePattern = /^```.*$/gm
+  let fenceStart: number | null = null
+
+  for (const match of markdownValue.matchAll(fencePattern)) {
+    const matchIndex = match.index ?? 0
+    const lineEnd = markdownValue.indexOf('\n', matchIndex)
+    const fenceEnd = lineEnd === -1 ? markdownValue.length : lineEnd + 1
+
+    if (fenceStart === null) {
+      fenceStart = matchIndex
+    } else {
+      ranges.push({ from: fenceStart, to: fenceEnd })
+      fenceStart = null
+    }
+  }
+
+  if (fenceStart !== null) {
+    ranges.push({ from: fenceStart, to: markdownValue.length })
+  }
+
+  return ranges
+}
+
+function isPositionInRanges(position: number, ranges: Array<{ from: number, to: number }>) {
+  return ranges.some((range) => position >= range.from && position < range.to)
+}
+
+function getHeadingAnchorBase(title: string) {
+  return title
+    .trim()
+    .toLowerCase()
+    .replace(/[#*_`~[\](){}]/g, '')
+    .replace(/[^\p{Letter}\p{Number}\s-]/gu, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '') || 'heading'
+}
+
+function getHeadingAnchorIds(outline: OutlineItem[]) {
+  const usedIds = new Map<string, number>()
+
+  return outline.map((item) => {
+    const baseId = getHeadingAnchorBase(item.title)
+    const nextCount = (usedIds.get(baseId) ?? 0) + 1
+    usedIds.set(baseId, nextCount)
+
+    return nextCount === 1 ? baseId : `${baseId}-${nextCount}`
+  })
+}
+
+function normalizeMarkdownReferenceTarget(rawTarget: string) {
+  const trimmedTarget = rawTarget.trim()
+
+  if (trimmedTarget.startsWith('<')) {
+    const endIndex = trimmedTarget.indexOf('>')
+    return endIndex > 0 ? trimmedTarget.slice(1, endIndex).trim() : trimmedTarget.slice(1).trim()
+  }
+
+  return trimmedTarget.split(/\s+/)[0] ?? ''
+}
+
+function normalizeHeadingLinkTarget(target: string) {
+  const hashTarget = target.slice(1)
+
+  try {
+    return decodeURIComponent(hashTarget).trim().toLowerCase()
+  } catch {
+    return hashTarget.trim().toLowerCase()
+  }
+}
+
+function isUnsafeLinkTarget(target: string) {
+  if (isAbsoluteLocalPath(target)) {
+    return false
+  }
+
+  if (!hasUrlScheme(target)) {
+    return false
+  }
+
+  try {
+    return !safeLinkProtocols.has(new URL(target).protocol)
+  } catch {
+    const protocol = target.slice(0, target.indexOf(':') + 1).toLowerCase()
+    return !safeLinkProtocols.has(protocol)
+  }
+}
+
+function isExternalResourceTarget(target: string) {
+  return /^(https?:|data:|blob:|file:)/i.test(target)
+}
+
+function hasRememberedPreviewImage(target: string, previewImageSources: PreviewImageSource[]) {
+  const decodedTarget = safeDecodeUri(target)
+
+  return previewImageSources.some((source) => (
+    source.markdownPath === target || source.markdownPath === decodedTarget
+  ))
+}
+
+function getDocumentDiagnostics(
+  markdownValue: string,
+  headingAnchorIds: string[],
+  activeFilePath: string | null,
+  previewImageSources: PreviewImageSource[],
+): DocumentDiagnostic[] {
+  const diagnostics: DocumentDiagnostic[] = []
+  const fenceRanges = getMarkdownCodeFenceRanges(markdownValue)
+  const headingAnchorIdSet = new Set(headingAnchorIds)
+
+  for (const match of markdownValue.matchAll(markdownReferencePattern)) {
+    const matchIndex = match.index ?? 0
+
+    if (isPositionInRanges(matchIndex, fenceRanges)) {
+      continue
+    }
+
+    const isImage = match[1] === '!'
+    const target = normalizeMarkdownReferenceTarget(match[3])
+    const lineNumber = getLineNumberAtPosition(markdownValue, matchIndex)
+    const lineStart = getLineJumpTarget(markdownValue, lineNumber).lineStart
+    const idPrefix = `${isImage ? 'image' : 'link'}-${matchIndex}`
+
+    if (target.length === 0) {
+      diagnostics.push({
+        id: `${idPrefix}-empty`,
+        kind: isImage ? 'emptyImage' : 'emptyLink',
+        lineNumber,
+        lineStart,
+        target,
+      })
+      continue
+    }
+
+    if (isImage) {
+      const decodedTarget = safeDecodeUri(target)
+      const isExternalTarget = isExternalResourceTarget(decodedTarget)
+      const hasUnsupportedImageType = !isExternalTarget && !isSupportedImageFile(decodedTarget)
+
+      if (hasUnsupportedImageType) {
+        diagnostics.push({
+          id: `${idPrefix}-extension`,
+          kind: 'unsupportedImage',
+          lineNumber,
+          lineStart,
+          target,
+        })
+      }
+
+      if (!hasUnsupportedImageType && !isExternalTarget && !isAbsoluteLocalPath(decodedTarget) && !activeFilePath && !hasRememberedPreviewImage(target, previewImageSources)) {
+        diagnostics.push({
+          id: `${idPrefix}-relative`,
+          kind: 'unsavedRelativeImage',
+          lineNumber,
+          lineStart,
+          target,
+        })
+      }
+
+      continue
+    }
+
+    if (isUnsafeLinkTarget(target)) {
+      diagnostics.push({
+        id: `${idPrefix}-unsafe`,
+        kind: 'unsafeLink',
+        lineNumber,
+        lineStart,
+        target,
+      })
+      continue
+    }
+
+    if (target.startsWith('#') && !headingAnchorIdSet.has(normalizeHeadingLinkTarget(target))) {
+      diagnostics.push({
+        id: `${idPrefix}-heading`,
+        kind: 'missingHeading',
+        lineNumber,
+        lineStart,
+        target,
+      })
+    }
+  }
+
+  return diagnostics
+}
+
 function getBaseName(fileName: string) {
   return fileName.replace(/\.(md|markdown|txt|html)$/i, '') || 'document'
 }
@@ -976,7 +1183,7 @@ function rewritePreviewImageSources(
   return template.innerHTML
 }
 
-function addPreviewHeadingNavigation(html: string, outline: OutlineItem[]) {
+function addPreviewHeadingNavigation(html: string, outline: OutlineItem[], headingAnchorIds: string[]) {
   if (outline.length === 0 || !/<h[1-6]/i.test(html)) {
     return html
   }
@@ -992,6 +1199,7 @@ function addPreviewHeadingNavigation(html: string, outline: OutlineItem[]) {
       return
     }
 
+    heading.setAttribute('id', headingAnchorIds[index] ?? getHeadingAnchorBase(outlineItem.title))
     heading.setAttribute('data-outline-index', String(index))
     heading.setAttribute('tabindex', '0')
     heading.setAttribute('role', 'button')
@@ -2074,12 +2282,18 @@ function App() {
     [exportHtml, fileName],
   )
   const outline = useMemo(() => getOutline(markdownValue), [markdownValue])
+  const headingAnchorIds = useMemo(() => getHeadingAnchorIds(outline), [outline])
+  const documentDiagnostics = useMemo(
+    () => getDocumentDiagnostics(markdownValue, headingAnchorIds, activeFilePath, previewImageSources),
+    [activeFilePath, headingAnchorIds, markdownValue, previewImageSources],
+  )
   const renderedHtml = useMemo(
     () => addPreviewHeadingNavigation(
       exportHtml,
       outline,
+      headingAnchorIds,
     ),
-    [exportHtml, outline],
+    [exportHtml, headingAnchorIds, outline],
   )
 
   const searchMatches = useMemo(
@@ -3794,6 +4008,22 @@ ${getExportStyleCss(exportStyle)}
     return true
   }
 
+  function jumpToDocumentDiagnostic(diagnostic: DocumentDiagnostic) {
+    const target = { lineNumber: diagnostic.lineNumber, lineStart: diagnostic.lineStart }
+
+    setActiveSidebarTab('document')
+    pendingLineJumpRef.current = target
+    setActiveOutlineLine(target.lineNumber)
+
+    if (mode === 'preview') {
+      setMode('split')
+      return
+    }
+
+    jumpToEditorLine(target)
+    pendingLineJumpRef.current = null
+  }
+
   function handleGoToLineSubmit(event: ReactFormEvent<HTMLFormElement>) {
     event.preventDefault()
 
@@ -4644,6 +4874,40 @@ ${getExportStyleCss(exportStyle)}
                 <strong>{stats.headings}</strong>
               </div>
             </div>
+            <section className="diagnostics-section" aria-label={t.diagnostics.title}>
+              <div className="diagnostics-heading">
+                <h3>{t.diagnostics.title}</h3>
+                <small>{formatTranslation(t.diagnostics.count, { count: String(documentDiagnostics.length) })}</small>
+              </div>
+              {documentDiagnostics.length > 0 ? (
+                <ol className="diagnostics-list">
+                  {documentDiagnostics.map((diagnostic) => (
+                    <li key={diagnostic.id}>
+                      <button
+                        type="button"
+                        className="diagnostic-button"
+                        onPointerDown={(event) => {
+                          event.preventDefault()
+                          jumpToDocumentDiagnostic(diagnostic)
+                        }}
+                        onClick={(event) => {
+                          if (event.detail === 0) {
+                            jumpToDocumentDiagnostic(diagnostic)
+                          }
+                        }}
+                      >
+                        <span className="diagnostic-line">
+                          {formatTranslation(t.diagnostics.line, { line: String(diagnostic.lineNumber) })}
+                        </span>
+                        <span>{formatTranslation(t.diagnostics.messages[diagnostic.kind], { target: diagnostic.target || t.diagnostics.emptyTarget })}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="muted">{t.diagnostics.none}</p>
+              )}
+            </section>
           </section>
           )}
 

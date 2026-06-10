@@ -132,6 +132,21 @@ const en = {
     pinned: 'Pinned',
     missing: 'Missing',
   },
+  diagnostics: {
+    title: 'Diagnostics',
+    count: '{count} issues',
+    line: 'Line {line}',
+    none: 'No link or image issues found.',
+    emptyTarget: 'empty target',
+    messages: {
+      emptyLink: 'Link has no destination.',
+      unsafeLink: 'Link uses an unsafe target.',
+      missingHeading: 'Heading anchor does not exist: {target}',
+      emptyImage: 'Image has no source.',
+      unsavedRelativeImage: 'Relative image needs a saved or opened document: {target}',
+      unsupportedImage: 'Image type may not preview: {target}',
+    },
+  },
   welcome: {
     welcome: 'Welcome',
     newDocument: 'New document',
@@ -457,6 +472,21 @@ const zhCN: TranslationCatalog = {
     unpinRecentFile: '取消置顶最近文件',
     pinned: '已置顶',
     missing: '缺失',
+  },
+  diagnostics: {
+    title: '诊断',
+    count: '{count} 个问题',
+    line: '第 {line} 行',
+    none: '没有发现链接或图片问题。',
+    emptyTarget: '空目标',
+    messages: {
+      emptyLink: '链接没有目标。',
+      unsafeLink: '链接目标不安全。',
+      missingHeading: '标题锚点不存在：{target}',
+      emptyImage: '图片没有来源。',
+      unsavedRelativeImage: '相对图片需要先保存或打开文档：{target}',
+      unsupportedImage: '图片类型可能无法预览：{target}',
+    },
   },
   welcome: {
     welcome: '欢迎',
