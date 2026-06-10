@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/CyrusAuyeung/OpenMark/actions/workflows/ci.yml/badge.svg)](https://github.com/CyrusAuyeung/OpenMark/actions/workflows/ci.yml)
 [![Release](https://github.com/CyrusAuyeung/OpenMark/actions/workflows/release.yml/badge.svg)](https://github.com/CyrusAuyeung/OpenMark/actions/workflows/release.yml)
-[![Release version](https://img.shields.io/badge/release-v0.11.0-2f7a5f)](https://github.com/CyrusAuyeung/OpenMark/releases/tag/v0.11.0)
+[![Release version](https://img.shields.io/badge/release-v0.12.0-2f7a5f)](https://github.com/CyrusAuyeung/OpenMark/releases/tag/v0.12.0)
 [![License](https://img.shields.io/github/license/CyrusAuyeung/OpenMark)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](docs/download.md)
 
@@ -48,11 +48,11 @@ The latest desktop release is available on the [GitHub Releases page](https://gi
 
 | Platform | Package |
 | --- | --- |
-| Windows installer | `OpenMark.Setup.0.11.0.exe` |
-| Windows portable app | `OpenMark.0.11.0.exe` |
-| macOS Intel | `OpenMark-0.11.0.dmg` |
-| macOS Apple Silicon | `OpenMark-0.11.0-arm64.dmg` |
-| Linux Debian/Ubuntu | `openmark-editor_0.11.0_amd64.deb` |
+| Windows installer | `OpenMark.Setup.0.12.0.exe` |
+| Windows portable app | `OpenMark.0.12.0.exe` |
+| macOS Intel | `OpenMark-0.12.0.dmg` |
+| macOS Apple Silicon | `OpenMark-0.12.0-arm64.dmg` |
+| Linux Debian/Ubuntu | `openmark-editor_0.12.0_amd64.deb` |
 
 Windows and macOS builds are currently unsigned, so the first launch may show operating-system warnings. Signed Windows releases are supported once code-signing secrets are configured in GitHub Actions; see [Windows Code Signing](docs/windows-signing.md).
 
@@ -61,9 +61,11 @@ Windows and macOS builds are currently unsigned, so the first launch may show op
 - CodeMirror Markdown editing with write, split, and preview modes
 - Resizable editor/preview panes with saved split balance
 - Command palette for file, edit, view, workspace, export, and update actions
-- Markdown toolbar for bold, italic, links, images, headings, lists, quotes, code blocks, and tables
+- Markdown toolbar for bold, italic, links, images, headings, lists, task lists, dividers, quotes, code blocks, and tables
+- Smart Markdown editing helpers for list continuation, task checkbox toggling, URL paste-to-link, and plain-text paste cleanup
 - Find and replace with match case, whole word, focused result feedback, click-to-jump navigation, replace next, and replace all
 - Go to Line, filtered document outline, preview heading jumps, position indicators, and split-view editor/preview scroll synchronization
+- Lightweight document diagnostics for broken links and images with click-to-jump issue navigation
 - Markdown table insertion, selected text-to-table conversion, and contextual row/column editing controls
 - Local image insertion with desktop relative-path handling and safe preview support
 - Export preview, HTML/PDF export, and Markdown/HTML clipboard copy from the toolbar, command palette, and desktop menu
@@ -124,6 +126,7 @@ Useful editor shortcuts:
 - `Ctrl+B`: wrap selection in bold Markdown
 - `Ctrl+I`: wrap selection in italic Markdown
 - `Ctrl+K`: insert a Markdown link
+- `Ctrl+Shift+X`: toggle the current task checkbox
 
 ### Quality And Packaging
 
@@ -211,11 +214,11 @@ OpenMark 是一个本地优先的 Markdown 编辑器，面向希望拥有安静�
 
 | 平台 | 安装包 |
 | --- | --- |
-| Windows 安装版 | `OpenMark.Setup.0.11.0.exe` |
-| Windows 便携版 | `OpenMark.0.11.0.exe` |
-| macOS Intel | `OpenMark-0.11.0.dmg` |
-| macOS Apple Silicon | `OpenMark-0.11.0-arm64.dmg` |
-| Linux Debian/Ubuntu | `openmark-editor_0.11.0_amd64.deb` |
+| Windows 安装版 | `OpenMark.Setup.0.12.0.exe` |
+| Windows 便携版 | `OpenMark.0.12.0.exe` |
+| macOS Intel | `OpenMark-0.12.0.dmg` |
+| macOS Apple Silicon | `OpenMark-0.12.0-arm64.dmg` |
+| Linux Debian/Ubuntu | `openmark-editor_0.12.0_amd64.deb` |
 
 Windows 和 macOS 构建当前尚未签名，首次启动可能出现系统安全提示。配置 GitHub Actions 签名密钥后可发布已签名 Windows 版本，流程见 [Windows Code Signing](docs/windows-signing.md)。
 
@@ -224,9 +227,11 @@ Windows 和 macOS 构建当前尚未签名，首次启动可能出现系统安�
 - 基于 CodeMirror 的 Markdown 编辑体验，支持编写、分屏和预览模式
 - 可调整的编辑器/预览分栏，并记住分栏比例
 - 命令面板覆盖文件、编辑、视图、工作区、导出和更新操作
-- Markdown 工具栏支持粗体、斜体、链接、图片、标题、列表、引用、代码块和表格
+- Markdown 工具栏支持粗体、斜体、链接、图片、标题、列表、任务列表、分隔线、引用、代码块和表格
+- Markdown 编辑助手支持列表续行、任务复选框切换、粘贴 URL 生成链接，以及纯文本粘贴清理
 - 查找替换支持大小写匹配、全词匹配、聚焦结果反馈、点击跳转、替换当前项和全部替换
 - 跳转到行、可筛选文档大纲、预览标题回跳、位置指示器，以及分屏编辑器/预览滚动同步
+- 轻量文档诊断可发现坏链接和坏图片，并支持点击跳转到问题行
 - 插入 Markdown 表格，将选中文本转换为表格，并在表格内使用行/列编辑控件
 - 插入本地图片，桌面端保存时使用相对路径，并在预览中安全显示
 - 通过工具栏、命令面板和桌面菜单预览导出文档、导出 HTML/PDF，或复制 Markdown/HTML 到剪贴板
@@ -287,6 +292,7 @@ npm run desktop:dev
 - `Ctrl+B`：将选中文本包裹为 Markdown 粗体
 - `Ctrl+I`：将选中文本包裹为 Markdown 斜体
 - `Ctrl+K`：插入 Markdown 链接
+- `Ctrl+Shift+X`：切换当前任务复选框
 
 ### 质量检查与打包
 

@@ -2,6 +2,15 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.12.0 - 2026-06-10
+
+### Markdown Editing Quality
+
+- Added repeated Markdown syntax helpers for task lists and dividers in the toolbar and command palette.
+- Improved list continuation and checkbox editing with smart Enter handling and a task checkbox toggle shortcut.
+- Improved paste handling for URLs and plain text with selected-text link creation and conservative text cleanup.
+- Added lightweight document diagnostics for broken links and images with click-to-jump issue navigation.
+
 ## 0.11.0 - 2026-06-10
 
 ### Long Document Navigation

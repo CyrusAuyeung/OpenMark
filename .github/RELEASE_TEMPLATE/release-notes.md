@@ -2,16 +2,16 @@
 
 ## Summary
 
-OpenMark 0.11.0 focuses on long document navigation. It includes a Go to Line command and shortcut for jumping directly to a Markdown line, improvements to search result navigation feedback with active result context and hidden-result counts, and outline filtering for dense documents with result counts, clear actions, and empty states.
+OpenMark 0.12.0 focuses on markdown editing quality. It includes repeated Markdown syntax helpers for task lists and dividers in the toolbar and command palette, improvements to list continuation and checkbox editing with smart Enter handling and a task checkbox toggle shortcut, and improvements to paste handling for URLs and plain text with selected-text link creation and conservative text cleanup.
 
 ## Highlights
 
-### Long Document Navigation
+### Markdown Editing Quality
 
-- Added a Go to Line command and shortcut for jumping directly to a Markdown line.
-- Improved search result navigation feedback with active result context and hidden-result counts.
-- Added outline filtering for dense documents with result counts, clear actions, and empty states.
-- Added document position indicators for current line, column, and editor scroll progress.
+- Added repeated Markdown syntax helpers for task lists and dividers in the toolbar and command palette.
+- Improved list continuation and checkbox editing with smart Enter handling and a task checkbox toggle shortcut.
+- Improved paste handling for URLs and plain text with selected-text link creation and conservative text cleanup.
+- Added lightweight document diagnostics for broken links and images with click-to-jump issue navigation.
 
 ## Downloads
 
@@ -19,11 +19,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.11.0.exe` | Recommended installer. |
-| Windows | `OpenMark.0.11.0.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.11.0.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.11.0-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.11.0_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.12.0.exe` | Recommended installer. |
+| Windows | `OpenMark.0.12.0.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.12.0.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.12.0-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.12.0_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -58,4 +58,4 @@ Keep these auto-update metadata files attached when generated:
 ## Full Changelog
 
 - Release date: 2026-06-10
-- Tag: v0.11.0
+- Tag: v0.12.0
