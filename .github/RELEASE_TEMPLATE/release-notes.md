@@ -2,16 +2,16 @@
 
 ## Summary
 
-OpenMark 0.13.0 focuses on product UI polish. It includes refinements to the app shell visual hierarchy with more consistent desktop-product surfaces, borders, shadows, and density, polished toolbar, panel, inspector, and library active states for clearer interaction feedback, and improvements to empty, loading, warning, error, and update states with product-grade state panels and clearer status presentation.
+OpenMark 0.14.0 focuses on search & replace. It includes a document find and replace workflow with replace current and replace all actions, support for match case and whole-word search options during replacement, and access to find and replace through toolbar buttons, keyboard shortcuts, command palette, and desktop menus.
 
 ## Highlights
 
-### Product UI Polish
+### Search & Replace
 
-- Refined the app shell visual hierarchy with more consistent desktop-product surfaces, borders, shadows, and density.
-- Polished toolbar, panel, inspector, and library active states for clearer interaction feedback.
-- Improved empty, loading, warning, error, and update states with product-grade state panels and clearer status presentation.
-- Fixed Windows auto-update metadata so installer builds download the published GitHub Release asset, and tightened release verification for update metadata references.
+- Added a document find and replace workflow with replace current and replace all actions.
+- Supported match case and whole-word search options during replacement.
+- Exposed find and replace through toolbar buttons, keyboard shortcuts, command palette, and desktop menus.
+- Improved replacement feedback and disabled states when no matches are available.
 
 ## Downloads
 
@@ -19,11 +19,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.13.0.exe` | Recommended installer. |
-| Windows | `OpenMark.0.13.0.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.13.0.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.13.0-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.13.0_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.14.0.exe` | Recommended installer. |
+| Windows | `OpenMark.0.14.0.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.14.0.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.14.0-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.14.0_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -58,4 +58,4 @@ Keep these auto-update metadata files attached when generated:
 ## Full Changelog
 
 - Release date: 2026-06-10
-- Tag: v0.13.0
+- Tag: v0.14.0

@@ -2,6 +2,15 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.14.0 - 2026-06-10
+
+### Search & Replace
+
+- Added a document find and replace workflow with replace current and replace all actions.
+- Supported match case and whole-word search options during replacement.
+- Exposed find and replace through toolbar buttons, keyboard shortcuts, command palette, and desktop menus.
+- Improved replacement feedback and disabled states when no matches are available.
+
 ## 0.13.0 - 2026-06-10
 
 ### Product UI Polish

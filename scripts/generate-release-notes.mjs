@@ -204,6 +204,8 @@ function toSummaryPhrase(item) {
     .replace(/^Fixed\s+/i, 'fixes for ')
     .replace(/^Polished\s+/i, 'polished ')
     .replace(/^Restored\s+/i, 'restoring ')
+    .replace(/^Supported\s+/i, 'support for ')
+    .replace(/^Exposed\s+/i, 'access to ')
     .replace(/^Improved\s+/i, 'improvements to ')
     .replace(/^Refined\s+/i, 'refinements to ')
     .replace(/\.$/, '')
