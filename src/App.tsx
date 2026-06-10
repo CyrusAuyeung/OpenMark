@@ -264,6 +264,8 @@ const libraryRowSelector = '[data-library-row="true"]'
 const taskListLinePattern = /^(\s*)([-*+])\s+\[([ xX])\]\s*(.*)$/
 const bulletListLinePattern = /^(\s*)([-*+])\s+(.*)$/
 const orderedListLinePattern = /^(\s*)(\d+)([.)])\s+(.*)$/
+const zeroWidthPasteCharactersPattern = /[\u200B-\u200D\uFEFF]/g
+const supportedPasteUrlProtocols = new Set(['http:', 'https:'])
 
 const markdownRenderer = new MarkdownIt({
   html: false,
@@ -1813,6 +1815,80 @@ function toggleTaskCheckbox(view: EditorView) {
   return true
 }
 
+function normalizePastedPlainText(text: string) {
+  return text
+    .replace(/^\uFEFF/, '')
+    .replace(zeroWidthPasteCharactersPattern, '')
+    .replace(/\u00A0/g, ' ')
+    .replace(/[\u2028\u2029]/g, '\n')
+    .replace(/\r\n?/g, '\n')
+}
+
+function getSinglePastedUrl(text: string) {
+  const trimmedText = text.trim()
+
+  if (trimmedText.length === 0 || /\s/.test(trimmedText)) {
+    return null
+  }
+
+  try {
+    const parsedUrl = new URL(trimmedText)
+    return supportedPasteUrlProtocols.has(parsedUrl.protocol) ? trimmedText : null
+  } catch {
+    return null
+  }
+}
+
+function escapeMarkdownLinkText(text: string) {
+  return text.replace(/([\\\]])/g, '\\$1').replace(/\s+/g, ' ').trim()
+}
+
+function formatMarkdownLinkDestination(url: string) {
+  return `<${url.replace(/</g, '%3C').replace(/>/g, '%3E')}>`
+}
+
+function createMarkdownLinkFromPaste(label: string, url: string) {
+  return `[${escapeMarkdownLinkText(label) || url}](${formatMarkdownLinkDestination(url)})`
+}
+
+function insertPastedText(view: EditorView, text: string) {
+  const selection = view.state.selection.main
+
+  view.dispatch({
+    changes: { from: selection.from, to: selection.to, insert: text },
+    selection: { anchor: selection.from + text.length },
+    scrollIntoView: true,
+  })
+  view.focus()
+}
+
+function handleMarkdownPaste(event: ClipboardEvent, view: EditorView) {
+  const clipboardText = event.clipboardData?.getData('text/plain') ?? ''
+
+  if (clipboardText.length === 0) {
+    return false
+  }
+
+  const selection = view.state.selection.main
+  const normalizedText = normalizePastedPlainText(clipboardText)
+  const pastedUrl = getSinglePastedUrl(normalizedText)
+
+  if (pastedUrl && !selection.empty) {
+    const selectedText = view.state.sliceDoc(selection.from, selection.to)
+    event.preventDefault()
+    insertPastedText(view, createMarkdownLinkFromPaste(selectedText, pastedUrl))
+    return true
+  }
+
+  if (normalizedText !== clipboardText) {
+    event.preventDefault()
+    insertPastedText(view, normalizedText)
+    return true
+  }
+
+  return false
+}
+
 function formatBlockLine(
   line: string,
   index: number,
@@ -1973,6 +2049,7 @@ function App() {
     () => [
       markdown({ base: markdownLanguage }),
       search({ top: true }),
+      EditorView.domEventHandlers({ paste: handleMarkdownPaste }),
       keymap.of([
         { key: 'Enter', run: continueMarkdownList },
         { key: 'Mod-b', run: (view) => applyInlineFormat(view, 'bold') },

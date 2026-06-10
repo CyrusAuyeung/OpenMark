@@ -97,5 +97,5 @@
 
 - Add repeated Markdown syntax helpers ✅
 - Improve list continuation and checkbox editing ✅
-- Improve paste handling for URLs and plain text
+- Improve paste handling for URLs and plain text ✅
 - Add lightweight document diagnostics for broken links and images
