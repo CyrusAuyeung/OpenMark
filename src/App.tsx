@@ -46,6 +46,7 @@ import {
   Link as LinkIcon,
   List,
   ListOrdered,
+  Minus,
   Moon,
   PanelBottom,
   PanelBottomClose,
@@ -84,7 +85,7 @@ type ThemeMode = 'light' | 'dark'
 type ThemePreference = ThemeMode | 'system'
 type SidebarTab = 'document' | 'outline' | 'recent' | 'workspace'
 type InlineFormat = 'bold' | 'italic' | 'link'
-type BlockFormat = 'heading-2' | 'bullet-list' | 'ordered-list' | 'quote' | 'code-block' | 'table'
+type BlockFormat = 'heading-2' | 'bullet-list' | 'ordered-list' | 'task-list' | 'quote' | 'code-block' | 'table' | 'horizontal-rule'
 type MarkdownFormat = InlineFormat | BlockFormat
 type TableEditAction = 'format' | 'insert-row-below' | 'delete-row' | 'insert-column-right' | 'delete-column'
 type TableTranslationKey = 'formatTable' | 'addRowBelow' | 'deleteRow' | 'addColumnRight' | 'deleteColumn'
@@ -350,6 +351,10 @@ const markdownToolbarGroups: Array<
     { format: 'heading-2', labelKey: 'heading', titleKey: 'headingTitle', Icon: Heading2 },
     { format: 'bullet-list', labelKey: 'bulletList', titleKey: 'bulletListTitle', Icon: List },
     { format: 'ordered-list', labelKey: 'orderedList', titleKey: 'orderedListTitle', Icon: ListOrdered },
+  ],
+  [
+    { format: 'task-list', labelKey: 'taskList', titleKey: 'taskListTitle', Icon: List },
+    { format: 'horizontal-rule', labelKey: 'horizontalRule', titleKey: 'horizontalRuleTitle', Icon: Minus },
   ],
   [
     { format: 'quote', labelKey: 'quote', titleKey: 'quoteTitle', Icon: Quote },
@@ -1659,10 +1664,45 @@ function applyTableFormat(view: EditorView, placeholders: MarkdownPlaceholderCat
   return true
 }
 
+function applyHorizontalRuleFormat(view: EditorView) {
+  const selection = view.state.selection.main
+  const beforeText = view.state.sliceDoc(0, selection.from)
+  const afterText = view.state.sliceDoc(selection.to)
+  const prefix = beforeText.length === 0
+    ? ''
+    : beforeText.endsWith('\n\n')
+      ? ''
+      : beforeText.endsWith('\n')
+        ? '\n'
+        : '\n\n'
+  const suffix = afterText.length === 0
+    ? ''
+    : afterText.startsWith('\n\n')
+      ? ''
+      : afterText.startsWith('\n')
+        ? '\n'
+        : '\n\n'
+  const insertText = `${prefix}---${suffix}`
+  const anchor = selection.from + insertText.length
+
+  view.dispatch({
+    changes: { from: selection.from, to: selection.to, insert: insertText },
+    selection: { anchor },
+    scrollIntoView: true,
+  })
+  view.focus()
+
+  return true
+}
+
+function stripListMarker(line: string) {
+  return line.replace(/^(-\s+\[[ xX]\]\s+|[-*+]\s+|\d+\.\s+)/, '')
+}
+
 function formatBlockLine(
   line: string,
   index: number,
-  format: Exclude<BlockFormat, 'code-block' | 'table'>,
+  format: Exclude<BlockFormat, 'code-block' | 'table' | 'horizontal-rule'>,
   placeholders: MarkdownPlaceholderCatalog,
 ) {
   const trimmedLine = line.trimStart()
@@ -1674,13 +1714,18 @@ function formatBlockLine(
   }
 
   if (format === 'bullet-list') {
-    const body = trimmedLine.replace(/^([-*+]\s+|\d+\.\s+)/, '')
+    const body = stripListMarker(trimmedLine)
     return `${indent}- ${body || placeholders.listItem}`
   }
 
   if (format === 'ordered-list') {
-    const body = trimmedLine.replace(/^([-*+]\s+|\d+\.\s+)/, '')
+    const body = stripListMarker(trimmedLine)
     return `${indent}${index + 1}. ${body || placeholders.listItem}`
+  }
+
+  if (format === 'task-list') {
+    const body = stripListMarker(trimmedLine)
+    return `${indent}- [ ] ${body || placeholders.taskItem}`
   }
 
   const body = trimmedLine.replace(/^>\s?/, '')
@@ -1694,6 +1739,10 @@ function applyBlockFormat(view: EditorView, format: BlockFormat, placeholders: M
 
   if (format === 'table') {
     return applyTableFormat(view, placeholders)
+  }
+
+  if (format === 'horizontal-rule') {
+    return applyHorizontalRuleFormat(view)
   }
 
   const selection = view.state.selection.main
@@ -2086,6 +2135,22 @@ function App() {
       Icon: Table,
       keywords: ['markdown', 'columns', 'rows'],
       action: () => handleMarkdownFormat('table'),
+    },
+    {
+      id: 'insert-task-list',
+      label: t.commands.insertTaskList,
+      group: t.groups.edit,
+      Icon: List,
+      keywords: ['markdown', 'checkbox', 'todo', 'checklist'],
+      action: () => handleMarkdownFormat('task-list'),
+    },
+    {
+      id: 'insert-horizontal-rule',
+      label: t.commands.insertHorizontalRule,
+      group: t.groups.edit,
+      Icon: Minus,
+      keywords: ['markdown', 'divider', 'separator', 'rule'],
+      action: () => handleMarkdownFormat('horizontal-rule'),
     },
     {
       id: 'format-table',

@@ -92,3 +92,10 @@
 - Improve search result navigation feedback ✅
 - Add outline filtering for dense documents ✅
 - Add document position indicators ✅
+
+## Milestone 13: Markdown Editing Quality
+
+- Add repeated Markdown syntax helpers ✅
+- Improve list continuation and checkbox editing
+- Improve paste handling for URLs and plain text
+- Add lightweight document diagnostics for broken links and images
