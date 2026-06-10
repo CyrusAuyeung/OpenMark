@@ -2,6 +2,15 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.13.0 - 2026-06-10
+
+### Product UI Polish
+
+- Refined the app shell visual hierarchy with more consistent desktop-product surfaces, borders, shadows, and density.
+- Polished toolbar, panel, inspector, and library active states for clearer interaction feedback.
+- Improved empty, loading, warning, error, and update states with product-grade state panels and clearer status presentation.
+- Fixed Windows auto-update metadata so installer builds download the published GitHub Release asset, and tightened release verification for update metadata references.
+
 ## 0.12.0 - 2026-06-10
 
 ### Markdown Editing Quality

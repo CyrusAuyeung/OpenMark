@@ -185,17 +185,24 @@ function buildReleaseNotes(targetVersion, expectedTag, releaseDate, sections) {
 
 function getSummary(targetVersion, sections) {
   const sectionNames = sections.map((section) => section.title)
-  const focusText = formatList(sectionNames.map((sectionName) => sectionName.toLowerCase()))
+  const focusText = formatList(sectionNames.map(toSummaryFocusText))
   const firstItems = sections.flatMap((section) => section.items).slice(0, 3)
   const upgradeText = firstItems.length > 0 ? ` It includes ${formatList(firstItems.map(toSummaryPhrase))}.` : ''
 
   return `OpenMark ${targetVersion} focuses on ${focusText}.${upgradeText}`
 }
 
+function toSummaryFocusText(sectionName) {
+  return sectionName
+    .toLowerCase()
+    .replace(/\bui\b/g, 'UI')
+}
+
 function toSummaryPhrase(item) {
   return item
     .replace(/^Added\s+/i, '')
     .replace(/^Fixed\s+/i, 'fixes for ')
+    .replace(/^Polished\s+/i, 'polished ')
     .replace(/^Restored\s+/i, 'restoring ')
     .replace(/^Improved\s+/i, 'improvements to ')
     .replace(/^Refined\s+/i, 'refinements to ')

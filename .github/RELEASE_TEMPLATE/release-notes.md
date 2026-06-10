@@ -2,16 +2,16 @@
 
 ## Summary
 
-OpenMark 0.12.0 focuses on markdown editing quality. It includes repeated Markdown syntax helpers for task lists and dividers in the toolbar and command palette, improvements to list continuation and checkbox editing with smart Enter handling and a task checkbox toggle shortcut, and improvements to paste handling for URLs and plain text with selected-text link creation and conservative text cleanup.
+OpenMark 0.13.0 focuses on product UI polish. It includes refinements to the app shell visual hierarchy with more consistent desktop-product surfaces, borders, shadows, and density, polished toolbar, panel, inspector, and library active states for clearer interaction feedback, and improvements to empty, loading, warning, error, and update states with product-grade state panels and clearer status presentation.
 
 ## Highlights
 
-### Markdown Editing Quality
+### Product UI Polish
 
-- Added repeated Markdown syntax helpers for task lists and dividers in the toolbar and command palette.
-- Improved list continuation and checkbox editing with smart Enter handling and a task checkbox toggle shortcut.
-- Improved paste handling for URLs and plain text with selected-text link creation and conservative text cleanup.
-- Added lightweight document diagnostics for broken links and images with click-to-jump issue navigation.
+- Refined the app shell visual hierarchy with more consistent desktop-product surfaces, borders, shadows, and density.
+- Polished toolbar, panel, inspector, and library active states for clearer interaction feedback.
+- Improved empty, loading, warning, error, and update states with product-grade state panels and clearer status presentation.
+- Fixed Windows auto-update metadata so installer builds download the published GitHub Release asset, and tightened release verification for update metadata references.
 
 ## Downloads
 
@@ -19,11 +19,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.12.0.exe` | Recommended installer. |
-| Windows | `OpenMark.0.12.0.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.12.0.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.12.0-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.12.0_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.13.0.exe` | Recommended installer. |
+| Windows | `OpenMark.0.13.0.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.13.0.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.13.0-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.13.0_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -58,4 +58,4 @@ Keep these auto-update metadata files attached when generated:
 ## Full Changelog
 
 - Release date: 2026-06-10
-- Tag: v0.12.0
+- Tag: v0.13.0
