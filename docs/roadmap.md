@@ -22,7 +22,7 @@
 - Command palette
 - Better table editing
 - Image insert and path handling ✅
-- Search and replace
+- Search and replace ✅
 - PDF export ✅
 - Theme settings ✅
 
@@ -106,3 +106,10 @@
 - Polish toolbar, panels, and inspector spacing, density, and active states ✅
 - Improve empty, loading, error, and unsaved states with clearer product-grade presentation ✅
 - Refresh light and dark theme surfaces, borders, shadows, and focus states for consistency ✅
+
+## Milestone 15: Search & Replace
+
+- Add document find and replace panel with replace current and replace all actions ✅
+- Support match case and whole-word search options during replacement ✅
+- Expose find and replace through toolbar buttons, keyboard shortcuts, command palette, and desktop menus ✅
+- Improve replacement feedback and disabled states when no matches are available ✅

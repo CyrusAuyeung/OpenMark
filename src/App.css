@@ -1409,12 +1409,19 @@ body.is-resizing-split * {
   background: var(--button-active);
 }
 
-.search-icon-button:hover,
-.search-toggle:hover,
-.search-action-button:hover {
+.search-icon-button:not(:disabled):hover,
+.search-toggle:not(:disabled):hover,
+.search-action-button:not(:disabled):hover {
   border-color: var(--accent-border);
   color: var(--ink);
   background: var(--button-hover);
+}
+
+.search-icon-button:disabled,
+.search-action-button:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .search-toggle.active {

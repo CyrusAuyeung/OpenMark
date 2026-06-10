@@ -2444,6 +2444,7 @@ function App() {
   const visibleSearchResults = searchResults.slice(searchResultWindowStart, searchResultWindowStart + searchResultWindowSize)
   const hiddenSearchResultsBefore = searchResultWindowStart
   const hiddenSearchResultsAfter = Math.max(searchResults.length - searchResultWindowStart - visibleSearchResults.length, 0)
+  const canUseSearchMatchActions = searchTerm.length > 0 && searchMatches.length > 0
   const searchStatusLabel = searchTerm.length === 0
     ? t.search.noQuery
     : `${activeSearchMatchIndex >= 0 ? activeSearchMatchIndex + 1 : 0} ${t.search.of} ${searchMatches.length}`
@@ -4360,9 +4361,15 @@ ${getExportStyleCss(exportStyle)}
       return
     }
 
+    if (searchMatches.length === 0) {
+      showDocumentOperationStatus('error', t.status.noSearchMatches)
+      return
+    }
+
     const didReplace = replaceNext(editorView)
 
     if (didReplace) {
+      showDocumentOperationStatus('success', t.status.replacedCurrentMatch)
       syncActiveSearchRange(editorView)
     }
   }
@@ -4374,7 +4381,17 @@ ${getExportStyleCss(exportStyle)}
       return
     }
 
+    const replacedCount = searchMatches.length
+
+    if (replacedCount === 0) {
+      showDocumentOperationStatus('error', t.status.noSearchMatches)
+      return
+    }
+
     replaceAll(editorView)
+    showDocumentOperationStatus('success', formatTranslation(t.status.replacedSearchMatches, {
+      count: String(replacedCount),
+    }))
     setActiveSearchRange(null)
   }
 
@@ -5336,6 +5353,7 @@ ${getExportStyleCss(exportStyle)}
                           onClick={() => moveSearchMatch('previous')}
                           title={t.search.previousMatch}
                           aria-label={t.search.previousMatch}
+                          disabled={!canUseSearchMatchActions}
                         >
                           <ChevronUp size={15} />
                         </button>
@@ -5346,6 +5364,7 @@ ${getExportStyleCss(exportStyle)}
                           onClick={() => moveSearchMatch('next')}
                           title={t.search.nextMatch}
                           aria-label={t.search.nextMatch}
+                          disabled={!canUseSearchMatchActions}
                         >
                           <ChevronDown size={15} />
                         </button>
@@ -5410,6 +5429,8 @@ ${getExportStyleCss(exportStyle)}
                             onMouseDown={(event) => event.preventDefault()}
                             onClick={replaceCurrentSearchMatch}
                             title={t.search.replaceCurrentMatch}
+                            aria-label={t.search.replaceCurrentMatch}
+                            disabled={!canUseSearchMatchActions}
                           >
                             <Replace size={14} />
                             <span>{t.search.replace}</span>
@@ -5420,6 +5441,8 @@ ${getExportStyleCss(exportStyle)}
                             onMouseDown={(event) => event.preventDefault()}
                             onClick={replaceAllSearchMatches}
                             title={t.search.replaceAllMatches}
+                            aria-label={t.search.replaceAllMatches}
+                            disabled={!canUseSearchMatchActions}
                           >
                             <ReplaceAllIcon size={14} />
                             <span>{t.search.all}</span>

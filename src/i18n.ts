@@ -327,6 +327,9 @@ const en = {
     openedDocument: 'Opened {fileName}',
     savedDocument: 'Saved {fileName}',
     downloadedDocument: 'Downloaded {fileName}',
+    replacedCurrentMatch: 'Replaced current match',
+    replacedSearchMatches: 'Replaced {count} matches',
+    noSearchMatches: 'No matches to replace',
   },
   alerts: {
     unsavedChanges: 'You have unsaved changes.',
@@ -668,6 +671,9 @@ const zhCN: TranslationCatalog = {
     openedDocument: '已打开 {fileName}',
     savedDocument: '已保存 {fileName}',
     downloadedDocument: '已下载 {fileName}',
+    replacedCurrentMatch: '已替换当前匹配',
+    replacedSearchMatches: '已替换 {count} 个匹配',
+    noSearchMatches: '没有可替换的匹配',
   },
   alerts: {
     unsavedChanges: '你有未保存的更改。',
