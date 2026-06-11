@@ -188,6 +188,11 @@ type PreviewCursorIndicatorState = {
   isFallback: boolean
 }
 
+type MarkdownPreviewBlockRange = {
+  startLine: number
+  endLine: number
+}
+
 type ExportDocumentMetadata = {
   title: string
   description: string
@@ -1709,11 +1714,61 @@ function getPreviewCursorFallbackTop(previewScroller: HTMLElement, editorProgres
   return Math.round(Math.min(Math.max(estimatedTop, 24), Math.max(previewScroller.scrollHeight - 24, 24)))
 }
 
+function getMarkdownPreviewBlockRanges(markdownValue: string): MarkdownPreviewBlockRange[] {
+  const blockRanges: MarkdownPreviewBlockRange[] = []
+  const lines = markdownValue.split(/\r\n|\r|\n/)
+  let blockStartLine: number | null = null
+
+  lines.forEach((line, index) => {
+    const lineNumber = index + 1
+
+    if (line.trim().length === 0) {
+      if (blockStartLine !== null) {
+        blockRanges.push({ startLine: blockStartLine, endLine: lineNumber - 1 })
+        blockStartLine = null
+      }
+
+      return
+    }
+
+    blockStartLine ??= lineNumber
+  })
+
+  if (blockStartLine !== null) {
+    blockRanges.push({ startLine: blockStartLine, endLine: lines.length })
+  }
+
+  return blockRanges
+}
+
+function getPreviewCursorSourceBlockTop(previewScroller: HTMLElement, lineNumber: number, markdownValue: string) {
+  const markdownPreview = previewScroller.querySelector<HTMLElement>('.markdown-preview')
+  const previewBlocks = Array.from(markdownPreview?.children ?? [])
+    .filter((element): element is HTMLElement => element instanceof HTMLElement)
+  const blockRanges = getMarkdownPreviewBlockRanges(markdownValue)
+
+  if (previewBlocks.length === 0 || blockRanges.length === 0) {
+    return null
+  }
+
+  const matchingBlockIndex = blockRanges.findIndex((range) => (
+    lineNumber >= range.startLine && lineNumber <= range.endLine
+  ))
+  const fallbackBlockIndex = Math.round(((lineNumber - 1) / Math.max(markdownValue.split(/\r\n|\r|\n/).length - 1, 1)) * (previewBlocks.length - 1))
+  const targetBlockIndex = matchingBlockIndex >= 0 ? matchingBlockIndex : fallbackBlockIndex
+  const targetBlock = previewBlocks[Math.min(Math.max(targetBlockIndex, 0), previewBlocks.length - 1)]
+  const blockOffset = Math.min(Math.max(targetBlock.offsetHeight / 2, 12), 24)
+
+  return Math.round(Math.min(Math.max(targetBlock.offsetTop + blockOffset, 24), Math.max(previewScroller.scrollHeight - 24, 24)))
+}
+
 function getPreviewCursorIndicator(
   previewScroller: HTMLElement,
   outlineIndex: number | null,
   sectionProgress: number,
   editorProgress: number,
+  lineNumber: number,
+  markdownValue: string,
 ): PreviewCursorIndicatorState {
   if (outlineIndex !== null) {
     const targetHeading = previewScroller.querySelector<HTMLElement>(`[data-outline-index="${outlineIndex}"]`)
@@ -1731,9 +1786,11 @@ function getPreviewCursorIndicator(
     }
   }
 
+  const sourceBlockTop = getPreviewCursorSourceBlockTop(previewScroller, lineNumber, markdownValue)
+
   return {
-    top: getPreviewCursorFallbackTop(previewScroller, editorProgress),
-    isFallback: true,
+    top: sourceBlockTop ?? getPreviewCursorFallbackTop(previewScroller, editorProgress),
+    isFallback: sourceBlockTop === null,
   }
 }
 
@@ -3556,6 +3613,8 @@ function App() {
         previewCursorOutlineIndex,
         previewCursorSectionProgress,
         editorPosition.progress,
+        editorPosition.line,
+        markdownValue,
       )
 
       setPreviewCursorIndicator((currentIndicator) => (
@@ -3566,7 +3625,7 @@ function App() {
     return () => {
       window.cancelAnimationFrame(animationFrame)
     }
-  }, [editorPosition.progress, isMarkdownPreviewLoading, markdownValue, mode, previewCursorOutlineIndex, previewCursorSectionProgress, renderedHtml])
+  }, [editorPosition.line, editorPosition.progress, isMarkdownPreviewLoading, markdownValue, mode, previewCursorOutlineIndex, previewCursorSectionProgress, renderedHtml])
 
   useEffect(() => {
     const previewCursorMarker = previewCursorMarkerRef.current
