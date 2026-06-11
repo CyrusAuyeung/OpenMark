@@ -450,6 +450,23 @@
   font-size: 18px;
 }
 
+.selection-stats-section {
+  margin-top: 18px;
+}
+
+.selection-metric-list {
+  margin-top: 9px;
+}
+
+.selection-metric-list div {
+  min-height: 52px;
+  padding: 9px 10px;
+}
+
+.selection-metric-list strong {
+  font-size: 16px;
+}
+
 .diagnostics-section {
   margin-top: 18px;
 }

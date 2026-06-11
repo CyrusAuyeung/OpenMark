@@ -133,6 +133,6 @@
 ## Milestone 18: Writing Insight & Review
 
 - Add estimated reading time to document statistics and the status bar ✅
-- Add selection-aware statistics for focused edits
+- Add selection-aware statistics for focused edits ✅
 - Add document goal tracking for longer writing sessions
 - Add lightweight review markers for drafts

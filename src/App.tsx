@@ -938,6 +938,37 @@ function getEstimatedReadingMinutes(plainText: string, words: number) {
   return Math.max(1, Math.ceil(estimatedMinutes))
 }
 
+function getSelectedMarkdown(view: EditorView) {
+  return view.state.selection.ranges
+    .filter((range) => !range.empty)
+    .map((range) => view.state.sliceDoc(range.from, range.to))
+    .join('\n')
+}
+
+function getSelectionStats(view: EditorView) {
+  const selectedMarkdown = getSelectedMarkdown(view)
+
+  return selectedMarkdown.length > 0
+    ? getDocumentStats(selectedMarkdown, getOutline(selectedMarkdown))
+    : null
+}
+
+function areDocumentStatsEqual(left: DocumentStats | null, right: DocumentStats | null) {
+  if (left === right) {
+    return true
+  }
+
+  if (left === null || right === null) {
+    return false
+  }
+
+  return left.words === right.words &&
+    left.characters === right.characters &&
+    left.lines === right.lines &&
+    left.headings === right.headings &&
+    left.readingMinutes === right.readingMinutes
+}
+
 function getMarkdownCodeFenceRanges(markdownValue: string) {
   const ranges: Array<{ from: number, to: number }> = []
   const fencePattern = /^```.*$/gm
@@ -2393,6 +2424,7 @@ function App() {
   const [isSearchWholeWord, setIsSearchWholeWord] = useState(false)
   const [activeSearchRange, setActiveSearchRange] = useState<SearchMatch | null>(null)
   const [tableEditingState, setTableEditingState] = useState<TableEditingState>(defaultTableEditingState)
+  const [selectionStats, setSelectionStats] = useState<DocumentStats | null>(null)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [commandQuery, setCommandQuery] = useState('')
   const [activeCommandIndex, setActiveCommandIndex] = useState(0)
@@ -4489,6 +4521,14 @@ ${getExportStyleCss(exportStyle)}
     ))
   }
 
+  function syncSelectionStats(view: EditorView) {
+    const nextSelectionStats = getSelectionStats(view)
+
+    setSelectionStats((currentSelectionStats) => (
+      areDocumentStatsEqual(currentSelectionStats, nextSelectionStats) ? currentSelectionStats : nextSelectionStats
+    ))
+  }
+
   function clearEditorSessionSaveTimer() {
     if (editorSessionSaveTimerRef.current === null) {
       return
@@ -5339,6 +5379,31 @@ ${getExportStyleCss(exportStyle)}
                 <strong>{formatTranslation(t.document.readingTimeMinutes, { minutes: String(stats.readingMinutes) })}</strong>
               </div>
             </div>
+            {selectionStats && (
+              <section className="selection-stats-section" aria-label={t.document.selectionStats}>
+                <div className="diagnostics-heading">
+                  <h3>{t.document.selection}</h3>
+                </div>
+                <div className="metric-list selection-metric-list">
+                  <div>
+                    <span>{t.document.words}</span>
+                    <strong>{selectionStats.words}</strong>
+                  </div>
+                  <div>
+                    <span>{t.document.characters}</span>
+                    <strong>{selectionStats.characters}</strong>
+                  </div>
+                  <div>
+                    <span>{t.document.lines}</span>
+                    <strong>{selectionStats.lines}</strong>
+                  </div>
+                  <div>
+                    <span>{t.document.readingTime}</span>
+                    <strong>{formatTranslation(t.document.readingTimeMinutes, { minutes: String(selectionStats.readingMinutes) })}</strong>
+                  </div>
+                </div>
+              </section>
+            )}
             <section className="diagnostics-section" aria-label={t.diagnostics.title}>
               <div className="diagnostics-heading">
                 <h3>{t.diagnostics.title}</h3>
@@ -5929,6 +5994,7 @@ ${getExportStyleCss(exportStyle)}
                         editorViewRef.current = view
                         restoreEditorSessionState(view)
                         syncEditorPosition(view)
+                        syncSelectionStats(view)
                         setNextTableEditingState(getTableEditingState(view))
                         const handleEditorScroll = () => {
                           syncPreviewScrollFromEditorRef.current()
@@ -5944,6 +6010,7 @@ ${getExportStyleCss(exportStyle)}
                       onUpdate={(viewUpdate) => {
                         if (viewUpdate.docChanged || viewUpdate.selectionSet) {
                           syncEditorPosition(viewUpdate.view)
+                          syncSelectionStats(viewUpdate.view)
                           setNextTableEditingState(getTableEditingState(viewUpdate.view))
                           scheduleEditorSessionPersist()
                         }
