@@ -2,16 +2,16 @@
 
 ## Summary
 
-OpenMark 0.15.0 focuses on document safety & recovery. It includes local recovery snapshots for unsaved document changes with a welcome-screen restore entry, support for restoring or discarding recovery snapshots without touching saved files, and visibility into recovery snapshot status in the footer while documents remain unsaved.
+OpenMark 0.16.0 focuses on bundle & startup polish. It includes split renderer dependencies into stable vendor chunks and added a build budget check for JavaScript chunk sizes, lazy-loaded Markdown preview, export rendering, and editor search tooling so the first editor screen can render sooner, and preserved preview/export behavior while loading Markdown rendering dependencies on demand.
 
 ## Highlights
 
-### Document Safety & Recovery
+### Bundle & Startup Polish
 
-- Added local recovery snapshots for unsaved document changes with a welcome-screen restore entry.
-- Supported restoring or discarding recovery snapshots without touching saved files.
-- Surfaced recovery snapshot status in the footer while documents remain unsaved.
-- Added save-time warnings before overwriting files changed outside OpenMark.
+- Split renderer dependencies into stable vendor chunks and added a build budget check for JavaScript chunk sizes.
+- Lazy-loaded Markdown preview, export rendering, and editor search tooling so the first editor screen can render sooner.
+- Preserved preview/export behavior while loading Markdown rendering dependencies on demand.
+- Improved outline jumps so the sidebar, Markdown editor, and preview stay aligned on the selected heading.
 
 ## Downloads
 
@@ -19,11 +19,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.15.0.exe` | Recommended installer. |
-| Windows | `OpenMark.0.15.0.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.15.0.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.15.0-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.15.0_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.16.0.exe` | Recommended installer. |
+| Windows | `OpenMark.0.16.0.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.16.0.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.16.0-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.16.0_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -53,9 +53,9 @@ Keep these auto-update metadata files attached when generated:
 - Windows code signing is optional until signing secrets are configured.
 - macOS builds are currently unsigned and not notarized.
 - Linux AppImage support is planned after the `.deb` release path is stable.
-- Large renderer bundle warning is expected while CodeMirror is bundled eagerly.
+- The core CodeMirror editor still loads with the editing surface while deeper editor lazy-loading is evaluated.
 
 ## Full Changelog
 
 - Release date: 2026-06-11
-- Tag: v0.15.0
+- Tag: v0.16.0

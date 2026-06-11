@@ -174,7 +174,7 @@ function buildReleaseNotes(targetVersion, expectedTag, releaseDate, sections) {
     '- Windows code signing is optional until signing secrets are configured.',
     '- macOS builds are currently unsigned and not notarized.',
     '- Linux AppImage support is planned after the `.deb` release path is stable.',
-    '- Large renderer bundle warning is expected while CodeMirror is bundled eagerly.',
+    '- The core CodeMirror editor still loads with the editing surface while deeper editor lazy-loading is evaluated.',
     '',
     '## Full Changelog',
     '',
@@ -202,6 +202,9 @@ function toSummaryPhrase(item) {
   return item
     .replace(/^Added\s+/i, '')
     .replace(/^Fixed\s+/i, 'fixes for ')
+    .replace(/^Split\s+/i, 'split ')
+    .replace(/^Lazy-loaded\s+/i, 'lazy-loaded ')
+    .replace(/^Preserved\s+/i, 'preserved ')
     .replace(/^Polished\s+/i, 'polished ')
     .replace(/^Restored\s+/i, 'restoring ')
     .replace(/^Supported\s+/i, 'support for ')

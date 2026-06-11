@@ -2,6 +2,15 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.16.0 - 2026-06-11
+
+### Bundle & Startup Polish
+
+- Split renderer dependencies into stable vendor chunks and added a build budget check for JavaScript chunk sizes.
+- Lazy-loaded Markdown preview, export rendering, and editor search tooling so the first editor screen can render sooner.
+- Preserved preview/export behavior while loading Markdown rendering dependencies on demand.
+- Improved outline jumps so the sidebar, Markdown editor, and preview stay aligned on the selected heading.
+
 ## 0.15.0 - 2026-06-11
 
 ### Document Safety & Recovery
