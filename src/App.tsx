@@ -189,6 +189,7 @@ type EditorSessionState = EditorSessionDocument & {
 type RecoverySnapshot = EditorSessionDocument & {
   markdownValue: string
   savedSnapshot: string
+  modifiedAt: number | null
   updatedAt: number
 }
 
@@ -255,6 +256,7 @@ type CommandPaletteItem = {
 const draftStorageKey = 'openmark:draft'
 const fileNameStorageKey = 'openmark:file-name'
 const activeFilePathStorageKey = 'openmark:active-file-path'
+const activeFileModifiedAtStorageKey = 'openmark:active-file-modified-at'
 const editorSessionStorageKey = 'openmark:editor-session'
 const themeStorageKey = 'openmark:theme'
 const localeStorageKey = 'openmark:locale'
@@ -468,6 +470,12 @@ function loadStoredFilePath() {
   return window.openmark && storedFilePath ? storedFilePath : null
 }
 
+function loadStoredFileModifiedAt() {
+  const storedValue = window.localStorage.getItem(activeFileModifiedAtStorageKey)
+  const storedModifiedAt = storedValue === null ? NaN : Number(storedValue)
+  return window.openmark && Number.isFinite(storedModifiedAt) ? storedModifiedAt : null
+}
+
 function loadRecentFiles(): RecentFile[] {
   try {
     const parsed = JSON.parse(window.localStorage.getItem(recentFilesStorageKey) ?? '[]')
@@ -587,6 +595,15 @@ function persistActiveFilePath(activeFilePath: string | null) {
   window.localStorage.setItem(activeFilePathStorageKey, activeFilePath)
 }
 
+function persistActiveFileModifiedAt(activeFileModifiedAt: number | null) {
+  if (activeFileModifiedAt === null || !Number.isFinite(activeFileModifiedAt)) {
+    window.localStorage.removeItem(activeFileModifiedAtStorageKey)
+    return
+  }
+
+  window.localStorage.setItem(activeFileModifiedAtStorageKey, String(activeFileModifiedAt))
+}
+
 function loadEditorSessionState(): EditorSessionState | null {
   try {
     const parsed = JSON.parse(window.localStorage.getItem(editorSessionStorageKey) ?? 'null') as Partial<EditorSessionState> | null
@@ -655,6 +672,9 @@ function loadRecoverySnapshot(): RecoverySnapshot | null {
       savedSnapshot: parsed.savedSnapshot,
       fileName: parsed.fileName,
       filePath: typeof parsed.filePath === 'string' ? parsed.filePath : null,
+      modifiedAt: typeof parsed.modifiedAt === 'number' && Number.isFinite(parsed.modifiedAt)
+        ? parsed.modifiedAt
+        : null,
       updatedAt,
     }
   } catch {
@@ -2297,6 +2317,7 @@ function App() {
     loadStoredValue(fileNameStorageKey, 'untitled.md'),
   )
   const [activeFilePath, setActiveFilePath] = useState<string | null>(loadStoredFilePath)
+  const [activeFileModifiedAt, setActiveFileModifiedAt] = useState<number | null>(() => initialRecoverySnapshot?.modifiedAt ?? loadStoredFileModifiedAt())
   editorSessionDocumentRef.current = { filePath: activeFilePath, fileName }
   const [savedSnapshot, setSavedSnapshot] = useState(() => (
     initialRecoverySnapshot?.markdownValue === initialMarkdownValue
@@ -2905,6 +2926,7 @@ function App() {
           savedSnapshot,
           fileName,
           filePath: activeFilePath,
+          modifiedAt: activeFileModifiedAt,
           updatedAt: savedAt,
         }
 
@@ -2919,7 +2941,7 @@ function App() {
     }, 250)
 
     return () => window.clearTimeout(saveTimer)
-  }, [activeFilePath, fileName, markdownValue, recoverySnapshot, savedSnapshot, showWelcome])
+  }, [activeFileModifiedAt, activeFilePath, fileName, markdownValue, recoverySnapshot, savedSnapshot, showWelcome])
 
   useEffect(() => {
     persistRecentFiles(recentFiles)
@@ -2932,6 +2954,10 @@ function App() {
   useEffect(() => {
     persistActiveFilePath(activeFilePath)
   }, [activeFilePath])
+
+  useEffect(() => {
+    persistActiveFileModifiedAt(activeFileModifiedAt)
+  }, [activeFileModifiedAt])
 
   useEffect(() => {
     const editorView = editorViewRef.current ?? editorRef.current?.view
@@ -3428,6 +3454,10 @@ function App() {
     showDocumentOperationStatus('error', message)
   }
 
+  function confirmOverwriteExternalChanges() {
+    return window.confirm(t.alerts.fileChangedExternally)
+  }
+
   function clearRecoverySnapshot() {
     clearPersistedRecoverySnapshot()
     setRecoverySnapshot(null)
@@ -3442,6 +3472,7 @@ function App() {
     setMarkdownValue(recoverySnapshot.markdownValue)
     setFileName(recoverySnapshot.fileName)
     setActiveFilePath(window.openmark ? recoverySnapshot.filePath : null)
+    setActiveFileModifiedAt(window.openmark ? recoverySnapshot.modifiedAt : null)
     setSavedSnapshot(recoverySnapshot.savedSnapshot)
     setLastSavedAt(new Date(recoverySnapshot.updatedAt))
     showDocumentOperationStatus('success', formatTranslation(t.status.restoredRecoverySnapshot, {
@@ -3468,6 +3499,7 @@ function App() {
     setMarkdownValue(nextMarkdown)
     setFileName('untitled.md')
     setActiveFilePath(null)
+    setActiveFileModifiedAt(null)
     setSavedSnapshot(nextMarkdown)
     clearRecoverySnapshot()
     setDocumentOperationStatus(null)
@@ -3476,11 +3508,12 @@ function App() {
     clearPreviewImageSources()
   }
 
-  function applyOpenedDocument(content: string, nextFileName: string, nextFilePath: string | null) {
+  function applyOpenedDocument(content: string, nextFileName: string, nextFilePath: string | null, nextModifiedAt: number | null) {
     clearEditorSessionState()
     setMarkdownValue(content)
     setFileName(nextFileName)
     setActiveFilePath(nextFilePath)
+    setActiveFileModifiedAt(nextModifiedAt)
     setSavedSnapshot(content)
     clearRecoverySnapshot()
     rememberRecentFile(nextFilePath, nextFileName)
@@ -3515,7 +3548,7 @@ function App() {
       return
     }
 
-    applyOpenedDocument(result.content, result.fileName, result.filePath ?? null)
+    applyOpenedDocument(result.content, result.fileName, result.filePath ?? null, result.modifiedAt ?? null)
   }
 
   async function handleOpenRecentFile(filePath: string) {
@@ -3543,7 +3576,7 @@ function App() {
       return
     }
 
-    applyOpenedDocument(result.content, result.fileName, result.filePath ?? null)
+    applyOpenedDocument(result.content, result.fileName, result.filePath ?? null, result.modifiedAt ?? null)
   }
 
   function applyWorkspaceFolder(result: OpenMarkWorkspaceFolderResult) {
@@ -3706,7 +3739,7 @@ function App() {
       return
     }
 
-    applyOpenedDocument(fileText, selectedFile.name, null)
+    applyOpenedDocument(fileText, selectedFile.name, null, null)
     event.target.value = ''
   }
 
@@ -3791,7 +3824,7 @@ function App() {
     event.target.value = ''
   }
 
-  async function handleSaveMarkdown(options?: { forceDialog?: boolean }) {
+  async function handleSaveMarkdown(options?: { forceDialog?: boolean; allowOverwrite?: boolean }) {
     const targetFileName = withMarkdownExtension(fileName)
     const shouldForceDialog = options?.forceDialog || (
       window.openmark &&
@@ -3808,6 +3841,8 @@ function App() {
           filePath: activeFilePath,
           fileName: targetFileName,
           forceDialog: shouldForceDialog,
+          expectedModifiedAt: shouldForceDialog ? null : activeFileModifiedAt,
+          allowOverwrite: options?.allowOverwrite === true,
         })
       } catch {
         showSaveFailedStatus()
@@ -3815,12 +3850,23 @@ function App() {
       }
 
       if (result.error) {
+        if (result.conflict) {
+          showSaveFailedStatus(result.error)
+
+          if (confirmOverwriteExternalChanges()) {
+            await handleSaveMarkdown({ ...options, allowOverwrite: true })
+          }
+
+          return
+        }
+
         showSaveFailedStatus(result.error)
         return
       }
 
       if (!result.canceled && result.filePath) {
         setActiveFilePath(result.filePath)
+        setActiveFileModifiedAt(result.modifiedAt ?? null)
         setFileName(result.fileName ?? targetFileName)
         setSavedSnapshot(markdownValue)
         clearRecoverySnapshot()
@@ -3840,6 +3886,7 @@ function App() {
       'text/markdown;charset=utf-8',
     )
     setFileName(targetFileName)
+    setActiveFileModifiedAt(null)
     setSavedSnapshot(markdownValue)
     clearRecoverySnapshot()
     showDownloadedDocumentStatus(targetFileName)

@@ -92,6 +92,7 @@ const applicationStrings = {
       fileOpenFailed: 'This file could not be opened.',
       invalidFilePath: 'Invalid file path',
       invalidFolderPath: 'Invalid folder path',
+      fileModifiedExternally: 'This file changed on disk. Save again to overwrite it.',
       pdfExportFailed: 'This document could not be exported as PDF.',
       invalidClipboardContent: 'Invalid clipboard content.',
       noDownloadedUpdate: 'No downloaded update is ready to install.',
@@ -155,6 +156,7 @@ const applicationStrings = {
       fileOpenFailed: '无法打开这个文件。',
       invalidFilePath: '无效的文件路径',
       invalidFolderPath: '无效的文件夹路径',
+      fileModifiedExternally: '这个文件已在磁盘上被其他程序修改。再次保存将覆盖它。',
       pdfExportFailed: '无法将当前文档导出为 PDF。',
       invalidClipboardContent: '无效的剪贴板内容。',
       noDownloadedUpdate: '没有可安装的已下载更新。',
@@ -529,8 +531,10 @@ async function readMarkdownFile(filePath) {
   }
 
   let content
+  let fileStats
 
   try {
+    fileStats = await fs.stat(filePath)
     content = await fs.readFile(filePath, 'utf8')
   } catch {
     return { canceled: true, error: getApplicationStrings().errors.fileOpenFailed }
@@ -541,6 +545,7 @@ async function readMarkdownFile(filePath) {
     content,
     filePath,
     fileName: getFileName(filePath),
+    modifiedAt: fileStats.mtimeMs,
   }
 }
 
@@ -620,6 +625,10 @@ ipcMain.handle('openmark:save-markdown-file', async (_event, payload) => {
   const content = typeof payload?.content === 'string' ? payload.content : ''
   const defaultFileName = typeof payload?.fileName === 'string' ? payload.fileName : 'untitled.md'
   const knownPath = typeof payload?.filePath === 'string' && payload.filePath.length > 0 ? payload.filePath : null
+  const expectedModifiedAt = typeof payload?.expectedModifiedAt === 'number' && Number.isFinite(payload.expectedModifiedAt)
+    ? payload.expectedModifiedAt
+    : null
+  const allowOverwrite = payload?.allowOverwrite === true
   const defaultPath = knownPath ? path.join(path.dirname(knownPath), defaultFileName) : defaultFileName
   const targetPath = payload?.forceDialog
     ? await showSaveDialog(defaultPath, 'markdown', ['md', 'markdown'])
@@ -629,12 +638,33 @@ ipcMain.handle('openmark:save-markdown-file', async (_event, payload) => {
     return { canceled: true }
   }
 
+  if (knownPath && targetPath === knownPath && expectedModifiedAt !== null && !allowOverwrite) {
+    let fileStats
+
+    try {
+      fileStats = await fs.stat(targetPath)
+    } catch {
+      return { canceled: true, error: getApplicationStrings().errors.fileOpenFailed }
+    }
+
+    if (Math.abs(fileStats.mtimeMs - expectedModifiedAt) > 2) {
+      return {
+        canceled: true,
+        conflict: true,
+        error: getApplicationStrings().errors.fileModifiedExternally,
+        modifiedAt: fileStats.mtimeMs,
+      }
+    }
+  }
+
   await fs.writeFile(targetPath, content, 'utf8')
+  const savedStats = await fs.stat(targetPath)
 
   return {
     canceled: false,
     filePath: targetPath,
     fileName: getFileName(targetPath),
+    modifiedAt: savedStats.mtimeMs,
   }
 })
 

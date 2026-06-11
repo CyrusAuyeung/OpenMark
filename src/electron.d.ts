@@ -72,6 +72,7 @@ declare global {
         content?: string
         fileName?: string
         filePath?: string
+        modifiedAt?: number
         error?: string
       }>
       openRecentFile: (filePath: string) => Promise<{
@@ -79,6 +80,7 @@ declare global {
         content?: string
         fileName?: string
         filePath?: string
+        modifiedAt?: number
         error?: string
       }>
       selectWorkspaceFolder: () => Promise<OpenMarkWorkspaceFolderResult>
@@ -93,10 +95,14 @@ declare global {
         filePath?: string | null
         fileName: string
         forceDialog?: boolean
+        expectedModifiedAt?: number | null
+        allowOverwrite?: boolean
       }) => Promise<{
         canceled: boolean
         filePath?: string
         fileName?: string
+        modifiedAt?: number
+        conflict?: boolean
         error?: string
       }>
       saveHtmlFile: (payload: {

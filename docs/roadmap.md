@@ -120,3 +120,4 @@
 - Show a welcome-screen recovery entry for available snapshots ✅
 - Restore or discard recovery snapshots without touching saved files ✅
 - Surface recovery snapshot status in the footer ✅
+- Warn before saving over files changed outside OpenMark ✅
