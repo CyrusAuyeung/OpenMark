@@ -2,15 +2,16 @@
 
 ## Summary
 
-OpenMark 0.18.1 focuses on toolbar & preview spacing fixes. It includes fixes for Markdown formatting toolbar wrapping by keeping the controls on a single horizontal row with overflow scrolling, preserved source blank lines in the preview with dedicated spacer blocks so repeated Enter presses are visible instead of collapsing to one gap, and improvements to preview cursor alignment by using rendered source-line metadata, including preserved blank lines.
+OpenMark 0.18.2 focuses on toolbar fit hotfix. It includes Replaced the cramped Markdown formatting scroll strip with a compact More formatting menu, Kept primary formatting controls visible in one row on narrow split-view editor panes, and Moved low-frequency formatting, image insertion, and table editing actions into the More formatting menu.
 
 ## Highlights
 
-### Toolbar & Preview Spacing Fixes
+### Toolbar Fit Hotfix
 
-- Fixed Markdown formatting toolbar wrapping by keeping the controls on a single horizontal row with overflow scrolling.
-- Preserved source blank lines in the preview with dedicated spacer blocks so repeated Enter presses are visible instead of collapsing to one gap.
-- Improved preview cursor alignment by using rendered source-line metadata, including preserved blank lines.
+- Replaced the cramped Markdown formatting scroll strip with a compact More formatting menu.
+- Kept primary formatting controls visible in one row on narrow split-view editor panes.
+- Moved low-frequency formatting, image insertion, and table editing actions into the More formatting menu.
+- Kept the More formatting menu inside the editor pane with visible toolbar overflow and stronger header layering.
 
 ## Downloads
 
@@ -18,11 +19,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.18.1.exe` | Recommended installer. |
-| Windows | `OpenMark.0.18.1.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.18.1.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.18.1-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.18.1_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.18.2.exe` | Recommended installer. |
+| Windows | `OpenMark.0.18.2.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.18.2.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.18.2-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.18.2_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -57,4 +58,4 @@ Keep these auto-update metadata files attached when generated:
 ## Full Changelog
 
 - Release date: 2026-06-11
-- Tag: v0.18.1
+- Tag: v0.18.2

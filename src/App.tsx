@@ -39,6 +39,7 @@ import {
   Link as LinkIcon,
   List,
   ListOrdered,
+  MoreHorizontal,
   Minus,
   Moon,
   PanelBottom,
@@ -508,6 +509,14 @@ const markdownToolbarGroups: Array<
     { format: 'table', labelKey: 'table', titleKey: 'tableTitle', Icon: Table },
   ],
 ]
+
+const primaryMarkdownFormats = new Set<MarkdownFormat>(['bold', 'italic', 'link', 'heading-2', 'bullet-list', 'ordered-list'])
+const primaryMarkdownToolbarGroups = markdownToolbarGroups
+  .map((group) => group.filter(({ format }) => primaryMarkdownFormats.has(format)))
+  .filter((group) => group.length > 0)
+const secondaryMarkdownToolbarGroups = markdownToolbarGroups
+  .map((group) => group.filter(({ format }) => !primaryMarkdownFormats.has(format)))
+  .filter((group) => group.length > 0)
 
 const tableToolbarActions: Array<{
   action: TableEditAction
@@ -2763,6 +2772,8 @@ function App() {
   const [isSearchWholeWord, setIsSearchWholeWord] = useState(false)
   const [activeSearchRange, setActiveSearchRange] = useState<SearchMatch | null>(null)
   const [tableEditingState, setTableEditingState] = useState<TableEditingState>(defaultTableEditingState)
+  const formatMoreRef = useRef<HTMLDivElement | null>(null)
+  const [isFormatMoreOpen, setIsFormatMoreOpen] = useState(false)
   const [selectionStats, setSelectionStats] = useState<DocumentStats | null>(null)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [commandQuery, setCommandQuery] = useState('')
@@ -3727,6 +3738,34 @@ function App() {
 
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true })
   })
+
+  useEffect(() => {
+    if (!isFormatMoreOpen) {
+      return
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && formatMoreRef.current?.contains(event.target)) {
+        return
+      }
+
+      setIsFormatMoreOpen(false)
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsFormatMoreOpen(false)
+      }
+    }
+
+    window.addEventListener('pointerdown', handlePointerDown, { capture: true })
+    window.addEventListener('keydown', handleKeyDown, { capture: true })
+
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown, { capture: true })
+      window.removeEventListener('keydown', handleKeyDown, { capture: true })
+    }
+  }, [isFormatMoreOpen])
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -4765,6 +4804,10 @@ ${getExportStyleCss(exportStyle)}
     }
 
     return false
+  }
+
+  function closeFormatMoreMenu() {
+    setIsFormatMoreOpen(false)
   }
 
   function focusCommandInput() {
@@ -6312,7 +6355,7 @@ ${getExportStyleCss(exportStyle)}
                 <section className="editor-panel panel" aria-label={t.editor.markdownEditor}>
                   <div className="panel-header editor-panel-header">
                     <div className="format-toolbar" role="toolbar" aria-label={t.toolbar.markdownFormatting}>
-                      {markdownToolbarGroups.map((group, groupIndex) => (
+                      {primaryMarkdownToolbarGroups.map((group, groupIndex) => (
                         <div className="format-group" key={`format-group-${groupIndex}`}>
                           {group.map(({ format, labelKey, titleKey, Icon }) => {
                             const label = t.markdownToolbar[labelKey]
@@ -6333,33 +6376,104 @@ ${getExportStyleCss(exportStyle)}
                           })}
                         </div>
                       ))}
-                      <div className="format-group">
-                        <button
-                          type="button"
-                          className="format-button"
-                          onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => { void handleInsertImage() }}
-                          title={t.toolbar.insertImage}
-                          aria-label={t.toolbar.insertImage}
-                        >
-                          <ImagePlus size={15} />
-                        </button>
-                      </div>
-                      <div className="format-group">
-                        {tableToolbarActions.map(({ action, translationKey, Icon }) => (
+                      <div className={`format-more${isFormatMoreOpen ? ' is-open' : ''}`} ref={formatMoreRef}>
+                        {isFormatMoreOpen ? (
                           <button
-                            key={action}
                             type="button"
                             className="format-button"
                             onMouseDown={(event) => event.preventDefault()}
-                            onClick={() => handleTableEditAction(action)}
-                            title={t.table[translationKey]}
-                            aria-label={t.table[translationKey]}
-                            disabled={isTableActionDisabled(action)}
+                            onClick={() => setIsFormatMoreOpen(false)}
+                            title={t.toolbar.moreFormatting}
+                            aria-label={t.toolbar.moreFormatting}
+                            aria-haspopup="menu"
+                            aria-expanded="true"
                           >
-                            <Icon size={15} />
+                            <MoreHorizontal size={15} />
                           </button>
-                        ))}
+                        ) : (
+                          <button
+                            type="button"
+                            className="format-button"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => setIsFormatMoreOpen(true)}
+                            title={t.toolbar.moreFormatting}
+                            aria-label={t.toolbar.moreFormatting}
+                            aria-haspopup="menu"
+                            aria-expanded="false"
+                          >
+                            <MoreHorizontal size={15} />
+                          </button>
+                        )}
+                        {isFormatMoreOpen && (
+                          <div className="format-more-menu" role="menu">
+                          {secondaryMarkdownToolbarGroups.map((group, groupIndex) => (
+                            <div className="format-more-group" key={`format-more-group-${groupIndex}`}>
+                              {group.map(({ format, labelKey, titleKey, Icon }) => {
+                                const label = t.markdownToolbar[labelKey]
+
+                                return (
+                                  <button
+                                    key={format}
+                                    type="button"
+                                    className="format-menu-item"
+                                    role="menuitem"
+                                    onMouseDown={(event) => event.preventDefault()}
+                                    onClick={() => {
+                                      handleMarkdownFormat(format)
+                                      closeFormatMoreMenu()
+                                    }}
+                                    title={t.markdownToolbar[titleKey]}
+                                    aria-label={label}
+                                  >
+                                    <Icon size={15} />
+                                    <span>{label}</span>
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          ))}
+                          <div className="format-more-group">
+                            <button
+                              type="button"
+                              className="format-menu-item"
+                              role="menuitem"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => {
+                                void handleInsertImage()
+                                closeFormatMoreMenu()
+                              }}
+                              title={t.toolbar.insertImage}
+                              aria-label={t.toolbar.insertImage}
+                            >
+                              <ImagePlus size={15} />
+                              <span>{t.toolbar.insertImage}</span>
+                            </button>
+                          </div>
+                          {tableEditingState.isInTable && (
+                            <div className="format-more-group">
+                              {tableToolbarActions.map(({ action, translationKey, Icon }) => (
+                                <button
+                                  key={action}
+                                  type="button"
+                                  className="format-menu-item"
+                                  role="menuitem"
+                                  onMouseDown={(event) => event.preventDefault()}
+                                  onClick={() => {
+                                    handleTableEditAction(action)
+                                    closeFormatMoreMenu()
+                                  }}
+                                  title={t.table[translationKey]}
+                                  aria-label={t.table[translationKey]}
+                                  disabled={isTableActionDisabled(action)}
+                                >
+                                  <Icon size={15} />
+                                  <span>{t.table[translationKey]}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <span className="panel-file-name">{withMarkdownExtension(fileName)}</span>

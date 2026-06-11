@@ -1554,8 +1554,9 @@ body.is-resizing-split * {
 }
 
 .editor-panel-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  position: relative;
+  z-index: 12;
+  display: flex;
   gap: 10px;
   align-items: center;
   padding-top: 6px;
@@ -1563,42 +1564,117 @@ body.is-resizing-split * {
 }
 
 .panel-file-name {
+  display: none;
   text-align: right;
 }
 
 .format-toolbar {
   min-width: 0;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: flex-start;
   flex-wrap: nowrap;
+  gap: 3px;
+  overflow: visible;
+  padding: 2px 0;
+}
+
+.format-more {
+  position: relative;
+  flex: 0 0 auto;
+  z-index: 1;
+}
+
+.format-more.is-open {
+  z-index: 2;
+}
+
+.format-more-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  min-width: 184px;
+  display: grid;
   gap: 5px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 2px 0 5px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-1);
+  box-shadow: var(--shadow-md);
+}
+
+.format-more-group {
+  display: grid;
+  gap: 3px;
+}
+
+.format-more-group + .format-more-group {
+  padding-top: 5px;
+  border-top: 1px solid var(--border-muted);
+}
+
+.format-menu-item {
+  width: 100%;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--ink);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.format-menu-item:hover:not(:disabled) {
+  border-color: var(--accent-border);
+  background: var(--button-hover);
+}
+
+.format-menu-item:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.format-menu-item:disabled {
+  color: var(--disabled-ink);
+  cursor: not-allowed;
+}
+
+.format-menu-item span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .format-group {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
 }
 
 .format-group + .format-group {
-  padding-left: 6px;
+  padding-left: 4px;
   border-left: 1px solid var(--border);
 }
 
 .format-button {
-  width: 30px;
-  flex: 0 0 30px;
-  height: 30px;
+  width: 26px;
+  flex: 0 0 26px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: 6px;
   color: var(--muted);
   background: transparent;
   cursor: pointer;

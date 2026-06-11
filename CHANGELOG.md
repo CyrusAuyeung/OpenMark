@@ -2,6 +2,15 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.18.2 - 2026-06-11
+
+### Toolbar Fit Hotfix
+
+- Replaced the cramped Markdown formatting scroll strip with a compact More formatting menu.
+- Kept primary formatting controls visible in one row on narrow split-view editor panes.
+- Moved low-frequency formatting, image insertion, and table editing actions into the More formatting menu.
+- Kept the More formatting menu inside the editor pane with visible toolbar overflow and stronger header layering.
+
 ## 0.18.1 - 2026-06-11
 
 ### Toolbar & Preview Spacing Fixes

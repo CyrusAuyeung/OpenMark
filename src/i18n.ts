@@ -27,6 +27,7 @@ const en = {
     commandPalette: 'Command palette',
     insertImage: 'Insert image',
     markdownFormatting: 'Markdown formatting',
+    moreFormatting: 'More formatting',
     modeSuffix: 'mode',
   },
   viewModes: {
@@ -409,6 +410,7 @@ const zhCN: TranslationCatalog = {
     commandPalette: '命令面板',
     insertImage: '插入图片',
     markdownFormatting: 'Markdown 格式工具栏',
+    moreFormatting: '更多格式',
     modeSuffix: '模式',
   },
   viewModes: {
