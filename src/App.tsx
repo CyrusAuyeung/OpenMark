@@ -98,12 +98,18 @@ type WorkspaceSortMode = 'modified-desc' | 'name-asc'
 type UpdatePanelTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger'
 
 const clipboardWriteTimeoutMs = 1200
+const scrollSyncLockReleaseDelayMs = 80
+const outlineJumpScrollLockReleaseDelayMs = 400
 
 type OutlineItem = {
   level: number
   title: string
   lineNumber: number
   lineStart: number
+}
+
+type OutlineJumpTarget = OutlineItem & {
+  outlineIndex: number
 }
 
 type LineJumpTarget = {
@@ -2297,11 +2303,12 @@ function App() {
   const editorSessionDocumentRef = useRef<EditorSessionDocument>({ filePath: null, fileName: 'untitled.md' })
   const scheduleEditorSessionPersistRef = useRef<() => void>(() => undefined)
   const flushEditorSessionPersistRef = useRef<() => void>(() => undefined)
-  const pendingOutlineJumpRef = useRef<OutlineItem | null>(null)
+  const pendingOutlineJumpRef = useRef<OutlineJumpTarget | null>(null)
   const pendingLineJumpRef = useRef<LineJumpTarget | null>(null)
-  const scrollSyncSourceRef = useRef<'editor' | 'preview' | null>(null)
+  const scrollSyncSourceRef = useRef<'editor' | 'preview' | 'jump' | null>(null)
   const scrollSyncTimerRef = useRef<number | null>(null)
   const syncPreviewScrollFromEditorRef = useRef<() => void>(() => undefined)
+  const jumpToOutlineTargetRef = useRef<(target: OutlineJumpTarget) => boolean>(() => false)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const commandInputRef = useRef<HTMLInputElement | null>(null)
   const quickOpenInputRef = useRef<HTMLInputElement | null>(null)
@@ -3080,6 +3087,10 @@ function App() {
     syncPreviewScrollFromEditorRef.current = syncPreviewScrollFromEditor
   })
 
+  useEffect(() => {
+    jumpToOutlineTargetRef.current = jumpToOutlineTarget
+  })
+
   useEffect(() => () => {
     editorScrollCleanupRef.current?.()
   }, [])
@@ -3190,8 +3201,9 @@ function App() {
 
     window.requestAnimationFrame(() => {
       if (pendingOutlineJump) {
-        jumpToEditorLine(pendingOutlineJump)
-        pendingOutlineJumpRef.current = null
+        if (jumpToOutlineTargetRef.current(pendingOutlineJump)) {
+          pendingOutlineJumpRef.current = null
+        }
       }
 
       if (pendingLineJump) {
@@ -4227,6 +4239,63 @@ ${getExportStyleCss(exportStyle)}
     return true
   }
 
+  function getOutlineJumpTarget(item: OutlineItem, outlineIndex?: number): OutlineJumpTarget {
+    return {
+      ...item,
+      outlineIndex: outlineIndex ?? outline.findIndex((candidate) => (
+        candidate.lineStart === item.lineStart &&
+        candidate.lineNumber === item.lineNumber &&
+        candidate.title === item.title
+      )),
+    }
+  }
+
+  function jumpToPreviewHeading(target: OutlineJumpTarget) {
+    const previewScroller = previewScrollRef.current
+
+    if (mode !== 'split' || !previewScroller || target.outlineIndex < 0) {
+      return false
+    }
+
+    const heading = previewScroller.querySelector<HTMLElement>(`[data-outline-index="${target.outlineIndex}"]`)
+
+    if (!heading) {
+      return false
+    }
+
+    const scrollerRect = previewScroller.getBoundingClientRect()
+    const headingRect = heading.getBoundingClientRect()
+    const targetScrollTop = previewScroller.scrollTop +
+      headingRect.top -
+      scrollerRect.top -
+      (previewScroller.clientHeight - headingRect.height) / 2
+    const maxScrollTop = Math.max(0, previewScroller.scrollHeight - previewScroller.clientHeight)
+
+    previewScroller.scrollTop = Math.min(maxScrollTop, Math.max(0, targetScrollTop))
+
+    return true
+  }
+
+  function jumpToOutlineTarget(target: OutlineJumpTarget) {
+    let jumpedToEditor = false
+    let jumpedToPreview = false
+    const settlePreviewJump = () => {
+      jumpedToPreview = jumpToPreviewHeading(target) || jumpedToPreview
+    }
+
+    withScrollSyncLock('jump', () => {
+      jumpedToEditor = jumpToEditorLine(target)
+      settlePreviewJump()
+
+      window.requestAnimationFrame(() => {
+        settlePreviewJump()
+        window.setTimeout(settlePreviewJump, 120)
+      })
+    }, outlineJumpScrollLockReleaseDelayMs)
+
+    return jumpedToEditor || jumpedToPreview
+  }
+
   function jumpToDocumentDiagnostic(diagnostic: DocumentDiagnostic) {
     const target = { lineNumber: diagnostic.lineNumber, lineStart: diagnostic.lineStart }
 
@@ -4401,7 +4470,11 @@ ${getExportStyleCss(exportStyle)}
     element.scrollTop = scrollableDistance <= 0 ? 0 : scrollableDistance * ratio
   }
 
-  function withScrollSyncLock(source: 'editor' | 'preview', syncScroll: () => void) {
+  function withScrollSyncLock(
+    source: 'editor' | 'preview' | 'jump',
+    syncScroll: () => void,
+    releaseDelayMs = scrollSyncLockReleaseDelayMs,
+  ) {
     scrollSyncSourceRef.current = source
     syncScroll()
 
@@ -4412,11 +4485,11 @@ ${getExportStyleCss(exportStyle)}
     scrollSyncTimerRef.current = window.setTimeout(() => {
       scrollSyncSourceRef.current = null
       scrollSyncTimerRef.current = null
-    }, 80)
+    }, releaseDelayMs)
   }
 
   function syncPreviewScrollFromEditor() {
-    if (mode !== 'split' || scrollSyncSourceRef.current === 'preview') {
+    if (mode !== 'split' || scrollSyncSourceRef.current === 'preview' || scrollSyncSourceRef.current === 'jump') {
       return
     }
 
@@ -4432,7 +4505,7 @@ ${getExportStyleCss(exportStyle)}
   }
 
   function syncEditorScrollFromPreview() {
-    if (mode !== 'split' || scrollSyncSourceRef.current === 'editor') {
+    if (mode !== 'split' || scrollSyncSourceRef.current === 'editor' || scrollSyncSourceRef.current === 'jump') {
       return
     }
 
@@ -4649,8 +4722,10 @@ ${getExportStyleCss(exportStyle)}
   }
 
   function handleOutlineJump(item: OutlineItem) {
+    const target = getOutlineJumpTarget(item)
+
     setActiveOutlineLine(item.lineNumber)
-    pendingOutlineJumpRef.current = item
+    pendingOutlineJumpRef.current = target
 
     if (mode === 'preview') {
       setMode('split')
@@ -4658,7 +4733,7 @@ ${getExportStyleCss(exportStyle)}
     }
 
     window.requestAnimationFrame(() => {
-      if (jumpToEditorLine(item)) {
+      if (jumpToOutlineTarget(target)) {
         pendingOutlineJumpRef.current = null
       }
     })
@@ -4675,7 +4750,7 @@ ${getExportStyleCss(exportStyle)}
     const item = Number.isInteger(outlineIndex) ? outline[outlineIndex] : undefined
 
     if (item) {
-      handleOutlineJump(item)
+      handleOutlineJump(getOutlineJumpTarget(item, outlineIndex))
     }
   }
 
@@ -4695,7 +4770,7 @@ ${getExportStyleCss(exportStyle)}
     const item = Number.isInteger(outlineIndex) ? outline[outlineIndex] : undefined
 
     if (item) {
-      handleOutlineJump(item)
+      handleOutlineJump(getOutlineJumpTarget(item, outlineIndex))
     }
   }
 
