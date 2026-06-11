@@ -2,16 +2,17 @@
 
 ## Summary
 
-OpenMark 0.17.0 focuses on writing insight & review. It includes estimated reading time to document statistics and the status bar, selection-aware statistics so focused edits show their own word, character, line, and reading-time counts, and per-document word goal tracking with progress feedback for longer writing sessions.
+OpenMark 0.18.0 focuses on preview alignment & review actions. It includes preview-side cursor alignment so split-view editing shows the corresponding preview position, refinements to the editor header and top bar with a cleaner formatting toolbar, no redundant Markdown label, and a refreshed OpenMark mark and favicon, and review marker actions in the document inspector so selected lines can be marked as TODO, FIXME, REVIEW, or NOTE without typing marker syntax manually.
 
 ## Highlights
 
-### Writing Insight & Review
+### Preview Alignment & Review Actions
 
-- Added estimated reading time to document statistics and the status bar.
-- Added selection-aware statistics so focused edits show their own word, character, line, and reading-time counts.
-- Added per-document word goal tracking with progress feedback for longer writing sessions.
-- Added lightweight draft review markers for TODO, FIXME, REVIEW, and NOTE lines, with document-panel jump navigation.
+- Added preview-side cursor alignment so split-view editing shows the corresponding preview position.
+- Refined the editor header and top bar with a cleaner formatting toolbar, no redundant Markdown label, and a refreshed OpenMark mark and favicon.
+- Added review marker actions in the document inspector so selected lines can be marked as TODO, FIXME, REVIEW, or NOTE without typing marker syntax manually.
+- Localized review marker insertion and display for Simplified Chinese, while keeping English marker compatibility.
+- Improved preview cursor fallback alignment for documents without headings by matching the current editor line to rendered preview content blocks.
 
 ## Downloads
 
@@ -19,11 +20,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.17.0.exe` | Recommended installer. |
-| Windows | `OpenMark.0.17.0.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.17.0.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.17.0-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.17.0_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.18.0.exe` | Recommended installer. |
+| Windows | `OpenMark.0.18.0.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.18.0.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.18.0-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.18.0_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -58,4 +59,4 @@ Keep these auto-update metadata files attached when generated:
 ## Full Changelog
 
 - Release date: 2026-06-11
-- Tag: v0.17.0
+- Tag: v0.18.0

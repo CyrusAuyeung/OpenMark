@@ -2,6 +2,16 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.18.0 - 2026-06-11
+
+### Preview Alignment & Review Actions
+
+- Added preview-side cursor alignment so split-view editing shows the corresponding preview position.
+- Refined the editor header and top bar with a cleaner formatting toolbar, no redundant Markdown label, and a refreshed OpenMark mark and favicon.
+- Added review marker actions in the document inspector so selected lines can be marked as TODO, FIXME, REVIEW, or NOTE without typing marker syntax manually.
+- Localized review marker insertion and display for Simplified Chinese, while keeping English marker compatibility.
+- Improved preview cursor fallback alignment for documents without headings by matching the current editor line to rendered preview content blocks.
+
 ## 0.17.0 - 2026-06-11
 
 ### Writing Insight & Review
