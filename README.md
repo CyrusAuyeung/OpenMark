@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/CyrusAuyeung/OpenMark/actions/workflows/ci.yml/badge.svg)](https://github.com/CyrusAuyeung/OpenMark/actions/workflows/ci.yml)
 [![Release](https://github.com/CyrusAuyeung/OpenMark/actions/workflows/release.yml/badge.svg)](https://github.com/CyrusAuyeung/OpenMark/actions/workflows/release.yml)
-[![Release version](https://img.shields.io/badge/release-v0.14.0-2f7a5f)](https://github.com/CyrusAuyeung/OpenMark/releases/tag/v0.14.0)
+[![Release version](https://img.shields.io/badge/release-v0.15.0-2f7a5f)](https://github.com/CyrusAuyeung/OpenMark/releases/tag/v0.15.0)
 [![License](https://img.shields.io/github/license/CyrusAuyeung/OpenMark)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](docs/download.md)
 
@@ -48,11 +48,11 @@ The latest desktop release is available on the [GitHub Releases page](https://gi
 
 | Platform | Package |
 | --- | --- |
-| Windows installer | `OpenMark.Setup.0.14.0.exe` |
-| Windows portable app | `OpenMark.0.14.0.exe` |
-| macOS Intel | `OpenMark-0.14.0.dmg` |
-| macOS Apple Silicon | `OpenMark-0.14.0-arm64.dmg` |
-| Linux Debian/Ubuntu | `openmark-editor_0.14.0_amd64.deb` |
+| Windows installer | `OpenMark.Setup.0.15.0.exe` |
+| Windows portable app | `OpenMark.0.15.0.exe` |
+| macOS Intel | `OpenMark-0.15.0.dmg` |
+| macOS Apple Silicon | `OpenMark-0.15.0-arm64.dmg` |
+| Linux Debian/Ubuntu | `openmark-editor_0.15.0_amd64.deb` |
 
 Windows and macOS builds are currently unsigned, so the first launch may show operating-system warnings. Signed Windows releases are supported once code-signing secrets are configured in GitHub Actions; see [Windows Code Signing](docs/windows-signing.md).
 
@@ -71,11 +71,11 @@ Windows and macOS builds are currently unsigned, so the first launch may show op
 - Export preview, HTML/PDF export, and Markdown/HTML clipboard copy from the toolbar, command palette, and desktop menu
 - Reader, compact, and manuscript export style presets shared by HTML export, PDF export, and Copy HTML
 - Share-friendly export metadata with derived document titles, descriptions, Open Graph, and Twitter summary tags
-- Document outline, stats, editable file name, recent files, and unsaved-change protection
+- Document outline, stats, editable file name, recent files, recovery snapshots, and unsaved-change protection
 - Searchable recent files, workspace folder browsing, unified quick open, and keyboard-friendly library lists
 - Light, dark, and system theme preferences with adjustable editor font size
 - English and Simplified Chinese UI language preferences
-- Electron desktop shell with native open, save, Save As, HTML export, and update checks
+- Electron desktop shell with native open, save, Save As, HTML export, update checks, and external-change save warnings
 
 ### Run From Source
 
@@ -214,11 +214,11 @@ OpenMark 是一个本地优先的 Markdown 编辑器，面向希望拥有安静�
 
 | 平台 | 安装包 |
 | --- | --- |
-| Windows 安装版 | `OpenMark.Setup.0.14.0.exe` |
-| Windows 便携版 | `OpenMark.0.14.0.exe` |
-| macOS Intel | `OpenMark-0.14.0.dmg` |
-| macOS Apple Silicon | `OpenMark-0.14.0-arm64.dmg` |
-| Linux Debian/Ubuntu | `openmark-editor_0.14.0_amd64.deb` |
+| Windows 安装版 | `OpenMark.Setup.0.15.0.exe` |
+| Windows 便携版 | `OpenMark.0.15.0.exe` |
+| macOS Intel | `OpenMark-0.15.0.dmg` |
+| macOS Apple Silicon | `OpenMark-0.15.0-arm64.dmg` |
+| Linux Debian/Ubuntu | `openmark-editor_0.15.0_amd64.deb` |
 
 Windows 和 macOS 构建当前尚未签名，首次启动可能出现系统安全提示。配置 GitHub Actions 签名密钥后可发布已签名 Windows 版本，流程见 [Windows Code Signing](docs/windows-signing.md)。
 

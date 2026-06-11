@@ -2,16 +2,16 @@
 
 ## Summary
 
-OpenMark 0.14.0 focuses on search & replace. It includes a document find and replace workflow with replace current and replace all actions, support for match case and whole-word search options during replacement, and access to find and replace through toolbar buttons, keyboard shortcuts, command palette, and desktop menus.
+OpenMark 0.15.0 focuses on document safety & recovery. It includes local recovery snapshots for unsaved document changes with a welcome-screen restore entry, support for restoring or discarding recovery snapshots without touching saved files, and visibility into recovery snapshot status in the footer while documents remain unsaved.
 
 ## Highlights
 
-### Search & Replace
+### Document Safety & Recovery
 
-- Added a document find and replace workflow with replace current and replace all actions.
-- Supported match case and whole-word search options during replacement.
-- Exposed find and replace through toolbar buttons, keyboard shortcuts, command palette, and desktop menus.
-- Improved replacement feedback and disabled states when no matches are available.
+- Added local recovery snapshots for unsaved document changes with a welcome-screen restore entry.
+- Supported restoring or discarding recovery snapshots without touching saved files.
+- Surfaced recovery snapshot status in the footer while documents remain unsaved.
+- Added save-time warnings before overwriting files changed outside OpenMark.
 
 ## Downloads
 
@@ -19,11 +19,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.14.0.exe` | Recommended installer. |
-| Windows | `OpenMark.0.14.0.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.14.0.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.14.0-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.14.0_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.15.0.exe` | Recommended installer. |
+| Windows | `OpenMark.0.15.0.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.15.0.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.15.0-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.15.0_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -57,5 +57,5 @@ Keep these auto-update metadata files attached when generated:
 
 ## Full Changelog
 
-- Release date: 2026-06-10
-- Tag: v0.14.0
+- Release date: 2026-06-11
+- Tag: v0.15.0

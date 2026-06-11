@@ -2,6 +2,15 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.15.0 - 2026-06-11
+
+### Document Safety & Recovery
+
+- Added local recovery snapshots for unsaved document changes with a welcome-screen restore entry.
+- Supported restoring or discarding recovery snapshots without touching saved files.
+- Surfaced recovery snapshot status in the footer while documents remain unsaved.
+- Added save-time warnings before overwriting files changed outside OpenMark.
+
 ## 0.14.0 - 2026-06-10
 
 ### Search & Replace

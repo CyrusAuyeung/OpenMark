@@ -206,6 +206,7 @@ function toSummaryPhrase(item) {
     .replace(/^Restored\s+/i, 'restoring ')
     .replace(/^Supported\s+/i, 'support for ')
     .replace(/^Exposed\s+/i, 'access to ')
+    .replace(/^Surfaced\s+/i, 'visibility into ')
     .replace(/^Improved\s+/i, 'improvements to ')
     .replace(/^Refined\s+/i, 'refinements to ')
     .replace(/\.$/, '')
