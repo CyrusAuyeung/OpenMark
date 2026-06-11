@@ -302,6 +302,7 @@ const splitPaneRatioStorageKey = 'openmark:split-pane-ratio'
 const viewModeStorageKey = 'openmark:view-mode'
 const sidebarTabStorageKey = 'openmark:sidebar-tab'
 const recoverySnapshotStorageKey = 'openmark:recovery-snapshot'
+const documentWordGoalsStorageKey = 'openmark:document-word-goals'
 const maxRecentFiles = 6
 const quickOpenResultLimit = 10
 const searchResultWindowSize = 12
@@ -715,6 +716,65 @@ function persistRecoverySnapshot(recoverySnapshot: RecoverySnapshot) {
 
 function clearPersistedRecoverySnapshot() {
   window.localStorage.removeItem(recoverySnapshotStorageKey)
+}
+
+function getDocumentGoalKey(fileName: string, activeFilePath: string | null) {
+  return activeFilePath ? `file:${activeFilePath}` : `draft:${withMarkdownExtension(fileName)}`
+}
+
+function loadDocumentWordGoals() {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(documentWordGoalsStorageKey) ?? '{}')
+
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return {}
+    }
+
+    return Object.fromEntries(
+      Object.entries(parsed)
+        .filter((entry): entry is [string, number] => {
+          const [, value] = entry
+          return typeof value === 'number' && Number.isFinite(value) && value > 0
+        })
+        .map(([key, value]) => [key, Math.round(value)]),
+    )
+  } catch {
+    return {}
+  }
+}
+
+function loadDocumentWordGoal(goalKey: string) {
+  return loadDocumentWordGoals()[goalKey] ?? 0
+}
+
+function persistDocumentWordGoal(goalKey: string, wordGoal: number) {
+  const goals = loadDocumentWordGoals()
+
+  if (wordGoal > 0) {
+    goals[goalKey] = Math.round(wordGoal)
+  } else {
+    delete goals[goalKey]
+  }
+
+  window.localStorage.setItem(documentWordGoalsStorageKey, JSON.stringify(goals))
+}
+
+function normalizeWordGoalInput(value: string) {
+  const numericValue = Number(value)
+
+  if (!Number.isFinite(numericValue) || numericValue <= 0) {
+    return 0
+  }
+
+  return Math.round(numericValue)
+}
+
+function getWordGoalProgress(words: number, wordGoal: number) {
+  if (wordGoal <= 0) {
+    return 0
+  }
+
+  return Math.min(100, Math.round((words / wordGoal) * 100))
 }
 
 function isEditorSessionForDocument(editorSession: EditorSessionState, document: EditorSessionDocument) {
@@ -2381,6 +2441,7 @@ function App() {
   const initialMarkdownValue = useMemo(() => loadStoredValue(draftStorageKey, ''), [])
   const initialEditorSessionState = useMemo(loadEditorSessionState, [])
   const pendingEditorSessionRef = useRef<EditorSessionState | null>(initialEditorSessionState)
+  const lastDocumentGoalKeyRef = useRef<string | null>(null)
   const [markdownValue, setMarkdownValue] = useState(initialMarkdownValue)
   const [fileName, setFileName] = useState(() =>
     loadStoredValue(fileNameStorageKey, 'untitled.md'),
@@ -2412,6 +2473,7 @@ function App() {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const [activeOutlineLine, setActiveOutlineLine] = useState<number | null>(null)
   const [editorPosition, setEditorPosition] = useState<EditorPositionState>(defaultEditorPosition)
+  const [documentWordGoal, setDocumentWordGoal] = useState(() => loadDocumentWordGoal(getDocumentGoalKey(initialRecoverySnapshot?.fileName ?? loadStoredValue(fileNameStorageKey, 'untitled.md'), initialRecoverySnapshot?.filePath ?? loadStoredFilePath())))
   const [isSearchVisible, setIsSearchVisible] = useState(false)
   const [isReplaceVisible, setIsReplaceVisible] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -2493,6 +2555,12 @@ function App() {
     () => getDocumentStats(markdownValue, outline),
     [markdownValue, outline],
   )
+  const documentGoalKey = useMemo(
+    () => getDocumentGoalKey(fileName, activeFilePath),
+    [activeFilePath, fileName],
+  )
+  const wordGoalProgress = getWordGoalProgress(stats.words, documentWordGoal)
+  const remainingWordGoal = Math.max(documentWordGoal - stats.words, 0)
   const fileDateFormatter = useMemo(() => new Intl.DateTimeFormat(locale), [locale])
   const workspaceFileCollator = useMemo(
     () => new Intl.Collator(locale, { numeric: true, sensitivity: 'base' }),
@@ -3022,6 +3090,29 @@ function App() {
   useEffect(() => {
     persistActiveFileModifiedAt(activeFileModifiedAt)
   }, [activeFileModifiedAt])
+
+  useEffect(() => {
+    let isCurrentGoalKey = true
+
+    queueMicrotask(() => {
+      if (isCurrentGoalKey) {
+        setDocumentWordGoal(loadDocumentWordGoal(documentGoalKey))
+      }
+    })
+
+    return () => {
+      isCurrentGoalKey = false
+    }
+  }, [documentGoalKey])
+
+  useEffect(() => {
+    if (lastDocumentGoalKeyRef.current !== documentGoalKey) {
+      lastDocumentGoalKeyRef.current = documentGoalKey
+      return
+    }
+
+    persistDocumentWordGoal(documentGoalKey, documentWordGoal)
+  }, [documentGoalKey, documentWordGoal])
 
   useEffect(() => {
     const editorView = editorViewRef.current ?? editorRef.current?.view
@@ -5357,6 +5448,40 @@ ${getExportStyleCss(exportStyle)}
                 {activeFilePath ?? t.document.unsavedDesktopDocument}
               </p>
             )}
+            <section className="word-goal-panel" aria-label={t.document.wordGoal}>
+              <label className="word-goal-field">
+                <span>{t.document.wordGoal}</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="50"
+                  inputMode="numeric"
+                  value={documentWordGoal > 0 ? String(documentWordGoal) : ''}
+                  placeholder={t.document.wordGoalPlaceholder}
+                  onChange={(event) => setDocumentWordGoal(normalizeWordGoalInput(event.target.value))}
+                />
+              </label>
+              <progress
+                className="word-goal-progress"
+                value={documentWordGoal > 0 ? Math.min(stats.words, documentWordGoal) : 0}
+                max={documentWordGoal > 0 ? documentWordGoal : 1}
+                aria-label={formatTranslation(t.document.wordGoalProgress, { progress: String(wordGoalProgress) })}
+              ></progress>
+              <div className="word-goal-summary" aria-live="polite">
+                {documentWordGoal > 0 ? (
+                  <>
+                    <span>{formatTranslation(t.document.wordGoalProgress, { progress: String(wordGoalProgress) })}</span>
+                    <strong>
+                      {remainingWordGoal > 0
+                        ? formatTranslation(t.document.wordGoalRemaining, { count: String(remainingWordGoal) })
+                        : t.document.wordGoalComplete}
+                    </strong>
+                  </>
+                ) : (
+                  <span>{t.document.wordGoalPlaceholder}</span>
+                )}
+              </div>
+            </section>
             <div className="metric-list">
               <div>
                 <span>{t.document.words}</span>
