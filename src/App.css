@@ -435,6 +435,11 @@
   box-shadow: var(--shadow-xs);
 }
 
+.metric-list .metric-wide {
+  grid-column: 1 / -1;
+  min-height: 54px;
+}
+
 .metric-list span {
   color: var(--muted);
   font-size: 12px;
@@ -1750,6 +1755,12 @@ body.is-resizing-split * {
   font-variant-numeric: tabular-nums;
 }
 
+.status-stats {
+  flex: 0 0 auto;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
 .status-message.success {
   color: var(--accent);
   font-weight: 700;
@@ -1758,6 +1769,12 @@ body.is-resizing-split * {
 .status-message.error {
   color: var(--warning);
   font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .status-stats {
+    display: none;
+  }
 }
 
 .command-palette-backdrop {

@@ -129,3 +129,10 @@
 - Lazy-load Markdown preview and export rendering dependencies ✅
 - Keep the first editor screen responsive while heavy editor tooling loads ✅
 - Review remaining editor dependencies for future lazy-loading boundaries ✅
+
+## Milestone 18: Writing Insight & Review
+
+- Add estimated reading time to document statistics and the status bar ✅
+- Add selection-aware statistics for focused edits
+- Add document goal tracking for longer writing sessions
+- Add lightweight review markers for drafts

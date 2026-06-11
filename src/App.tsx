@@ -124,6 +124,8 @@ type UpdatePanelTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger'
 const clipboardWriteTimeoutMs = 1200
 const scrollSyncLockReleaseDelayMs = 80
 const outlineJumpScrollLockReleaseDelayMs = 400
+const estimatedWordsPerMinute = 225
+const estimatedCjkCharactersPerMinute = 500
 
 type OutlineItem = {
   level: number
@@ -146,6 +148,7 @@ type DocumentStats = {
   characters: number
   lines: number
   headings: number
+  readingMinutes: number
 }
 
 type DocumentDiagnosticKind =
@@ -912,13 +915,27 @@ function getDocumentStats(markdownValue: string, outline: OutlineItem[]): Docume
     .replace(/!\[[^\]]*]\([^)]*\)/g, ' ')
     .replace(/\[[^\]]*]\([^)]*\)/g, ' ')
     .replace(/[#>*_`~|[\](){}-]/g, ' ')
+  const normalizedPlainText = plainText.trim()
+  const words = normalizedPlainText.split(/\s+/).filter(Boolean).length
 
   return {
-    words: plainText.trim().split(/\s+/).filter(Boolean).length,
+    words,
     characters: markdownValue.replace(/\s/g, '').length,
     lines: markdownValue.length > 0 ? markdownValue.split(/\r\n|\r|\n/).length : 0,
     headings: outline.length,
+    readingMinutes: getEstimatedReadingMinutes(normalizedPlainText, words),
   }
+}
+
+function getEstimatedReadingMinutes(plainText: string, words: number) {
+  if (!plainText) {
+    return 0
+  }
+
+  const cjkCharacters = plainText.match(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu)?.length ?? 0
+  const estimatedMinutes = (words / estimatedWordsPerMinute) + (cjkCharacters / estimatedCjkCharactersPerMinute)
+
+  return Math.max(1, Math.ceil(estimatedMinutes))
 }
 
 function getMarkdownCodeFenceRanges(markdownValue: string) {
@@ -2904,6 +2921,10 @@ function App() {
     line: String(editorPosition.line),
     column: String(editorPosition.column),
   })} · ${formatTranslation(t.status.documentProgress, { progress: String(editorPosition.progress) })}`
+  const footerDocumentStatsLabel = formatTranslation(t.status.documentStats, {
+    words: String(stats.words),
+    minutes: String(stats.readingMinutes),
+  })
   const recoverySnapshotSavedLabel = recoverySnapshot
     ? new Intl.DateTimeFormat(locale, {
       month: 'short',
@@ -5313,6 +5334,10 @@ ${getExportStyleCss(exportStyle)}
                 <span>{t.document.headings}</span>
                 <strong>{stats.headings}</strong>
               </div>
+              <div className="metric-wide">
+                <span>{t.document.readingTime}</span>
+                <strong>{formatTranslation(t.document.readingTimeMinutes, { minutes: String(stats.readingMinutes) })}</strong>
+              </div>
             </div>
             <section className="diagnostics-section" aria-label={t.diagnostics.title}>
               <div className="diagnostics-heading">
@@ -5974,6 +5999,7 @@ ${getExportStyleCss(exportStyle)}
         <span>{fileName}</span>
         <span>{t.viewModes[mode]}</span>
         <span className="status-position">{footerPositionLabel}</span>
+        <span className="status-stats">{footerDocumentStatsLabel}</span>
         <span>{hasUnsavedChanges ? t.document.unsaved : t.document.saved}</span>
         <span className={documentOperationStatus ? `status-message ${documentOperationStatus.tone}` : undefined}>
           {footerStatusLabel}
