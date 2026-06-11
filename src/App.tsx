@@ -9,17 +9,9 @@ import {
   useState,
 } from 'react'
 import CodeMirror, { type ReactCodeMirrorRef } from '@uiw/react-codemirror'
+import { Compartment } from '@codemirror/state'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { oneDark } from '@codemirror/theme-one-dark'
-import {
-  SearchQuery,
-  findNext,
-  findPrevious,
-  replaceAll,
-  replaceNext,
-  search,
-  setSearchQuery,
-} from '@codemirror/search'
 import { EditorView, keymap } from '@codemirror/view'
 import {
   Bold,
@@ -82,9 +74,12 @@ import {
 } from './i18n'
 
 type MarkdownEngineModule = typeof import('./markdownEngine')
+type EditorSearchToolsModule = typeof import('./editorSearchTools')
 
 let markdownEngineModule: MarkdownEngineModule | null = null
 let markdownEnginePromise: Promise<MarkdownEngineModule> | null = null
+let editorSearchToolsModule: EditorSearchToolsModule | null = null
+let editorSearchToolsPromise: Promise<EditorSearchToolsModule> | null = null
 
 function isMarkdownEngineLoaded() {
   return markdownEngineModule !== null
@@ -97,6 +92,19 @@ function loadMarkdownEngine() {
   })
 
   return markdownEnginePromise
+}
+
+function isEditorSearchToolsLoaded() {
+  return editorSearchToolsModule !== null
+}
+
+function loadEditorSearchTools() {
+  editorSearchToolsPromise ??= import('./editorSearchTools').then((module) => {
+    editorSearchToolsModule = module
+    return module
+  })
+
+  return editorSearchToolsPromise
 }
 
 type ViewMode = 'write' | 'split' | 'preview'
@@ -2313,6 +2321,8 @@ function App() {
   const scrollSyncTimerRef = useRef<number | null>(null)
   const syncPreviewScrollFromEditorRef = useRef<() => void>(() => undefined)
   const jumpToOutlineTargetRef = useRef<(target: OutlineJumpTarget) => boolean>(() => false)
+  const editorSearchCompartmentRef = useRef(new Compartment())
+  const isEditorSearchExtensionLoadedRef = useRef(false)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const commandInputRef = useRef<HTMLInputElement | null>(null)
   const quickOpenInputRef = useRef<HTMLInputElement | null>(null)
@@ -2391,7 +2401,7 @@ function App() {
   const editorExtensions = useMemo(
     () => [
       markdown({ base: markdownLanguage }),
-      search({ top: true }),
+      editorSearchCompartmentRef.current.of([]),
       EditorView.domEventHandlers({ paste: handleMarkdownPaste }),
       keymap.of([
         { key: 'Enter', run: continueMarkdownList },
@@ -3158,18 +3168,15 @@ function App() {
   useEffect(() => {
     const editorView = editorViewRef.current ?? editorRef.current?.view
 
-    if (!editorView) {
+    if (!editorView || !isEditorSearchToolsLoaded()) {
       return
     }
 
-    editorView.dispatch({
-      effects: setSearchQuery.of(new SearchQuery({
-        search: searchTerm,
-        replace: replaceTerm,
-        caseSensitive: isSearchCaseSensitive,
-        wholeWord: isSearchWholeWord,
-        literal: true,
-      })),
+    editorSearchToolsModule?.applySearchQuery(editorView, {
+      searchTerm,
+      replaceTerm,
+      caseSensitive: isSearchCaseSensitive,
+      wholeWord: isSearchWholeWord,
     })
   }, [isSearchCaseSensitive, isSearchWholeWord, replaceTerm, searchTerm])
 
@@ -4613,6 +4620,30 @@ ${getExportStyleCss(exportStyle)}
     })
   }
 
+  async function ensureEditorSearchTools(editorView = getEditorView()) {
+    if (!editorView) {
+      return null
+    }
+
+    const searchTools = await loadEditorSearchTools()
+
+    if (!isEditorSearchExtensionLoadedRef.current) {
+      editorView.dispatch({
+        effects: editorSearchCompartmentRef.current.reconfigure(searchTools.createSearchExtension()),
+      })
+      isEditorSearchExtensionLoadedRef.current = true
+    }
+
+    searchTools.applySearchQuery(editorView, {
+      searchTerm,
+      replaceTerm,
+      caseSensitive: isSearchCaseSensitive,
+      wholeWord: isSearchWholeWord,
+    })
+
+    return searchTools
+  }
+
   function openSearchBar(searchMode: 'find' | 'replace') {
     if (showWelcome) {
       setIsWelcomeVisible(false)
@@ -4625,6 +4656,7 @@ ${getExportStyleCss(exportStyle)}
       setMode((currentMode) => (currentMode === 'preview' ? 'split' : currentMode))
     }
 
+    void ensureEditorSearchTools()
     focusSearchInput()
   }
 
@@ -4641,14 +4673,20 @@ ${getExportStyleCss(exportStyle)}
     })
   }
 
-  function moveSearchMatch(direction: 'next' | 'previous') {
+  async function moveSearchMatch(direction: 'next' | 'previous') {
     const editorView = getEditorView()
 
     if (!editorView || searchTerm.length === 0) {
       return
     }
 
-    const didMove = direction === 'next' ? findNext(editorView) : findPrevious(editorView)
+    const searchTools = await ensureEditorSearchTools(editorView)
+
+    if (!searchTools) {
+      return
+    }
+
+    const didMove = searchTools.moveSearchMatch(editorView, direction)
 
     if (didMove) {
       syncActiveSearchRange(editorView)
@@ -4675,7 +4713,7 @@ ${getExportStyleCss(exportStyle)}
     setActiveSearchRange({ from: result.from, to: result.to })
   }
 
-  function replaceCurrentSearchMatch() {
+  async function replaceCurrentSearchMatch() {
     const editorView = getEditorView()
 
     if (!editorView || searchTerm.length === 0) {
@@ -4687,7 +4725,13 @@ ${getExportStyleCss(exportStyle)}
       return
     }
 
-    const didReplace = replaceNext(editorView)
+    const searchTools = await ensureEditorSearchTools(editorView)
+
+    if (!searchTools) {
+      return
+    }
+
+    const didReplace = searchTools.replaceCurrentSearchMatch(editorView)
 
     if (didReplace) {
       showDocumentOperationStatus('success', t.status.replacedCurrentMatch)
@@ -4695,7 +4739,7 @@ ${getExportStyleCss(exportStyle)}
     }
   }
 
-  function replaceAllSearchMatches() {
+  async function replaceAllSearchMatches() {
     const editorView = getEditorView()
 
     if (!editorView || searchTerm.length === 0) {
@@ -4709,7 +4753,13 @@ ${getExportStyleCss(exportStyle)}
       return
     }
 
-    replaceAll(editorView)
+    const searchTools = await ensureEditorSearchTools(editorView)
+
+    if (!searchTools) {
+      return
+    }
+
+    searchTools.replaceAllSearchMatches(editorView)
     showDocumentOperationStatus('success', formatTranslation(t.status.replacedSearchMatches, {
       count: String(replacedCount),
     }))
@@ -4719,7 +4769,7 @@ ${getExportStyleCss(exportStyle)}
   function handleSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
     if (event.key === 'Enter') {
       event.preventDefault()
-      moveSearchMatch(event.shiftKey ? 'previous' : 'next')
+      void moveSearchMatch(event.shiftKey ? 'previous' : 'next')
     }
 
     if (event.key === 'Escape') {
@@ -5695,7 +5745,7 @@ ${getExportStyleCss(exportStyle)}
                           type="button"
                           className="search-icon-button"
                           onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => moveSearchMatch('previous')}
+                          onClick={() => { void moveSearchMatch('previous') }}
                           title={t.search.previousMatch}
                           aria-label={t.search.previousMatch}
                           disabled={!canUseSearchMatchActions}
@@ -5706,7 +5756,7 @@ ${getExportStyleCss(exportStyle)}
                           type="button"
                           className="search-icon-button"
                           onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => moveSearchMatch('next')}
+                          onClick={() => { void moveSearchMatch('next') }}
                           title={t.search.nextMatch}
                           aria-label={t.search.nextMatch}
                           disabled={!canUseSearchMatchActions}
@@ -5772,7 +5822,7 @@ ${getExportStyleCss(exportStyle)}
                             type="button"
                             className="search-action-button"
                             onMouseDown={(event) => event.preventDefault()}
-                            onClick={replaceCurrentSearchMatch}
+                            onClick={() => { void replaceCurrentSearchMatch() }}
                             title={t.search.replaceCurrentMatch}
                             aria-label={t.search.replaceCurrentMatch}
                             disabled={!canUseSearchMatchActions}
@@ -5784,7 +5834,7 @@ ${getExportStyleCss(exportStyle)}
                             type="button"
                             className="search-action-button"
                             onMouseDown={(event) => event.preventDefault()}
-                            onClick={replaceAllSearchMatches}
+                            onClick={() => { void replaceAllSearchMatches() }}
                             title={t.search.replaceAllMatches}
                             aria-label={t.search.replaceAllMatches}
                             disabled={!canUseSearchMatchActions}
