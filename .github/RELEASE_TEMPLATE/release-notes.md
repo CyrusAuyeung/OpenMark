@@ -2,16 +2,16 @@
 
 ## Summary
 
-OpenMark 0.16.0 focuses on bundle & startup polish. It includes split renderer dependencies into stable vendor chunks and added a build budget check for JavaScript chunk sizes, lazy-loaded Markdown preview, export rendering, and editor search tooling so the first editor screen can render sooner, and preserved preview/export behavior while loading Markdown rendering dependencies on demand.
+OpenMark 0.17.0 focuses on writing insight & review. It includes estimated reading time to document statistics and the status bar, selection-aware statistics so focused edits show their own word, character, line, and reading-time counts, and per-document word goal tracking with progress feedback for longer writing sessions.
 
 ## Highlights
 
-### Bundle & Startup Polish
+### Writing Insight & Review
 
-- Split renderer dependencies into stable vendor chunks and added a build budget check for JavaScript chunk sizes.
-- Lazy-loaded Markdown preview, export rendering, and editor search tooling so the first editor screen can render sooner.
-- Preserved preview/export behavior while loading Markdown rendering dependencies on demand.
-- Improved outline jumps so the sidebar, Markdown editor, and preview stay aligned on the selected heading.
+- Added estimated reading time to document statistics and the status bar.
+- Added selection-aware statistics so focused edits show their own word, character, line, and reading-time counts.
+- Added per-document word goal tracking with progress feedback for longer writing sessions.
+- Added lightweight draft review markers for TODO, FIXME, REVIEW, and NOTE lines, with document-panel jump navigation.
 
 ## Downloads
 
@@ -19,11 +19,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.16.0.exe` | Recommended installer. |
-| Windows | `OpenMark.0.16.0.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.16.0.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.16.0-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.16.0_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.17.0.exe` | Recommended installer. |
+| Windows | `OpenMark.0.17.0.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.17.0.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.17.0-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.17.0_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -58,4 +58,4 @@ Keep these auto-update metadata files attached when generated:
 ## Full Changelog
 
 - Release date: 2026-06-11
-- Tag: v0.16.0
+- Tag: v0.17.0

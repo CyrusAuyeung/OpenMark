@@ -2,6 +2,15 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.17.0 - 2026-06-11
+
+### Writing Insight & Review
+
+- Added estimated reading time to document statistics and the status bar.
+- Added selection-aware statistics so focused edits show their own word, character, line, and reading-time counts.
+- Added per-document word goal tracking with progress feedback for longer writing sessions.
+- Added lightweight draft review markers for TODO, FIXME, REVIEW, and NOTE lines, with document-panel jump navigation.
+
 ## 0.16.0 - 2026-06-11
 
 ### Bundle & Startup Polish
