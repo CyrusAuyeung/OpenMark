@@ -1555,7 +1555,7 @@ body.is-resizing-split * {
 
 .editor-panel-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(76px, 132px);
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
   padding-top: 6px;
@@ -1571,10 +1571,11 @@ body.is-resizing-split * {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 5px;
-  overflow: visible;
-  padding: 2px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0 5px;
 }
 
 .format-group {
@@ -1591,6 +1592,7 @@ body.is-resizing-split * {
 
 .format-button {
   width: 30px;
+  flex: 0 0 30px;
   height: 30px;
   display: inline-flex;
   align-items: center;
@@ -1906,6 +1908,11 @@ body.is-resizing-split * {
   font: 17px/1.72 var(--serif);
 }
 
+.markdown-preview .markdown-blank-line {
+  min-height: 1.72em;
+  margin: 0;
+}
+
 .markdown-preview > *:first-child {
   margin-top: 0;
 }
@@ -1961,7 +1968,11 @@ body.is-resizing-split * {
 .markdown-preview blockquote,
 .markdown-preview pre,
 .markdown-preview table {
-  margin: 0 0 1em;
+  margin: 0;
+}
+
+.markdown-preview > :not(.markdown-blank-line) + :not(.markdown-blank-line) {
+  margin-top: 1em;
 }
 
 .markdown-preview a {

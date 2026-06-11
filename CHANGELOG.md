@@ -2,6 +2,14 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.18.1 - 2026-06-11
+
+### Toolbar & Preview Spacing Fixes
+
+- Fixed Markdown formatting toolbar wrapping by keeping the controls on a single horizontal row with overflow scrolling.
+- Preserved source blank lines in the preview with dedicated spacer blocks so repeated Enter presses are visible instead of collapsing to one gap.
+- Improved preview cursor alignment by using rendered source-line metadata, including preserved blank lines.
+
 ## 0.18.0 - 2026-06-11
 
 ### Preview Alignment & Review Actions
