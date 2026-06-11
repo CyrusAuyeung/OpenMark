@@ -125,5 +125,6 @@
 ## Milestone 17: Bundle & Startup Polish
 
 - Split large renderer dependencies into stable build chunks ✅
+- Add a build budget check for renderer JavaScript chunks ✅
 - Keep the first editor screen responsive while heavy editor tooling loads
 - Review export and preview dependencies for future lazy-loading boundaries

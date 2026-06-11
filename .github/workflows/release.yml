@@ -66,6 +66,9 @@ jobs:
       - name: Build renderer
         run: npm run build
 
+      - name: Check build budget
+        run: npm run build:budget
+
       - name: Build Windows artifacts
         env:
           CSC_LINK: ${{ secrets.WINDOWS_CODESIGN_CERTIFICATE }}
@@ -102,6 +105,9 @@ jobs:
 
       - name: Build renderer
         run: npm run build
+
+      - name: Check build budget
+        run: npm run build:budget
 
       - name: Build macOS artifacts
         run: npx electron-builder --mac --publish never --config electron-builder.config.cjs
@@ -143,6 +149,9 @@ jobs:
 
       - name: Build renderer
         run: npm run build
+
+      - name: Check build budget
+        run: npm run build:budget
 
       - name: Build Linux artifacts
         run: npx electron-builder --linux --publish never --config electron-builder.config.cjs
