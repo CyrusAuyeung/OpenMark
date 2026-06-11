@@ -121,3 +121,9 @@
 - Restore or discard recovery snapshots without touching saved files ✅
 - Surface recovery snapshot status in the footer ✅
 - Warn before saving over files changed outside OpenMark ✅
+
+## Milestone 17: Bundle & Startup Polish
+
+- Split large renderer dependencies into stable build chunks ✅
+- Keep the first editor screen responsive while heavy editor tooling loads
+- Review export and preview dependencies for future lazy-loading boundaries
