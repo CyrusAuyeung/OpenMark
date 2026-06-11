@@ -83,6 +83,7 @@ jobs:
             release/*.exe
             release/*.blockmap
             release/*.yml
+            !release/builder-debug.yml
           if-no-files-found: error
           retention-days: 14
 
@@ -121,6 +122,7 @@ jobs:
             release/*.zip
             release/*.blockmap
             release/*.yml
+            !release/builder-debug.yml
           if-no-files-found: error
           retention-days: 14
 
@@ -166,6 +168,7 @@ jobs:
           path: |
             release/*.deb
             release/*.yml
+            !release/builder-debug.yml
           if-no-files-found: error
           retention-days: 14
 
