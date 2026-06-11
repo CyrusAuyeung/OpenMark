@@ -285,6 +285,8 @@ type MarkdownToolbarTranslationKey = keyof TranslationCatalog['markdownToolbar']
 
 type MarkdownPlaceholderCatalog = TranslationCatalog['markdownPlaceholders']
 
+type ReviewMarkerTranslationCatalog = TranslationCatalog['review']
+
 type MarkdownListMatch = {
   indent: string
   marker: string
@@ -346,7 +348,21 @@ const zeroWidthPasteCharactersPattern = /[\u200B-\u200D\uFEFF]/g
 const supportedPasteUrlProtocols = new Set(['http:', 'https:'])
 const safeLinkProtocols = new Set(['http:', 'https:', 'mailto:', 'tel:', 'file:'])
 const markdownReferencePattern = /(!?)\[([^\]\n]*)\]\(([^)\n]*)\)/g
-const reviewMarkerPattern = /^\s*(?:[-*+]\s+|>\s*)?(?:\[[ xX]\]\s*)?(TODO|FIXME|REVIEW|NOTE)\b\s*:?[ \t]*(.*)/i
+const reviewMarkerTokenPattern = 'TODO|FIXME|REVIEW|NOTE|待办|修正|审阅|备注'
+const reviewMarkerLeadPattern = '\\s*(?:(?:(?:[-*+]|\\d+[.)])\\s+)(?:\\[[ xX]\\]\\s*)?|>\\s*)?'
+const reviewMarkerPattern = new RegExp(`^(${reviewMarkerLeadPattern})(${reviewMarkerTokenPattern})(?=\\s|[:：]|$)\\s*[:：]?[ \\t]*(.*)$`, 'iu')
+const reviewMarkerLinePattern = new RegExp(`^(${reviewMarkerLeadPattern})(.*)$`, 'u')
+const reviewMarkerKindByToken = new Map<string, ReviewMarkerKind>([
+  ['TODO', 'todo'],
+  ['待办', 'todo'],
+  ['FIXME', 'fixme'],
+  ['修正', 'fixme'],
+  ['REVIEW', 'review'],
+  ['审阅', 'review'],
+  ['NOTE', 'note'],
+  ['备注', 'note'],
+])
+const reviewMarkerActionKinds: ReviewMarkerKind[] = ['todo', 'fixme', 'review', 'note']
 
 const modeOptions: Array<{
   value: ViewMode
@@ -1258,12 +1274,19 @@ function getReviewMarkers(markdownValue: string): ReviewMarker[] {
     const markerMatch = reviewMarkerPattern.exec(lineText)
 
     if (markerMatch) {
+      const reviewMarkerKind = reviewMarkerKindByToken.get(markerMatch[2].toUpperCase())
+
+      if (!reviewMarkerKind) {
+        lineNumber += 1
+        continue
+      }
+
       reviewMarkers.push({
         id: `review-${lineStart}`,
-        kind: markerMatch[1].toLowerCase() as ReviewMarkerKind,
+        kind: reviewMarkerKind,
         lineNumber,
         lineStart,
-        text: markerMatch[2].trim() || lineText.trim(),
+        text: markerMatch[3].trim() || lineText.trim(),
       })
     }
 
@@ -1271,6 +1294,47 @@ function getReviewMarkers(markdownValue: string): ReviewMarker[] {
   }
 
   return reviewMarkers
+}
+
+function formatReviewMarkerLine(line: string, kind: ReviewMarkerKind, reviewCatalog: ReviewMarkerTranslationCatalog) {
+  const markerMatch = reviewMarkerPattern.exec(line)
+  const markerToken = reviewCatalog.tokens[kind]
+  const markerSeparator = reviewCatalog.separator
+
+  if (markerMatch) {
+    return `${markerMatch[1]}${markerToken}${markerSeparator}${markerMatch[3].trim() || reviewCatalog.placeholder}`
+  }
+
+  const lineMatch = reviewMarkerLinePattern.exec(line)
+  const linePrefix = lineMatch?.[1] ?? ''
+  const lineBody = lineMatch?.[2]?.trim() ?? ''
+
+  return `${linePrefix}${markerToken}${markerSeparator}${lineBody || reviewCatalog.placeholder}`
+}
+
+function applyReviewMarker(view: EditorView, kind: ReviewMarkerKind, reviewCatalog: ReviewMarkerTranslationCatalog) {
+  const selection = view.state.selection.main
+  const lineEndPosition = selection.empty ? selection.to : Math.max(selection.from, selection.to - 1)
+  const fromLine = view.state.doc.lineAt(selection.from)
+  const toLine = view.state.doc.lineAt(lineEndPosition)
+  const markedLines: string[] = []
+
+  for (let lineNumber = fromLine.number; lineNumber <= toLine.number; lineNumber += 1) {
+    markedLines.push(formatReviewMarkerLine(view.state.doc.line(lineNumber).text, kind, reviewCatalog))
+  }
+
+  const insertText = markedLines.join('\n')
+  const anchor = fromLine.from
+  const head = anchor + insertText.length
+
+  view.dispatch({
+    changes: { from: fromLine.from, to: toLine.to, insert: insertText },
+    selection: { anchor, head },
+    scrollIntoView: true,
+  })
+  view.focus()
+
+  return true
 }
 
 function getBaseName(fileName: string) {
@@ -4598,6 +4662,21 @@ ${getExportStyleCss(exportStyle)}
     applyMarkdownFormat(editorView, format, t.markdownPlaceholders)
   }
 
+  function handleApplyReviewMarker(kind: ReviewMarkerKind) {
+    const editorView = getEditorView()
+
+    if (!editorView) {
+      setMode('split')
+      return
+    }
+
+    applyReviewMarker(editorView, kind, t.review)
+    syncEditorPosition(editorView)
+    syncSelectionStats(editorView)
+    setNextTableEditingState(getTableEditingState(editorView))
+    scheduleEditorSessionPersist()
+  }
+
   function handleToggleTaskCheckbox() {
     const editorView = getEditorView()
 
@@ -5786,6 +5865,28 @@ ${getExportStyleCss(exportStyle)}
               <div className="diagnostics-heading">
                 <h3>{t.review.title}</h3>
                 <small>{formatTranslation(t.review.count, { count: String(reviewMarkers.length) })}</small>
+              </div>
+              <p className="review-marker-help">{t.review.help}</p>
+              <div className="review-marker-actions" role="group" aria-label={t.review.markSelection}>
+                {reviewMarkerActionKinds.map((kind) => {
+                  const label = t.review.labels[kind]
+                  const title = formatTranslation(t.review.markAs, { label })
+
+                  return (
+                    <button
+                      type="button"
+                      key={kind}
+                      className={`review-marker-action ${kind}`}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => handleApplyReviewMarker(kind)}
+                      title={title}
+                      aria-label={title}
+                      disabled={mode === 'preview'}
+                    >
+                      <span>{label}</span>
+                    </button>
+                  )
+                })}
               </div>
               {reviewMarkers.length > 0 ? (
                 <ol className="review-marker-list">
