@@ -559,6 +559,72 @@
   font-size: 16px;
 }
 
+.review-section {
+  margin-top: 18px;
+}
+
+.review-marker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.review-marker-button {
+  width: 100%;
+  display: grid;
+  gap: 5px;
+  padding: 9px 10px;
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--accent-soft);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+}
+
+.review-marker-button:hover {
+  border-color: var(--accent);
+  background: var(--surface-1);
+}
+
+.review-marker-button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.review-marker-button.fixme {
+  border-color: var(--warning-border);
+  background: var(--warning-soft);
+}
+
+.review-marker-button span:last-child {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.review-marker-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.review-marker-meta strong {
+  color: var(--ink);
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+.review-marker-meta small {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 .diagnostics-section {
   margin-top: 18px;
 }

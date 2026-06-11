@@ -156,6 +156,17 @@ const en = {
       unsupportedImage: 'Image type may not preview: {target}',
     },
   },
+  review: {
+    title: 'Review markers',
+    count: '{count} markers',
+    none: 'No draft markers found.',
+    labels: {
+      todo: 'TODO',
+      fixme: 'FIXME',
+      review: 'REVIEW',
+      note: 'NOTE',
+    },
+  },
   welcome: {
     welcome: 'Welcome',
     newDocument: 'New document',
@@ -518,6 +529,17 @@ const zhCN: TranslationCatalog = {
       emptyImage: '图片没有来源。',
       unsavedRelativeImage: '相对图片需要先保存或打开文档：{target}',
       unsupportedImage: '图片类型可能无法预览：{target}',
+    },
+  },
+  review: {
+    title: '审阅标记',
+    count: '{count} 个标记',
+    none: '没有发现草稿标记。',
+    labels: {
+      todo: 'TODO',
+      fixme: 'FIXME',
+      review: 'REVIEW',
+      note: 'NOTE',
     },
   },
   welcome: {

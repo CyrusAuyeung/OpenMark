@@ -167,6 +167,16 @@ type DocumentDiagnostic = {
   target: string
 }
 
+type ReviewMarkerKind = 'todo' | 'fixme' | 'review' | 'note'
+
+type ReviewMarker = {
+  id: string
+  kind: ReviewMarkerKind
+  lineNumber: number
+  lineStart: number
+  text: string
+}
+
 type EditorPositionState = {
   line: number
   column: number
@@ -331,6 +341,7 @@ const zeroWidthPasteCharactersPattern = /[\u200B-\u200D\uFEFF]/g
 const supportedPasteUrlProtocols = new Set(['http:', 'https:'])
 const safeLinkProtocols = new Set(['http:', 'https:', 'mailto:', 'tel:', 'file:'])
 const markdownReferencePattern = /(!?)\[([^\]\n]*)\]\(([^)\n]*)\)/g
+const reviewMarkerPattern = /^\s*(?:[-*+]\s+|>\s*)?(?:\[[ xX]\]\s*)?(TODO|FIXME|REVIEW|NOTE)\b\s*:?[ \t]*(.*)/i
 
 const modeOptions: Array<{
   value: ViewMode
@@ -1216,6 +1227,45 @@ function getDocumentDiagnostics(
   }
 
   return diagnostics
+}
+
+function getReviewMarkers(markdownValue: string): ReviewMarker[] {
+  const reviewMarkers: ReviewMarker[] = []
+  const fenceRanges = getMarkdownCodeFenceRanges(markdownValue)
+  const linePattern = /.*(?:\r\n|\r|\n|$)/g
+  let lineNumber = 1
+
+  for (const match of markdownValue.matchAll(linePattern)) {
+    const rawLine = match[0]
+
+    if (!rawLine) {
+      continue
+    }
+
+    const lineStart = match.index ?? 0
+    const lineText = rawLine.replace(/\r\n|\r|\n$/, '')
+
+    if (isPositionInRanges(lineStart, fenceRanges)) {
+      lineNumber += 1
+      continue
+    }
+
+    const markerMatch = reviewMarkerPattern.exec(lineText)
+
+    if (markerMatch) {
+      reviewMarkers.push({
+        id: `review-${lineStart}`,
+        kind: markerMatch[1].toLowerCase() as ReviewMarkerKind,
+        lineNumber,
+        lineStart,
+        text: markerMatch[2].trim() || lineText.trim(),
+      })
+    }
+
+    lineNumber += 1
+  }
+
+  return reviewMarkers
 }
 
 function getBaseName(fileName: string) {
@@ -2530,6 +2580,10 @@ function App() {
   const documentDiagnostics = useMemo(
     () => getDocumentDiagnostics(markdownValue, headingAnchorIds, activeFilePath, previewImageSources),
     [activeFilePath, headingAnchorIds, markdownValue, previewImageSources],
+  )
+  const reviewMarkers = useMemo(
+    () => getReviewMarkers(markdownValue),
+    [markdownValue],
   )
   const renderedHtml = useMemo(
     () => addPreviewHeadingNavigation(
@@ -4527,9 +4581,7 @@ ${getExportStyleCss(exportStyle)}
     return jumpedToEditor || jumpedToPreview
   }
 
-  function jumpToDocumentDiagnostic(diagnostic: DocumentDiagnostic) {
-    const target = { lineNumber: diagnostic.lineNumber, lineStart: diagnostic.lineStart }
-
+  function jumpToDocumentLine(target: LineJumpTarget) {
     setActiveSidebarTab('document')
     pendingLineJumpRef.current = target
     setActiveOutlineLine(target.lineNumber)
@@ -4541,6 +4593,14 @@ ${getExportStyleCss(exportStyle)}
 
     jumpToEditorLine(target)
     pendingLineJumpRef.current = null
+  }
+
+  function jumpToDocumentDiagnostic(diagnostic: DocumentDiagnostic) {
+    jumpToDocumentLine({ lineNumber: diagnostic.lineNumber, lineStart: diagnostic.lineStart })
+  }
+
+  function jumpToReviewMarker(reviewMarker: ReviewMarker) {
+    jumpToDocumentLine({ lineNumber: reviewMarker.lineNumber, lineStart: reviewMarker.lineStart })
   }
 
   function handleGoToLineSubmit(event: ReactFormEvent<HTMLFormElement>) {
@@ -5529,6 +5589,35 @@ ${getExportStyleCss(exportStyle)}
                 </div>
               </section>
             )}
+            <section className="review-section" aria-label={t.review.title}>
+              <div className="diagnostics-heading">
+                <h3>{t.review.title}</h3>
+                <small>{formatTranslation(t.review.count, { count: String(reviewMarkers.length) })}</small>
+              </div>
+              {reviewMarkers.length > 0 ? (
+                <ol className="review-marker-list">
+                  {reviewMarkers.map((reviewMarker) => (
+                    <li key={reviewMarker.id}>
+                      <button
+                        type="button"
+                        className={`review-marker-button ${reviewMarker.kind}`}
+                        onClick={() => {
+                          jumpToReviewMarker(reviewMarker)
+                        }}
+                      >
+                        <span className="review-marker-meta">
+                          <strong>{t.review.labels[reviewMarker.kind]}</strong>
+                          <small>{formatTranslation(t.diagnostics.line, { line: String(reviewMarker.lineNumber) })}</small>
+                        </span>
+                        <span>{reviewMarker.text}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="muted panel-state panel-state-success">{t.review.none}</p>
+              )}
+            </section>
             <section className="diagnostics-section" aria-label={t.diagnostics.title}>
               <div className="diagnostics-heading">
                 <h3>{t.diagnostics.title}</h3>
