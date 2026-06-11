@@ -4,9 +4,6 @@ export type LocalePreference = AppLocale | 'system'
 export const localePreferenceValues: readonly LocalePreference[] = ['system', 'en', 'zh-CN']
 
 const en = {
-  brand: {
-    subtitle: 'Local-first Markdown editor',
-  },
   toolbar: {
     editorToolbar: 'Editor toolbar',
     newDocument: 'New document',
@@ -217,7 +214,6 @@ const en = {
   editor: {
     workspace: 'Editor workspace',
     markdownEditor: 'Markdown editor',
-    markdown: 'Markdown',
     markdownPreview: 'Markdown preview',
     preview: 'Preview',
     emptyDocument: 'Empty document',
@@ -379,9 +375,6 @@ const en = {
 export type TranslationCatalog = typeof en
 
 const zhCN: TranslationCatalog = {
-  brand: {
-    subtitle: '本地优先 Markdown 编辑器',
-  },
   toolbar: {
     editorToolbar: '编辑器工具栏',
     newDocument: '新建文档',
@@ -592,7 +585,6 @@ const zhCN: TranslationCatalog = {
   editor: {
     workspace: '编辑器工作区',
     markdownEditor: 'Markdown 编辑器',
-    markdown: 'Markdown',
     markdownPreview: 'Markdown 预览',
     preview: '预览',
     emptyDocument: '空文档',

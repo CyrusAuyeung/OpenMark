@@ -136,3 +136,10 @@
 - Add selection-aware statistics for focused edits ✅
 - Add document goal tracking for longer writing sessions ✅
 - Add lightweight review markers for drafts ✅
+
+## Milestone 19: Preview Alignment & Editor Chrome
+
+- Add preview-side cursor position alignment for easier split-view editing ✅
+- Remove redundant editor header text and show formatting toolbar buttons without horizontal scrolling ✅
+- Remove the brand subtitle from the top bar ✅
+- Refresh the product mark and favicon for a more polished OpenMark identity ✅

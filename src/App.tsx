@@ -183,6 +183,11 @@ type EditorPositionState = {
   progress: number
 }
 
+type PreviewCursorIndicatorState = {
+  top: number
+  isFallback: boolean
+}
+
 type ExportDocumentMetadata = {
   title: string
   description: string
@@ -1587,6 +1592,118 @@ function areEditorPositionsEqual(left: EditorPositionState, right: EditorPositio
     left.progress === right.progress
 }
 
+function getPreviewOutlineIndexForLine(lineNumber: number, outline: OutlineItem[]) {
+  let activeOutlineIndex: number | null = null
+
+  for (let index = 0; index < outline.length; index += 1) {
+    if (outline[index].lineNumber > lineNumber) {
+      break
+    }
+
+    activeOutlineIndex = index
+  }
+
+  return activeOutlineIndex
+}
+
+function getPreviewSectionProgress(lineNumber: number, outline: OutlineItem[], outlineIndex: number | null, documentLineCount: number) {
+  if (outlineIndex === null) {
+    return 0
+  }
+
+  const currentOutlineItem = outline[outlineIndex]
+  const nextOutlineItem = outline[outlineIndex + 1]
+  const sectionStartLine = currentOutlineItem.lineNumber
+  const sectionEndLine = nextOutlineItem?.lineNumber ?? Math.max(documentLineCount + 1, sectionStartLine + 1)
+  const sectionLength = Math.max(sectionEndLine - sectionStartLine, 1)
+
+  return Math.min(1, Math.max(0, (lineNumber - sectionStartLine) / sectionLength))
+}
+
+function clearPreviewCursorActiveElement(previewScroller: HTMLElement) {
+  previewScroller.querySelectorAll('.preview-cursor-active').forEach((element) => {
+    element.classList.remove('preview-cursor-active')
+  })
+}
+
+function syncPreviewCursorActiveHeading(previewScroller: HTMLElement, outlineIndex: number | null) {
+  clearPreviewCursorActiveElement(previewScroller)
+
+  if (outlineIndex === null) {
+    return
+  }
+
+  previewScroller
+    .querySelector<HTMLElement>(`[data-outline-index="${outlineIndex}"]`)
+    ?.classList.add('preview-cursor-active')
+}
+
+function getPreviewCursorFallbackTop(previewScroller: HTMLElement, editorProgress: number) {
+  const scrollableDistance = Math.max(previewScroller.scrollHeight - previewScroller.clientHeight, 0)
+  const estimatedTop = scrollableDistance * (editorProgress / 100) + Math.min(96, previewScroller.clientHeight * 0.35)
+
+  return Math.round(Math.min(Math.max(estimatedTop, 24), Math.max(previewScroller.scrollHeight - 24, 24)))
+}
+
+function getPreviewCursorIndicator(
+  previewScroller: HTMLElement,
+  outlineIndex: number | null,
+  sectionProgress: number,
+  editorProgress: number,
+): PreviewCursorIndicatorState {
+  if (outlineIndex !== null) {
+    const targetHeading = previewScroller.querySelector<HTMLElement>(`[data-outline-index="${outlineIndex}"]`)
+
+    if (targetHeading) {
+      const nextHeading = previewScroller.querySelector<HTMLElement>(`[data-outline-index="${outlineIndex + 1}"]`)
+      const sectionStartTop = targetHeading.offsetTop + Math.min(targetHeading.offsetHeight / 2, 24)
+      const sectionEndTop = nextHeading?.offsetTop ?? Math.max(previewScroller.scrollHeight - 56, sectionStartTop)
+      const top = sectionStartTop + ((sectionEndTop - sectionStartTop) * sectionProgress)
+
+      return {
+        top: Math.round(Math.min(Math.max(top, 24), Math.max(previewScroller.scrollHeight - 24, 24))),
+        isFallback: false,
+      }
+    }
+  }
+
+  return {
+    top: getPreviewCursorFallbackTop(previewScroller, editorProgress),
+    isFallback: true,
+  }
+}
+
+function arePreviewCursorIndicatorsEqual(left: PreviewCursorIndicatorState | null, right: PreviewCursorIndicatorState | null) {
+  if (left === right) {
+    return true
+  }
+
+  if (!left || !right) {
+    return false
+  }
+
+  return left.top === right.top && left.isFallback === right.isFallback
+}
+
+function OpenMarkLogo({ size = 24 }: { size?: number }) {
+  return (
+    <svg
+      className="openmark-logo"
+      width={size}
+      height={size}
+      viewBox="0 0 32 32"
+      fill="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect className="openmark-logo-surface" x="4" y="4" width="24" height="24" rx="7" />
+      <path className="openmark-logo-ring" d="M16 7.5a8.5 8.5 0 1 0 8.5 8.5" />
+      <path className="openmark-logo-fold" d="M21.5 5.8v6.7h6.2" />
+      <path className="openmark-logo-lines" d="M11 13h6.6M11 16.6h10M11 20.2h7.2" />
+    </svg>
+  )
+}
+
 function parseLineNumberInput(value: string) {
   const normalizedValue = value.trim()
 
@@ -2466,6 +2583,7 @@ function App() {
   const imageInputRef = useRef<HTMLInputElement | null>(null)
   const editorWorkbenchRef = useRef<HTMLElement | null>(null)
   const previewScrollRef = useRef<HTMLDivElement | null>(null)
+  const previewCursorMarkerRef = useRef<HTMLDivElement | null>(null)
   const editorRef = useRef<ReactCodeMirrorRef | null>(null)
   const editorViewRef = useRef<EditorView | null>(null)
   const editorScrollCleanupRef = useRef<(() => void) | null>(null)
@@ -2523,6 +2641,7 @@ function App() {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const [activeOutlineLine, setActiveOutlineLine] = useState<number | null>(null)
   const [editorPosition, setEditorPosition] = useState<EditorPositionState>(defaultEditorPosition)
+  const [previewCursorIndicator, setPreviewCursorIndicator] = useState<PreviewCursorIndicatorState | null>(null)
   const [documentWordGoal, setDocumentWordGoal] = useState(() => loadDocumentWordGoal(getDocumentGoalKey(initialRecoverySnapshot?.fileName ?? loadStoredValue(fileNameStorageKey, 'untitled.md'), initialRecoverySnapshot?.filePath ?? loadStoredFilePath())))
   const [isSearchVisible, setIsSearchVisible] = useState(false)
   const [isReplaceVisible, setIsReplaceVisible] = useState(false)
@@ -2608,6 +2727,14 @@ function App() {
   const stats = useMemo(
     () => getDocumentStats(markdownValue, outline),
     [markdownValue, outline],
+  )
+  const previewCursorOutlineIndex = useMemo(
+    () => getPreviewOutlineIndexForLine(editorPosition.line, outline),
+    [editorPosition.line, outline],
+  )
+  const previewCursorSectionProgress = useMemo(
+    () => getPreviewSectionProgress(editorPosition.line, outline, previewCursorOutlineIndex, stats.lines),
+    [editorPosition.line, outline, previewCursorOutlineIndex, stats.lines],
   )
   const documentGoalKey = useMemo(
     () => getDocumentGoalKey(fileName, activeFilePath),
@@ -3338,6 +3465,73 @@ function App() {
 
   useEffect(() => {
     syncPreviewScrollFromEditorRef.current = syncPreviewScrollFromEditor
+  })
+
+  useEffect(() => {
+    const previewScroller = previewScrollRef.current
+
+    if (
+      !previewScroller ||
+      (mode !== 'split' && mode !== 'preview') ||
+      isMarkdownPreviewLoading ||
+      markdownValue.trim().length === 0
+    ) {
+      if (previewScroller) {
+        clearPreviewCursorActiveElement(previewScroller)
+      }
+
+      setPreviewCursorIndicator((currentIndicator) => (
+        currentIndicator === null ? currentIndicator : null
+      ))
+      return undefined
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      const nextIndicator = getPreviewCursorIndicator(
+        previewScroller,
+        previewCursorOutlineIndex,
+        previewCursorSectionProgress,
+        editorPosition.progress,
+      )
+
+      setPreviewCursorIndicator((currentIndicator) => (
+        arePreviewCursorIndicatorsEqual(currentIndicator, nextIndicator) ? currentIndicator : nextIndicator
+      ))
+    })
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame)
+    }
+  }, [editorPosition.progress, isMarkdownPreviewLoading, markdownValue, mode, previewCursorOutlineIndex, previewCursorSectionProgress, renderedHtml])
+
+  useEffect(() => {
+    const previewCursorMarker = previewCursorMarkerRef.current
+
+    if (!previewCursorMarker || !previewCursorIndicator) {
+      return
+    }
+
+    previewCursorMarker.style.setProperty('--preview-cursor-top', `${previewCursorIndicator.top}px`)
+  }, [previewCursorIndicator])
+
+  useEffect(() => {
+    const previewScroller = previewScrollRef.current
+
+    if (
+      !previewScroller ||
+      (mode !== 'split' && mode !== 'preview') ||
+      isMarkdownPreviewLoading ||
+      markdownValue.trim().length === 0
+    ) {
+      if (previewScroller) {
+        clearPreviewCursorActiveElement(previewScroller)
+      }
+
+      return undefined
+    }
+
+    syncPreviewCursorActiveHeading(previewScroller, previewCursorOutlineIndex)
+    return undefined
   })
 
   useEffect(() => {
@@ -5256,11 +5450,10 @@ ${getExportStyleCss(exportStyle)}
       <header className="topbar">
         <div className="brand" aria-label="OpenMark">
           <div className="brand-mark" aria-hidden="true">
-            <FileText size={20} />
+            <OpenMarkLogo size={25} />
           </div>
-          <div>
+          <div className="brand-copy">
             <span className="brand-title">OpenMark</span>
-            <span className="brand-subtitle">{t.brand.subtitle}</span>
           </div>
         </div>
 
@@ -5913,7 +6106,7 @@ ${getExportStyleCss(exportStyle)}
             <section className="welcome-panel" aria-label={t.welcome.welcome}>
               <div className="welcome-inner">
                 <div className="welcome-mark" aria-hidden="true">
-                  <FileText size={28} />
+                  <OpenMarkLogo size={32} />
                 </div>
                 <h1>OpenMark</h1>
                 <div className="welcome-actions">
@@ -5971,7 +6164,6 @@ ${getExportStyleCss(exportStyle)}
               {(mode === 'write' || mode === 'split') && (
                 <section className="editor-panel panel" aria-label={t.editor.markdownEditor}>
                   <div className="panel-header editor-panel-header">
-                    <span>{t.editor.markdown}</span>
                     <div className="format-toolbar" role="toolbar" aria-label={t.toolbar.markdownFormatting}>
                       {markdownToolbarGroups.map((group, groupIndex) => (
                         <div className="format-group" key={`format-group-${groupIndex}`}>
@@ -6256,6 +6448,13 @@ ${getExportStyleCss(exportStyle)}
                 <span>{stats.words} {t.editor.wordCountSuffix}</span>
               </div>
               <div className="preview-scroll" ref={previewScrollRef} onScroll={syncEditorScrollFromPreview}>
+                {previewCursorIndicator && (
+                  <div
+                    ref={previewCursorMarkerRef}
+                    className={`preview-cursor-marker${previewCursorIndicator.isFallback ? ' fallback' : ''}`}
+                    aria-hidden="true"
+                  ></div>
+                )}
                 {isMarkdownPreviewLoading ? (
                   <div className="empty-preview">{t.editor.loadingPreview}</div>
                 ) : markdownValue.trim().length > 0 ? (
