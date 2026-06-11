@@ -21,8 +21,6 @@ import {
   setSearchQuery,
 } from '@codemirror/search'
 import { EditorView, keymap } from '@codemirror/view'
-import MarkdownIt from 'markdown-it'
-import DOMPurify from 'dompurify'
 import {
   Bold,
   CaseSensitive,
@@ -82,6 +80,24 @@ import {
   isLocalePreference,
   translations,
 } from './i18n'
+
+type MarkdownEngineModule = typeof import('./markdownEngine')
+
+let markdownEngineModule: MarkdownEngineModule | null = null
+let markdownEnginePromise: Promise<MarkdownEngineModule> | null = null
+
+function isMarkdownEngineLoaded() {
+  return markdownEngineModule !== null
+}
+
+function loadMarkdownEngine() {
+  markdownEnginePromise ??= import('./markdownEngine').then((module) => {
+    markdownEngineModule = module
+    return module
+  })
+
+  return markdownEnginePromise
+}
 
 type ViewMode = 'write' | 'split' | 'preview'
 type ThemeMode = 'light' | 'dark'
@@ -303,12 +319,6 @@ const zeroWidthPasteCharactersPattern = /[\u200B-\u200D\uFEFF]/g
 const supportedPasteUrlProtocols = new Set(['http:', 'https:'])
 const safeLinkProtocols = new Set(['http:', 'https:', 'mailto:', 'tel:', 'file:'])
 const markdownReferencePattern = /(!?)\[([^\]\n]*)\]\(([^)\n]*)\)/g
-
-const markdownRenderer = new MarkdownIt({
-  html: false,
-  linkify: true,
-  typographer: true,
-})
 
 const modeOptions: Array<{
   value: ViewMode
@@ -1647,12 +1657,6 @@ function downloadFile(content: string, fileName: string, mimeType: string) {
   URL.revokeObjectURL(objectUrl)
 }
 
-function sanitizeMarkdownHtml(html: string) {
-  return DOMPurify.sanitize(html, {
-    ALLOWED_URI_REGEXP: /^(?:(?:(?:https?|mailto|tel|file|blob):)|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i,
-  })
-}
-
 function applyInlineFormat(view: EditorView, format: InlineFormat) {
   const selection = view.state.selection.main
   const selectedText = view.state.sliceDoc(selection.from, selection.to)
@@ -2372,6 +2376,8 @@ function App() {
   const [quickOpenQuery, setQuickOpenQuery] = useState('')
   const [activeQuickOpenIndex, setActiveQuickOpenIndex] = useState(0)
   const [previewImageSources, setPreviewImageSources] = useState<PreviewImageSource[]>([])
+  const [exportHtml, setExportHtml] = useState('')
+  const [isMarkdownPreviewLoading, setIsMarkdownPreviewLoading] = useState(() => initialMarkdownValue.trim().length > 0)
   const [isExportPreviewOpen, setIsExportPreviewOpen] = useState(false)
   const [isThemeSettingsOpen, setIsThemeSettingsOpen] = useState(false)
   const [updateStatus, setUpdateStatus] = useState<OpenMarkUpdateStatus>(defaultUpdateStatus)
@@ -2398,18 +2404,6 @@ function App() {
     [],
   )
 
-  const rawRenderedHtml = useMemo(
-    () => markdownRenderer.render(markdownValue),
-    [markdownValue],
-  )
-  const exportHtml = useMemo(
-    () => sanitizeMarkdownHtml(rewritePreviewImageSources(rawRenderedHtml, activeFilePath, previewImageSources)),
-    [activeFilePath, previewImageSources, rawRenderedHtml],
-  )
-  const exportMetadata = useMemo(
-    () => getExportDocumentMetadata(exportHtml, fileName),
-    [exportHtml, fileName],
-  )
   const outline = useMemo(() => getOutline(markdownValue), [markdownValue])
   const headingAnchorIds = useMemo(() => getHeadingAnchorIds(outline), [outline])
   const documentDiagnostics = useMemo(
@@ -3064,6 +3058,57 @@ function App() {
   useEffect(() => {
     previewImageSourcesRef.current = previewImageSources
   }, [previewImageSources])
+
+  useEffect(() => {
+    let isCurrentRender = true
+
+    if (markdownValue.trim().length === 0) {
+      queueMicrotask(() => {
+        if (!isCurrentRender) {
+          return
+        }
+
+        setExportHtml('')
+        setIsMarkdownPreviewLoading(false)
+      })
+
+      return () => {
+        isCurrentRender = false
+      }
+    }
+
+    if (!isMarkdownEngineLoaded()) {
+      queueMicrotask(() => {
+        if (!isCurrentRender) {
+          return
+        }
+
+        setIsMarkdownPreviewLoading(true)
+      })
+    }
+
+    void renderMarkdownHtml(markdownValue, activeFilePath, previewImageSources)
+      .then((nextExportHtml) => {
+        if (!isCurrentRender) {
+          return
+        }
+
+        setExportHtml(nextExportHtml)
+        setIsMarkdownPreviewLoading(false)
+      })
+      .catch(() => {
+        if (!isCurrentRender) {
+          return
+        }
+
+        setExportHtml('')
+        setIsMarkdownPreviewLoading(false)
+      })
+
+    return () => {
+      isCurrentRender = false
+    }
+  }, [activeFilePath, markdownValue, previewImageSources])
 
   useEffect(() => () => {
     previewImageSourcesRef.current.forEach((source) => {
@@ -3904,10 +3949,43 @@ function App() {
     showDownloadedDocumentStatus(targetFileName)
   }
 
-  function buildExportHtml(contentHtml = exportHtml) {
-    const metadata = contentHtml === exportHtml
-      ? exportMetadata
-      : getExportDocumentMetadata(contentHtml, fileName)
+  async function renderMarkdownHtml(
+    markdownSource: string,
+    sourceFilePath: string | null,
+    imageSources: PreviewImageSource[],
+  ) {
+    if (markdownSource.trim().length === 0) {
+      return ''
+    }
+
+    const markdownEngine = await loadMarkdownEngine()
+    const rawRenderedHtml = markdownEngine.renderMarkdownSource(markdownSource)
+    const rewrittenHtml = rewritePreviewImageSources(rawRenderedHtml, sourceFilePath, imageSources)
+
+    return markdownEngine.sanitizeMarkdownHtml(rewrittenHtml)
+  }
+
+  async function getCurrentExportHtml() {
+    if (markdownValue.trim().length === 0) {
+      setExportHtml('')
+      setIsMarkdownPreviewLoading(false)
+      return ''
+    }
+
+    if (!isMarkdownEngineLoaded()) {
+      setIsMarkdownPreviewLoading(true)
+    }
+
+    const nextExportHtml = await renderMarkdownHtml(markdownValue, activeFilePath, previewImageSources)
+
+    setExportHtml(nextExportHtml)
+    setIsMarkdownPreviewLoading(false)
+
+    return nextExportHtml
+  }
+
+  function buildExportHtml(contentHtml: string) {
+    const metadata = getExportDocumentMetadata(contentHtml, fileName)
     const title = escapeHtml(metadata.title)
 
     return `<!doctype html>
@@ -3929,17 +4007,18 @@ ${getExportStyleCss(exportStyle)}
 
   async function handleExportHtml() {
     const htmlFileName = `${getBaseName(fileName)}.html`
+    const htmlContent = buildExportHtml(await getCurrentExportHtml())
 
     if (window.openmark) {
       await window.openmark.saveHtmlFile({
-        content: buildExportHtml(),
+        content: htmlContent,
         fileName: htmlFileName,
       })
       return
     }
 
     downloadFile(
-      buildExportHtml(),
+      htmlContent,
       htmlFileName,
       'text/html;charset=utf-8',
     )
@@ -3947,7 +4026,7 @@ ${getExportStyleCss(exportStyle)}
 
   async function handleExportPdf() {
     const pdfFileName = `${getBaseName(fileName)}.pdf`
-    const htmlContent = buildExportHtml()
+    const htmlContent = buildExportHtml(await getCurrentExportHtml())
 
     if (window.openmark) {
       const result = await window.openmark.savePdfFile({
@@ -3983,6 +4062,7 @@ ${getExportStyleCss(exportStyle)}
   function openExportPreview() {
     setIsCommandPaletteOpen(false)
     setIsExportPreviewOpen(true)
+    void getCurrentExportHtml()
   }
 
   function closeExportPreview() {
@@ -4071,7 +4151,7 @@ ${getExportStyleCss(exportStyle)}
   }
 
   async function handleCopyHtml() {
-    await copyDocumentToClipboard('html', buildExportHtml())
+    await copyDocumentToClipboard('html', buildExportHtml(await getCurrentExportHtml()))
   }
 
   function toggleTheme() {
@@ -5820,7 +5900,9 @@ ${getExportStyleCss(exportStyle)}
                 <span>{stats.words} {t.editor.wordCountSuffix}</span>
               </div>
               <div className="preview-scroll" ref={previewScrollRef} onScroll={syncEditorScrollFromPreview}>
-                {markdownValue.trim().length > 0 ? (
+                {isMarkdownPreviewLoading ? (
+                  <div className="empty-preview">{t.editor.loadingPreview}</div>
+                ) : markdownValue.trim().length > 0 ? (
                   <article
                     className="markdown-preview"
                     onClick={handlePreviewClick}
@@ -6067,7 +6149,7 @@ ${getExportStyleCss(exportStyle)}
               ref={exportPreviewFrameRef}
               className="export-preview-frame"
               title={t.exportPreview.documentFrame}
-              srcDoc={buildExportHtml()}
+              srcDoc={buildExportHtml(exportHtml)}
             />
           </section>
         </div>

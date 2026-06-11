@@ -126,5 +126,6 @@
 
 - Split large renderer dependencies into stable build chunks ✅
 - Add a build budget check for renderer JavaScript chunks ✅
+- Lazy-load Markdown preview and export rendering dependencies ✅
 - Keep the first editor screen responsive while heavy editor tooling loads
-- Review export and preview dependencies for future lazy-loading boundaries
+- Review remaining editor dependencies for future lazy-loading boundaries
