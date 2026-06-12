@@ -2,14 +2,14 @@
 
 ## Summary
 
-OpenMark 0.20.1 focuses on preview caret alignment. It includes Replaced the preview-side cursor marker with an inline black blinking caret inside rendered preview text and Mapped the editor insertion point to the rendered preview text position so split-view cursor feedback follows the actual text.
+OpenMark 0.20.2 focuses on preview soft line breaks. It includes preserved single-line breaks in Markdown preview paragraphs so split view no longer collapses typed lines into one visual line and Kept the inline preview caret aligned with the preserved visual line breaks.
 
 ## Highlights
 
-### Preview Caret Alignment
+### Preview Soft Line Breaks
 
-- Replaced the preview-side cursor marker with an inline black blinking caret inside rendered preview text.
-- Mapped the editor insertion point to the rendered preview text position so split-view cursor feedback follows the actual text.
+- Preserved single-line breaks in Markdown preview paragraphs so split view no longer collapses typed lines into one visual line.
+- Kept the inline preview caret aligned with the preserved visual line breaks.
 
 ## Downloads
 
@@ -17,11 +17,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.20.1.exe` | Recommended installer. |
-| Windows | `OpenMark.0.20.1.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.20.1.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.20.1-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.20.1_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.20.2.exe` | Recommended installer. |
+| Windows | `OpenMark.0.20.2.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.20.2.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.20.2-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.20.2_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -56,4 +56,4 @@ Keep these auto-update metadata files attached when generated:
 ## Full Changelog
 
 - Release date: 2026-06-12
-- Tag: v0.20.1
+- Tag: v0.20.2

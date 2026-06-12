@@ -1862,7 +1862,7 @@ function normalizeMarkdownFragmentForPreviewText(sourceFragment: string) {
       .replace(/_([^_]*)_/g, '$1')
       .replace(/`([^`]*)`/g, '$1')
       .replace(/~~([^~]*)~~/g, '$1'))
-    .join(' ')
+    .join('\n')
 }
 
 function getCollapsedRangeRectAtTextOffset(element: HTMLElement, textOffset: number) {

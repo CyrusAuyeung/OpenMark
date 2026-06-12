@@ -2,6 +2,13 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.20.2 - 2026-06-12
+
+### Preview Soft Line Breaks
+
+- Preserved single-line breaks in Markdown preview paragraphs so split view no longer collapses typed lines into one visual line.
+- Kept the inline preview caret aligned with the preserved visual line breaks.
+
 ## 0.20.1 - 2026-06-12
 
 ### Preview Caret Alignment

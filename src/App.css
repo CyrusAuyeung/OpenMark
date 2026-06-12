@@ -2164,6 +2164,10 @@ body.is-resizing-split * {
   line-height: 1.2;
 }
 
+.markdown-preview p {
+  white-space: pre-line;
+}
+
 .markdown-preview h1 {
   font-size: 34px;
 }
