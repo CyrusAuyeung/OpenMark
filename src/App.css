@@ -2087,6 +2087,11 @@ body.is-resizing-split * {
   background: var(--editor-active-line-bg);
 }
 
+.editor-host .cm-editor:has(.cm-selectionBackground) .cm-activeLine,
+.editor-host .cm-editor:has(.cm-selectionBackground) .cm-activeLineGutter {
+  background: transparent;
+}
+
 .editor-host .cm-selectionBackground,
 .editor-host .cm-focused .cm-selectionBackground {
   background: var(--editor-selection-bg-focused) !important;

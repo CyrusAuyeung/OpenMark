@@ -151,3 +151,5 @@
 - Synchronize editor and preview caret blink timing ✅
 - Replace green editor selection and active-line accents with neutral highlighting ✅
 - Make bold and italic toolbar actions toggle formatted selections off ✅
+- Hide active-line highlighting while a text selection is visible ✅
+- Normalize combined bold/italic marker toggles for repeated asterisk runs ✅

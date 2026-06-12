@@ -2270,31 +2270,70 @@ function restartCaretBlinkAnimations(previewCursorMarker: HTMLElement, editorVie
   })
 }
 
-function isInlineDelimiterPartOfBold(view: EditorView, delimiter: string, from: number, to: number) {
-  return delimiter === '*' &&
-    view.state.sliceDoc(Math.max(0, from - 2), from) === '**' &&
-    view.state.sliceDoc(to, Math.min(view.state.doc.length, to + 2)) === '**'
+function countEdgeMarkerRun(text: string, direction: 'start' | 'end') {
+  let markerCount = 0
+  const startIndex = direction === 'start' ? 0 : text.length - 1
+  const step = direction === 'start' ? 1 : -1
+
+  for (let index = startIndex; index >= 0 && index < text.length; index += step) {
+    if (text[index] !== '*') {
+      break
+    }
+
+    markerCount += 1
+  }
+
+  return markerCount
+}
+
+function countAdjacentMarkerRun(view: EditorView, position: number, direction: 'before' | 'after') {
+  let markerCount = 0
+  const step = direction === 'before' ? -1 : 1
+  let currentPosition = direction === 'before' ? position - 1 : position
+
+  while (currentPosition >= 0 && currentPosition < view.state.doc.length) {
+    if (view.state.sliceDoc(currentPosition, currentPosition + 1) !== '*') {
+      break
+    }
+
+    markerCount += 1
+    currentPosition += step
+  }
+
+  return markerCount
+}
+
+function getInlineStyleMarker(hasBold: boolean, hasItalic: boolean) {
+  return '*'.repeat((hasBold ? 2 : 0) + (hasItalic ? 1 : 0))
+}
+
+function getToggledInlineStyleMarker(leftMarkerRun: number, rightMarkerRun: number, delimiter: '*' | '**') {
+  const hasBold = leftMarkerRun >= 2 && rightMarkerRun >= 2
+  const hasItalic = leftMarkerRun % 2 === 1 && rightMarkerRun % 2 === 1
+
+  return getInlineStyleMarker(
+    delimiter === '**' ? !hasBold : hasBold,
+    delimiter === '*' ? !hasItalic : hasItalic,
+  )
 }
 
 function toggleDelimitedInlineFormat(view: EditorView, delimiter: '*' | '**') {
   const selection = view.state.selection.main
   const selectedText = view.state.sliceDoc(selection.from, selection.to)
-  const delimiterLength = delimiter.length
-  const selectionStartsWithDelimiter = selectedText.startsWith(delimiter)
-  const selectionEndsWithDelimiter = selectedText.endsWith(delimiter)
-  const isBoldDelimitedSelection = delimiter === '*' && selectedText.startsWith('**') && selectedText.endsWith('**')
-  const canUnwrapSelectedText = selectedText.length >= delimiterLength * 2 &&
-    selectionStartsWithDelimiter &&
-    selectionEndsWithDelimiter &&
-    !isBoldDelimitedSelection &&
-    !isInlineDelimiterPartOfBold(view, delimiter, selection.from + delimiterLength, selection.to - delimiterLength)
+  const selectedLeftMarkerRun = countEdgeMarkerRun(selectedText, 'start')
+  const selectedRightMarkerRun = countEdgeMarkerRun(selectedText, 'end')
+  const selectionIncludesMarkers = selectedLeftMarkerRun > 0 &&
+    selectedRightMarkerRun > 0 &&
+    selectedText.length > selectedLeftMarkerRun + selectedRightMarkerRun
 
-  if (canUnwrapSelectedText) {
-    const unwrappedText = selectedText.slice(delimiterLength, selectedText.length - delimiterLength)
+  if (selectionIncludesMarkers) {
+    const marker = getToggledInlineStyleMarker(selectedLeftMarkerRun, selectedRightMarkerRun, delimiter)
+    const unwrappedText = selectedText.slice(selectedLeftMarkerRun, selectedText.length - selectedRightMarkerRun)
+    const insertText = `${marker}${unwrappedText}${marker}`
 
     view.dispatch({
-      changes: { from: selection.from, to: selection.to, insert: unwrappedText },
-      selection: { anchor: selection.from, head: selection.from + unwrappedText.length },
+      changes: { from: selection.from, to: selection.to, insert: insertText },
+      selection: { anchor: selection.from + marker.length, head: selection.from + marker.length + unwrappedText.length },
       scrollIntoView: true,
     })
     view.focus()
@@ -2302,21 +2341,21 @@ function toggleDelimitedInlineFormat(view: EditorView, delimiter: '*' | '**') {
     return true
   }
 
-  const hasOuterDelimiters = selection.from >= delimiterLength &&
-    selection.to + delimiterLength <= view.state.doc.length &&
-    view.state.sliceDoc(selection.from - delimiterLength, selection.from) === delimiter &&
-    view.state.sliceDoc(selection.to, selection.to + delimiterLength) === delimiter &&
-    !isInlineDelimiterPartOfBold(view, delimiter, selection.from, selection.to)
+  const leftOuterMarkerRun = countAdjacentMarkerRun(view, selection.from, 'before')
+  const rightOuterMarkerRun = countAdjacentMarkerRun(view, selection.to, 'after')
+  const hasOuterMarkers = leftOuterMarkerRun > 0 && rightOuterMarkerRun > 0
 
-  if (hasOuterDelimiters) {
+  if (hasOuterMarkers) {
+    const marker = getToggledInlineStyleMarker(leftOuterMarkerRun, rightOuterMarkerRun, delimiter)
+
     view.dispatch({
       changes: [
-        { from: selection.from - delimiterLength, to: selection.from, insert: '' },
-        { from: selection.to, to: selection.to + delimiterLength, insert: '' },
+        { from: selection.from - leftOuterMarkerRun, to: selection.from, insert: marker },
+        { from: selection.to, to: selection.to + rightOuterMarkerRun, insert: marker },
       ],
       selection: {
-        anchor: selection.from - delimiterLength,
-        head: selection.to - delimiterLength,
+        anchor: selection.from - leftOuterMarkerRun + marker.length,
+        head: selection.to - leftOuterMarkerRun + marker.length,
       },
       scrollIntoView: true,
     })
@@ -2326,7 +2365,7 @@ function toggleDelimitedInlineFormat(view: EditorView, delimiter: '*' | '**') {
   }
 
   const insertText = `${delimiter}${selectedText}${delimiter}`
-  const anchor = selection.from + delimiterLength
+  const anchor = selection.from + delimiter.length
   const head = anchor + selectedText.length
 
   view.dispatch({

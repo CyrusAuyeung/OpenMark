@@ -2,6 +2,13 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.21.1 - 2026-06-12
+
+### Editing Parity Hotfix
+
+- Hid the active-line background while text is selected so selecting one line no longer makes another line look highlighted.
+- Normalized bold and italic toggles for combined or repeated asterisk markers, including `***text***` and long marker runs.
+
 ## 0.21.0 - 2026-06-12
 
 ### Markdown Fidelity & Editing Parity
