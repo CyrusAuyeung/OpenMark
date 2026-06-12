@@ -2,6 +2,14 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.19.0 - 2026-06-12
+
+### Document Asset Management
+
+- Copied inserted desktop images into a document-local `assets/` folder when the Markdown file has a saved path.
+- Inserted portable relative image paths like `assets/image.png` so Markdown documents can move with their images.
+- Kept preview and PDF export reliable by using copied image data URLs immediately after insertion.
+
 ## 0.18.3 - 2026-06-12
 
 ### Local Image Preview Fixes

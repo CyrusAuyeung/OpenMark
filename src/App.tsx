@@ -4402,15 +4402,44 @@ function App() {
         return
       }
 
-      const markdownPath = activeFilePath
+      let markdownPath = activeFilePath
         ? getRelativePath(getPathDirectory(activeFilePath), result.filePath)
         : toFileUrl(result.filePath)
+      let previewSrc = result.previewSrc ?? null
+      let insertedFileName = result.fileName ?? getPathFileName(result.filePath)
 
-      if (result.previewSrc) {
-        rememberPreviewImageSource({ markdownPath, previewSrc: result.previewSrc })
+      if (activeFilePath) {
+        try {
+          const assetResult = await window.openmark.copyImageToDocumentAssets({
+            sourcePath: result.filePath,
+            documentPath: activeFilePath,
+          })
+
+          if (!assetResult || assetResult.canceled || !assetResult.relativePath) {
+            if (assetResult?.error) {
+              showDocumentOperationStatus('error', assetResult.error)
+            } else {
+              showDocumentOperationStatus('error', t.alerts.imageAssetCopyFailed)
+            }
+
+            return
+          }
+
+          markdownPath = assetResult.relativePath
+          previewSrc = assetResult.previewSrc ?? previewSrc
+          insertedFileName = assetResult.fileName ?? insertedFileName
+          showDocumentOperationStatus('success', formatTranslation(t.status.copiedImageAsset, { path: markdownPath }))
+        } catch {
+          showDocumentOperationStatus('error', t.alerts.imageAssetCopyFailed)
+          return
+        }
       }
 
-      insertMarkdownImage(markdownPath, result.fileName ?? getPathFileName(result.filePath))
+      if (previewSrc) {
+        rememberPreviewImageSource({ markdownPath, previewSrc })
+      }
+
+      insertMarkdownImage(markdownPath, insertedFileName)
       return
     }
 

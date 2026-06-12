@@ -2,15 +2,15 @@
 
 ## Summary
 
-OpenMark 0.18.3 focuses on local image preview fixes. It includes fixes for local `file:///` image links rendering as raw Markdown instead of preview images, preserved selected local images as data URLs so preview and PDF export can load them reliably, and Sanitized inserted image alt text so bracketed local file names do not break Markdown image syntax.
+OpenMark 0.19.0 focuses on document asset management. It includes Copied inserted desktop images into a document-local `assets/` folder when the Markdown file has a saved path, Inserted portable relative image paths like `assets/image.png` so Markdown documents can move with their images, and Kept preview and PDF export reliable by using copied image data URLs immediately after insertion.
 
 ## Highlights
 
-### Local Image Preview Fixes
+### Document Asset Management
 
-- Fixed local `file:///` image links rendering as raw Markdown instead of preview images.
-- Preserved selected local images as data URLs so preview and PDF export can load them reliably.
-- Sanitized inserted image alt text so bracketed local file names do not break Markdown image syntax.
+- Copied inserted desktop images into a document-local `assets/` folder when the Markdown file has a saved path.
+- Inserted portable relative image paths like `assets/image.png` so Markdown documents can move with their images.
+- Kept preview and PDF export reliable by using copied image data URLs immediately after insertion.
 
 ## Downloads
 
@@ -18,11 +18,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.18.3.exe` | Recommended installer. |
-| Windows | `OpenMark.0.18.3.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.18.3.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.18.3-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.18.3_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.19.0.exe` | Recommended installer. |
+| Windows | `OpenMark.0.19.0.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.19.0.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.19.0-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.19.0_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -57,4 +57,4 @@ Keep these auto-update metadata files attached when generated:
 ## Full Changelog
 
 - Release date: 2026-06-12
-- Tag: v0.18.3
+- Tag: v0.19.0

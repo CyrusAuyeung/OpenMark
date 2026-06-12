@@ -93,6 +93,7 @@ const applicationStrings = {
       invalidFilePath: 'Invalid file path',
       invalidFolderPath: 'Invalid folder path',
       fileModifiedExternally: 'This file changed on disk. Save again to overwrite it.',
+      assetCopyFailed: 'This image could not be copied into the document assets folder.',
       pdfExportFailed: 'This document could not be exported as PDF.',
       invalidClipboardContent: 'Invalid clipboard content.',
       noDownloadedUpdate: 'No downloaded update is ready to install.',
@@ -157,6 +158,7 @@ const applicationStrings = {
       invalidFilePath: '无效的文件路径',
       invalidFolderPath: '无效的文件夹路径',
       fileModifiedExternally: '这个文件已在磁盘上被其他程序修改。再次保存将覆盖它。',
+      assetCopyFailed: '无法将这张图片复制到文档资源文件夹。',
       pdfExportFailed: '无法将当前文档导出为 PDF。',
       invalidClipboardContent: '无效的剪贴板内容。',
       noDownloadedUpdate: '没有可安装的已下载更新。',
@@ -460,6 +462,48 @@ function getImageMimeType(filePath) {
   }
 }
 
+function sanitizeAssetFileName(fileName) {
+  const extension = path.extname(fileName)
+  const baseName = path.basename(fileName, extension)
+  const safeBaseName = baseName
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '-')
+    .replace(/\s+/g, ' ')
+    .replace(/[. ]+$/g, '')
+    .trim()
+  const safeExtension = extension.replace(/[<>:"/\\|?*\u0000-\u001F]/g, '').toLowerCase()
+
+  return `${safeBaseName || 'image'}${safeExtension}`
+}
+
+async function pathExists(filePath) {
+  try {
+    await fs.access(filePath)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function getAvailableAssetPath(assetDirectoryPath, fileName, sourcePath) {
+  const safeFileName = sanitizeAssetFileName(fileName)
+  const extension = path.extname(safeFileName)
+  const baseName = path.basename(safeFileName, extension)
+  const normalizedSourcePath = path.resolve(sourcePath)
+
+  for (let index = 1; index < 1000; index += 1) {
+    const candidateFileName = index === 1 ? safeFileName : `${baseName}-${index}${extension}`
+    const candidatePath = path.join(assetDirectoryPath, candidateFileName)
+
+    if (path.resolve(candidatePath) === normalizedSourcePath || !(await pathExists(candidatePath))) {
+      return { filePath: candidatePath, fileName: candidateFileName }
+    }
+  }
+
+  const fallbackFileName = `${baseName}-${Date.now()}${extension}`
+
+  return { filePath: path.join(assetDirectoryPath, fallbackFileName), fileName: fallbackFileName }
+}
+
 async function readImageDataUrl(filePath) {
   const mimeType = getImageMimeType(filePath)
 
@@ -655,6 +699,45 @@ ipcMain.handle('openmark:select-image-file', async () => {
     filePath,
     fileName: getFileName(filePath),
     previewSrc: await readImageDataUrl(filePath),
+  }
+})
+
+ipcMain.handle('openmark:copy-image-to-document-assets', async (_event, payload) => {
+  const sourcePath = typeof payload?.sourcePath === 'string' && payload.sourcePath.length > 0 ? payload.sourcePath : null
+  const documentPath = typeof payload?.documentPath === 'string' && payload.documentPath.length > 0 ? payload.documentPath : null
+
+  if (!sourcePath || !documentPath) {
+    return { canceled: true, error: getApplicationStrings().errors.invalidFilePath }
+  }
+
+  if (!getImageMimeType(sourcePath)) {
+    return { canceled: true, error: getApplicationStrings().errors.assetCopyFailed }
+  }
+
+  const documentDirectoryPath = path.dirname(documentPath)
+  const assetDirectoryPath = path.join(documentDirectoryPath, 'assets')
+
+  try {
+    await fs.mkdir(assetDirectoryPath, { recursive: true })
+
+    const asset = await getAvailableAssetPath(assetDirectoryPath, getFileName(sourcePath), sourcePath)
+
+    if (path.resolve(asset.filePath) !== path.resolve(sourcePath)) {
+      await fs.copyFile(sourcePath, asset.filePath)
+    }
+
+    const relativePath = path.relative(documentDirectoryPath, asset.filePath).split(path.sep).join('/')
+
+    return {
+      canceled: false,
+      filePath: asset.filePath,
+      fileName: asset.fileName,
+      relativePath,
+      previewSrc: await readImageDataUrl(asset.filePath),
+    }
+  } catch (error) {
+    console.error('Image asset copy failed:', error)
+    return { canceled: true, error: getApplicationStrings().errors.assetCopyFailed }
   }
 })
 

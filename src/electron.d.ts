@@ -91,6 +91,17 @@ declare global {
         filePath?: string
         previewSrc?: string | null
       }>
+      copyImageToDocumentAssets: (payload: {
+        sourcePath: string
+        documentPath: string
+      }) => Promise<{
+        canceled: boolean
+        fileName?: string
+        filePath?: string
+        relativePath?: string
+        previewSrc?: string | null
+        error?: string
+      }>
       saveMarkdownFile: (payload: {
         content: string
         filePath?: string | null

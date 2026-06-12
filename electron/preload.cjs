@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('openmark', {
   selectWorkspaceFolder: () => ipcRenderer.invoke('openmark:select-workspace-folder'),
   readWorkspaceFolder: (folderPath) => ipcRenderer.invoke('openmark:read-workspace-folder', folderPath),
   selectImageFile: () => ipcRenderer.invoke('openmark:select-image-file'),
+  copyImageToDocumentAssets: (payload) => ipcRenderer.invoke('openmark:copy-image-to-document-assets', payload),
   saveMarkdownFile: (payload) => ipcRenderer.invoke('openmark:save-markdown-file', payload),
   saveHtmlFile: (payload) => ipcRenderer.invoke('openmark:save-html-file', payload),
   savePdfFile: (payload) => ipcRenderer.invoke('openmark:save-pdf-file', payload),
