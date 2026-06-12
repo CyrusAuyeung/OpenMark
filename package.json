@@ -1,6 +1,6 @@
 {
   "name": "openmark-editor",
-  "version": "0.20.2",
+  "version": "0.21.0",
   "description": "A local-first Markdown editor MVP built with React, CodeMirror, and markdown-it.",
   "keywords": [
     "markdown",

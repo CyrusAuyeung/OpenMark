@@ -143,3 +143,11 @@
 - Remove redundant editor header text and show formatting toolbar buttons without horizontal scrolling ✅
 - Remove the brand subtitle from the top bar ✅
 - Refresh the product mark and favicon for a more polished OpenMark identity ✅
+
+## Milestone 20: Markdown Fidelity & Editing Parity
+
+- Preserve soft line breaks in rendered preview paragraphs ✅
+- Keep the inline preview caret aligned with preserved visual line breaks ✅
+- Synchronize editor and preview caret blink timing ✅
+- Replace green editor selection and active-line accents with neutral highlighting ✅
+- Make bold and italic toolbar actions toggle formatted selections off ✅

@@ -2251,6 +2251,94 @@ function downloadFile(content: string, fileName: string, mimeType: string) {
   URL.revokeObjectURL(objectUrl)
 }
 
+function restartCaretBlinkAnimations(previewCursorMarker: HTMLElement, editorView: EditorView | null) {
+  const caretElements = [
+    previewCursorMarker,
+    ...Array.from(editorView?.dom.querySelectorAll<HTMLElement>('.cm-cursor') ?? []),
+  ]
+
+  caretElements.forEach((element) => {
+    element.style.animation = 'none'
+  })
+
+  void previewCursorMarker.offsetHeight
+
+  window.requestAnimationFrame(() => {
+    caretElements.forEach((element) => {
+      element.style.animation = ''
+    })
+  })
+}
+
+function isInlineDelimiterPartOfBold(view: EditorView, delimiter: string, from: number, to: number) {
+  return delimiter === '*' &&
+    view.state.sliceDoc(Math.max(0, from - 2), from) === '**' &&
+    view.state.sliceDoc(to, Math.min(view.state.doc.length, to + 2)) === '**'
+}
+
+function toggleDelimitedInlineFormat(view: EditorView, delimiter: '*' | '**') {
+  const selection = view.state.selection.main
+  const selectedText = view.state.sliceDoc(selection.from, selection.to)
+  const delimiterLength = delimiter.length
+  const selectionStartsWithDelimiter = selectedText.startsWith(delimiter)
+  const selectionEndsWithDelimiter = selectedText.endsWith(delimiter)
+  const isBoldDelimitedSelection = delimiter === '*' && selectedText.startsWith('**') && selectedText.endsWith('**')
+  const canUnwrapSelectedText = selectedText.length >= delimiterLength * 2 &&
+    selectionStartsWithDelimiter &&
+    selectionEndsWithDelimiter &&
+    !isBoldDelimitedSelection &&
+    !isInlineDelimiterPartOfBold(view, delimiter, selection.from + delimiterLength, selection.to - delimiterLength)
+
+  if (canUnwrapSelectedText) {
+    const unwrappedText = selectedText.slice(delimiterLength, selectedText.length - delimiterLength)
+
+    view.dispatch({
+      changes: { from: selection.from, to: selection.to, insert: unwrappedText },
+      selection: { anchor: selection.from, head: selection.from + unwrappedText.length },
+      scrollIntoView: true,
+    })
+    view.focus()
+
+    return true
+  }
+
+  const hasOuterDelimiters = selection.from >= delimiterLength &&
+    selection.to + delimiterLength <= view.state.doc.length &&
+    view.state.sliceDoc(selection.from - delimiterLength, selection.from) === delimiter &&
+    view.state.sliceDoc(selection.to, selection.to + delimiterLength) === delimiter &&
+    !isInlineDelimiterPartOfBold(view, delimiter, selection.from, selection.to)
+
+  if (hasOuterDelimiters) {
+    view.dispatch({
+      changes: [
+        { from: selection.from - delimiterLength, to: selection.from, insert: '' },
+        { from: selection.to, to: selection.to + delimiterLength, insert: '' },
+      ],
+      selection: {
+        anchor: selection.from - delimiterLength,
+        head: selection.to - delimiterLength,
+      },
+      scrollIntoView: true,
+    })
+    view.focus()
+
+    return true
+  }
+
+  const insertText = `${delimiter}${selectedText}${delimiter}`
+  const anchor = selection.from + delimiterLength
+  const head = anchor + selectedText.length
+
+  view.dispatch({
+    changes: { from: selection.from, to: selection.to, insert: insertText },
+    selection: { anchor, head },
+    scrollIntoView: true,
+  })
+  view.focus()
+
+  return true
+}
+
 function applyInlineFormat(view: EditorView, format: InlineFormat) {
   const selection = view.state.selection.main
   const selectedText = view.state.sliceDoc(selection.from, selection.to)
@@ -2259,15 +2347,11 @@ function applyInlineFormat(view: EditorView, format: InlineFormat) {
   let head = selection.from
 
   if (format === 'bold') {
-    insertText = `**${selectedText}**`
-    anchor = selection.from + 2
-    head = anchor + selectedText.length
+    return toggleDelimitedInlineFormat(view, '**')
   }
 
   if (format === 'italic') {
-    insertText = `*${selectedText}*`
-    anchor = selection.from + 1
-    head = anchor + selectedText.length
+    return toggleDelimitedInlineFormat(view, '*')
   }
 
   if (format === 'link') {
@@ -3909,7 +3993,8 @@ function App() {
     previewCursorMarker.style.setProperty('--preview-cursor-top', `${previewCursorIndicator.top}px`)
     previewCursorMarker.style.setProperty('--preview-cursor-left', `${previewCursorIndicator.left}px`)
     previewCursorMarker.style.setProperty('--preview-cursor-height', `${previewCursorIndicator.height}px`)
-  }, [previewCursorIndicator])
+    restartCaretBlinkAnimations(previewCursorMarker, editorViewRef.current ?? editorRef.current?.view ?? null)
+  }, [editorPosition.column, editorPosition.line, editorPosition.offset, previewCursorIndicator])
 
   useEffect(() => {
     jumpToOutlineTargetRef.current = jumpToOutlineTarget

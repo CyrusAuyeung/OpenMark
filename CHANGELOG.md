@@ -2,6 +2,14 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.21.0 - 2026-06-12
+
+### Markdown Fidelity & Editing Parity
+
+- Synchronized the editor and preview caret blink animations so split-view cursor feedback feels visually unified.
+- Replaced the green editor selection and active-line accents with neutral blue-gray highlighting in light and dark themes.
+- Made bold and italic toolbar actions toggle Markdown delimiters off when the selected text is already formatted.
+
 ## 0.20.2 - 2026-06-12
 
 ### Preview Soft Line Breaks

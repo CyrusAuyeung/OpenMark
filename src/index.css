@@ -37,6 +37,9 @@
   --shadow-md: 0 18px 48px rgba(25, 35, 31, 0.14);
   --shadow-lg: 0 28px 86px rgba(25, 35, 31, 0.24);
   --editor-bg: #ffffff;
+  --editor-selection-bg: rgba(49, 95, 159, 0.16);
+  --editor-selection-bg-focused: rgba(49, 95, 159, 0.24);
+  --editor-active-line-bg: rgba(49, 95, 159, 0.06);
   --preview-bg: #fbfcfb;
   --inline-code-bg: #eef2f0;
   --code-bg: #202722;
@@ -94,6 +97,9 @@
   --shadow-md: 0 18px 48px rgba(0, 0, 0, 0.36);
   --shadow-lg: 0 28px 86px rgba(0, 0, 0, 0.48);
   --editor-bg: #20261f;
+  --editor-selection-bg: rgba(155, 188, 242, 0.24);
+  --editor-selection-bg-focused: rgba(155, 188, 242, 0.34);
+  --editor-active-line-bg: rgba(155, 188, 242, 0.1);
   --preview-bg: #191f1b;
   --inline-code-bg: #303a2e;
   --code-bg: #0f130f;
