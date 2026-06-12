@@ -197,12 +197,14 @@ type ReviewMarker = {
 type EditorPositionState = {
   line: number
   column: number
+  offset: number
   progress: number
 }
 
 type PreviewCursorIndicatorState = {
   top: number
-  isFallback: boolean
+  left: number
+  height: number
 }
 
 type ExportDocumentMetadata = {
@@ -360,6 +362,7 @@ const outlineResultLimit = 16
 const defaultEditorPosition: EditorPositionState = {
   line: 1,
   column: 1,
+  offset: 0,
   progress: 0,
 }
 const defaultSplitPaneRatio = 50
@@ -1790,6 +1793,7 @@ function getEditorPositionState(view: EditorView): EditorPositionState {
   return {
     line: line.number,
     column: selection.head - line.from + 1,
+    offset: selection.head,
     progress: Math.min(100, Math.max(0, progress)),
   }
 }
@@ -1797,72 +1801,16 @@ function getEditorPositionState(view: EditorView): EditorPositionState {
 function areEditorPositionsEqual(left: EditorPositionState, right: EditorPositionState) {
   return left.line === right.line &&
     left.column === right.column &&
+    left.offset === right.offset &&
     left.progress === right.progress
 }
 
-function getPreviewOutlineIndexForLine(lineNumber: number, outline: OutlineItem[]) {
-  let activeOutlineIndex: number | null = null
-
-  for (let index = 0; index < outline.length; index += 1) {
-    if (outline[index].lineNumber > lineNumber) {
-      break
-    }
-
-    activeOutlineIndex = index
-  }
-
-  return activeOutlineIndex
-}
-
-function getPreviewSectionProgress(lineNumber: number, outline: OutlineItem[], outlineIndex: number | null, documentLineCount: number) {
-  if (outlineIndex === null) {
-    return 0
-  }
-
-  const currentOutlineItem = outline[outlineIndex]
-  const nextOutlineItem = outline[outlineIndex + 1]
-  const sectionStartLine = currentOutlineItem.lineNumber
-  const sectionEndLine = nextOutlineItem?.lineNumber ?? Math.max(documentLineCount + 1, sectionStartLine + 1)
-  const sectionLength = Math.max(sectionEndLine - sectionStartLine, 1)
-
-  return Math.min(1, Math.max(0, (lineNumber - sectionStartLine) / sectionLength))
-}
-
-function clearPreviewCursorActiveElement(previewScroller: HTMLElement) {
-  previewScroller.querySelectorAll('.preview-cursor-active').forEach((element) => {
-    element.classList.remove('preview-cursor-active')
-  })
-}
-
-function syncPreviewCursorActiveHeading(previewScroller: HTMLElement, outlineIndex: number | null) {
-  clearPreviewCursorActiveElement(previewScroller)
-
-  if (outlineIndex === null) {
-    return
-  }
-
-  previewScroller
-    .querySelector<HTMLElement>(`[data-outline-index="${outlineIndex}"]`)
-    ?.classList.add('preview-cursor-active')
-}
-
-function getPreviewCursorFallbackTop(previewScroller: HTMLElement, editorProgress: number) {
-  const scrollableDistance = Math.max(previewScroller.scrollHeight - previewScroller.clientHeight, 0)
-  const estimatedTop = scrollableDistance * (editorProgress / 100) + Math.min(96, previewScroller.clientHeight * 0.35)
-
-  return Math.round(Math.min(Math.max(estimatedTop, 24), Math.max(previewScroller.scrollHeight - 24, 24)))
-}
-
-function getPreviewCursorSourceBlockTop(previewScroller: HTMLElement, lineNumber: number, markdownValue: string) {
+function getPreviewSourceRanges(previewScroller: HTMLElement) {
   const markdownPreview = previewScroller.querySelector<HTMLElement>('.markdown-preview')
   const previewBlocks = Array.from(markdownPreview?.children ?? [])
     .filter((element): element is HTMLElement => element instanceof HTMLElement)
 
-  if (previewBlocks.length === 0) {
-    return null
-  }
-
-  const lineRanges = previewBlocks.map((element) => {
+  return previewBlocks.map((element) => {
     const sourceLine = Number(element.dataset.sourceLine)
 
     if (Number.isFinite(sourceLine)) {
@@ -1876,6 +1824,124 @@ function getPreviewCursorSourceBlockTop(previewScroller: HTMLElement, lineNumber
       ? { element, startLine, endLine }
       : null
   }).filter((range): range is { element: HTMLElement; startLine: number; endLine: number } => range !== null)
+}
+
+function getSourceOffsetAtLineColumn(markdownValue: string, lineNumber: number, column: number) {
+  const sourceLines = markdownValue.split(/\r\n|\r|\n/)
+  const safeLineNumber = Math.min(Math.max(lineNumber, 1), Math.max(sourceLines.length, 1))
+  const safeColumn = Math.max(column, 1)
+  let offset = 0
+
+  for (let index = 0; index < safeLineNumber - 1; index += 1) {
+    offset += sourceLines[index].length + 1
+  }
+
+  return Math.min(offset + safeColumn - 1, markdownValue.length)
+}
+
+function getSourceLineEndOffset(markdownValue: string, lineNumber: number) {
+  const sourceLines = markdownValue.split(/\r\n|\r|\n/)
+  const safeLineNumber = Math.min(Math.max(lineNumber, 1), Math.max(sourceLines.length, 1))
+
+  return getSourceOffsetAtLineColumn(markdownValue, safeLineNumber, sourceLines[safeLineNumber - 1].length + 1)
+}
+
+function normalizeMarkdownFragmentForPreviewText(sourceFragment: string) {
+  return sourceFragment
+    .split(/\r\n|\r|\n/)
+    .map((line) => line
+      .replace(/^\s{0,3}#{1,6}\s+/, '')
+      .replace(/^\s{0,3}>\s?/, '')
+      .replace(/^\s*[-*+]\s+\[[ xX]\]\s+/, '')
+      .replace(/^\s*(?:[-*+]|\d+[.)])\s+/, '')
+      .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+      .replace(/\*\*([^*]*)\*\*/g, '$1')
+      .replace(/__([^_]*)__/g, '$1')
+      .replace(/\*([^*]*)\*/g, '$1')
+      .replace(/_([^_]*)_/g, '$1')
+      .replace(/`([^`]*)`/g, '$1')
+      .replace(/~~([^~]*)~~/g, '$1'))
+    .join(' ')
+}
+
+function getCollapsedRangeRectAtTextOffset(element: HTMLElement, textOffset: number) {
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
+  let remainingOffset = Math.max(textOffset, 0)
+  let currentNode = walker.nextNode()
+  let fallbackNode: Text | null = null
+
+  while (currentNode) {
+    if (currentNode instanceof Text) {
+      const textLength = currentNode.data.length
+      fallbackNode = currentNode
+
+      if (remainingOffset <= textLength) {
+        const range = document.createRange()
+        const textNodeOffset = Math.min(remainingOffset, textLength)
+
+        range.setStart(currentNode, textNodeOffset)
+        range.collapse(true)
+
+        const collapsedRect = range.getBoundingClientRect()
+
+        if (collapsedRect.height > 0) {
+          return collapsedRect
+        }
+
+        if (textNodeOffset > 0) {
+          range.setStart(currentNode, textNodeOffset - 1)
+          range.setEnd(currentNode, textNodeOffset)
+          const previousCharacterRect = range.getBoundingClientRect()
+
+          if (previousCharacterRect.height > 0) {
+            return new DOMRect(previousCharacterRect.right, previousCharacterRect.top, 0, previousCharacterRect.height)
+          }
+        }
+
+        return collapsedRect
+      }
+
+      remainingOffset -= textLength
+    }
+
+    currentNode = walker.nextNode()
+  }
+
+  if (fallbackNode) {
+    const range = document.createRange()
+
+    range.selectNodeContents(fallbackNode)
+    range.collapse(false)
+
+    const fallbackRect = range.getBoundingClientRect()
+
+    if (fallbackRect.height > 0) {
+      return fallbackRect
+    }
+  }
+
+  return null
+}
+
+function getPreviewLineHeight(element: HTMLElement) {
+  const lineHeight = Number.parseFloat(window.getComputedStyle(element).lineHeight)
+
+  return Number.isFinite(lineHeight) ? lineHeight : 24
+}
+
+function getPreviewCursorIndicator(
+  previewScroller: HTMLElement,
+  lineNumber: number,
+  cursorOffset: number,
+  markdownValue: string,
+): PreviewCursorIndicatorState | null {
+  const lineRanges = getPreviewSourceRanges(previewScroller)
+
+  if (lineRanges.length === 0) {
+    return null
+  }
+
   const matchingRange = lineRanges.find((range) => lineNumber >= range.startLine && lineNumber <= range.endLine)
   const nearestRange = lineRanges.reduce<{ element: HTMLElement; distance: number } | null>((nearest, range) => {
     const distance = lineNumber < range.startLine
@@ -1886,42 +1952,33 @@ function getPreviewCursorSourceBlockTop(previewScroller: HTMLElement, lineNumber
       ? { element: range.element, distance }
       : nearest
   }, null)
-  const fallbackBlockIndex = Math.round(((lineNumber - 1) / Math.max(markdownValue.split(/\r\n|\r|\n/).length - 1, 1)) * (previewBlocks.length - 1))
-  const targetBlock = matchingRange?.element ?? nearestRange?.element ?? previewBlocks[Math.min(Math.max(fallbackBlockIndex, 0), previewBlocks.length - 1)]
-  const blockOffset = Math.min(Math.max(targetBlock.offsetHeight / 2, 12), 24)
-
-  return Math.round(Math.min(Math.max(targetBlock.offsetTop + blockOffset, 24), Math.max(previewScroller.scrollHeight - 24, 24)))
-}
-
-function getPreviewCursorIndicator(
-  previewScroller: HTMLElement,
-  outlineIndex: number | null,
-  sectionProgress: number,
-  editorProgress: number,
-  lineNumber: number,
-  markdownValue: string,
-): PreviewCursorIndicatorState {
-  if (outlineIndex !== null) {
-    const targetHeading = previewScroller.querySelector<HTMLElement>(`[data-outline-index="${outlineIndex}"]`)
-
-    if (targetHeading) {
-      const nextHeading = previewScroller.querySelector<HTMLElement>(`[data-outline-index="${outlineIndex + 1}"]`)
-      const sectionStartTop = targetHeading.offsetTop + Math.min(targetHeading.offsetHeight / 2, 24)
-      const sectionEndTop = nextHeading?.offsetTop ?? Math.max(previewScroller.scrollHeight - 56, sectionStartTop)
-      const top = sectionStartTop + ((sectionEndTop - sectionStartTop) * sectionProgress)
-
-      return {
-        top: Math.round(Math.min(Math.max(top, 24), Math.max(previewScroller.scrollHeight - 24, 24))),
-        isFallback: false,
-      }
-    }
-  }
-
-  const sourceBlockTop = getPreviewCursorSourceBlockTop(previewScroller, lineNumber, markdownValue)
+  const fallbackBlockIndex = Math.round(((lineNumber - 1) / Math.max(markdownValue.split(/\r\n|\r|\n/).length - 1, 1)) * (lineRanges.length - 1))
+  const targetRange = matchingRange ?? (nearestRange
+    ? { element: nearestRange.element, startLine: lineNumber, endLine: lineNumber }
+    : lineRanges[Math.min(Math.max(fallbackBlockIndex, 0), lineRanges.length - 1)])
+  const targetBlock = targetRange.element
+  const lineHeight = getPreviewLineHeight(targetBlock)
+  const previewRect = previewScroller.getBoundingClientRect()
+  const blockRect = targetBlock.getBoundingClientRect()
+  const blockStartOffset = getSourceOffsetAtLineColumn(markdownValue, targetRange.startLine, 1)
+  const blockEndOffset = getSourceLineEndOffset(markdownValue, targetRange.endLine)
+  const safeCursorOffset = Math.min(Math.max(cursorOffset, blockStartOffset), blockEndOffset)
+  const sourceBeforeCursor = markdownValue.slice(blockStartOffset, safeCursorOffset)
+  const textOffset = Math.min(
+    normalizeMarkdownFragmentForPreviewText(sourceBeforeCursor).length,
+    targetBlock.textContent?.length ?? 0,
+  )
+  const caretRect = targetBlock.textContent && targetBlock.textContent.length > 0
+    ? getCollapsedRangeRectAtTextOffset(targetBlock, textOffset)
+    : null
+  const top = caretRect?.top ?? blockRect.top
+  const left = caretRect?.left ?? blockRect.left
+  const height = caretRect?.height && caretRect.height > 0 ? caretRect.height : lineHeight
 
   return {
-    top: sourceBlockTop ?? getPreviewCursorFallbackTop(previewScroller, editorProgress),
-    isFallback: sourceBlockTop === null,
+    top: Math.round(previewScroller.scrollTop + top - previewRect.top),
+    left: Math.round(previewScroller.scrollLeft + left - previewRect.left),
+    height: Math.round(Math.min(Math.max(height, 16), 42)),
   }
 }
 
@@ -1934,7 +1991,9 @@ function arePreviewCursorIndicatorsEqual(left: PreviewCursorIndicatorState | nul
     return false
   }
 
-  return left.top === right.top && left.isFallback === right.isFallback
+  return left.top === right.top &&
+    left.left === right.left &&
+    left.height === right.height
 }
 
 function OpenMarkLogo({ size = 24 }: { size?: number }) {
@@ -2995,14 +3054,6 @@ function App() {
     () => getDocumentStats(markdownValue, outline),
     [markdownValue, outline],
   )
-  const previewCursorOutlineIndex = useMemo(
-    () => getPreviewOutlineIndexForLine(editorPosition.line, outline),
-    [editorPosition.line, outline],
-  )
-  const previewCursorSectionProgress = useMemo(
-    () => getPreviewSectionProgress(editorPosition.line, outline, previewCursorOutlineIndex, stats.lines),
-    [editorPosition.line, outline, previewCursorOutlineIndex, stats.lines],
-  )
   const documentGoalKey = useMemo(
     () => getDocumentGoalKey(fileName, activeFilePath),
     [activeFilePath, fileName],
@@ -3824,10 +3875,6 @@ function App() {
       isMarkdownPreviewLoading ||
       markdownValue.trim().length === 0
     ) {
-      if (previewScroller) {
-        clearPreviewCursorActiveElement(previewScroller)
-      }
-
       setPreviewCursorIndicator((currentIndicator) => (
         currentIndicator === null ? currentIndicator : null
       ))
@@ -3837,10 +3884,8 @@ function App() {
     const animationFrame = window.requestAnimationFrame(() => {
       const nextIndicator = getPreviewCursorIndicator(
         previewScroller,
-        previewCursorOutlineIndex,
-        previewCursorSectionProgress,
-        editorPosition.progress,
         editorPosition.line,
+        editorPosition.offset,
         markdownValue,
       )
 
@@ -3852,7 +3897,7 @@ function App() {
     return () => {
       window.cancelAnimationFrame(animationFrame)
     }
-  }, [editorPosition.line, editorPosition.progress, isMarkdownPreviewLoading, markdownValue, mode, previewCursorOutlineIndex, previewCursorSectionProgress, renderedHtml])
+  }, [editorPosition.column, editorPosition.line, editorPosition.offset, isMarkdownPreviewLoading, markdownValue, mode, renderedHtml])
 
   useEffect(() => {
     const previewCursorMarker = previewCursorMarkerRef.current
@@ -3862,27 +3907,9 @@ function App() {
     }
 
     previewCursorMarker.style.setProperty('--preview-cursor-top', `${previewCursorIndicator.top}px`)
+    previewCursorMarker.style.setProperty('--preview-cursor-left', `${previewCursorIndicator.left}px`)
+    previewCursorMarker.style.setProperty('--preview-cursor-height', `${previewCursorIndicator.height}px`)
   }, [previewCursorIndicator])
-
-  useEffect(() => {
-    const previewScroller = previewScrollRef.current
-
-    if (
-      !previewScroller ||
-      (mode !== 'split' && mode !== 'preview') ||
-      isMarkdownPreviewLoading ||
-      markdownValue.trim().length === 0
-    ) {
-      if (previewScroller) {
-        clearPreviewCursorActiveElement(previewScroller)
-      }
-
-      return undefined
-    }
-
-    syncPreviewCursorActiveHeading(previewScroller, previewCursorOutlineIndex)
-    return undefined
-  })
 
   useEffect(() => {
     jumpToOutlineTargetRef.current = jumpToOutlineTarget
@@ -7189,7 +7216,7 @@ ${getExportStyleCss(exportStyle)}
                 {previewCursorIndicator && (
                   <div
                     ref={previewCursorMarkerRef}
-                    className={`preview-cursor-marker${previewCursorIndicator.isFallback ? ' fallback' : ''}`}
+                    className="preview-cursor-marker"
                     aria-hidden="true"
                   ></div>
                 )}

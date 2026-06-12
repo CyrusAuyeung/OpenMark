@@ -2,15 +2,14 @@
 
 ## Summary
 
-OpenMark 0.20.0 focuses on resource health & menu polish. It includes desktop image resource checks for missing local images and absolute local image paths in document diagnostics, one-click copy-to-assets repair for existing absolute local image references so saved documents become portable, and Replaced the plain native menu row with a styled in-app File/Edit/View/Help menu and localized native menu role labels for Chinese users.
+OpenMark 0.20.1 focuses on preview caret alignment. It includes Replaced the preview-side cursor marker with an inline black blinking caret inside rendered preview text and Mapped the editor insertion point to the rendered preview text position so split-view cursor feedback follows the actual text.
 
 ## Highlights
 
-### Resource Health & Menu Polish
+### Preview Caret Alignment
 
-- Added desktop image resource checks for missing local images and absolute local image paths in document diagnostics.
-- Added one-click copy-to-assets repair for existing absolute local image references so saved documents become portable.
-- Replaced the plain native menu row with a styled in-app File/Edit/View/Help menu and localized native menu role labels for Chinese users.
+- Replaced the preview-side cursor marker with an inline black blinking caret inside rendered preview text.
+- Mapped the editor insertion point to the rendered preview text position so split-view cursor feedback follows the actual text.
 
 ## Downloads
 
@@ -18,11 +17,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.20.0.exe` | Recommended installer. |
-| Windows | `OpenMark.0.20.0.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.20.0.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.20.0-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.20.0_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.20.1.exe` | Recommended installer. |
+| Windows | `OpenMark.0.20.1.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.20.1.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.20.1-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.20.1_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -57,4 +56,4 @@ Keep these auto-update metadata files attached when generated:
 ## Full Changelog
 
 - Release date: 2026-06-12
-- Tag: v0.20.0
+- Tag: v0.20.1

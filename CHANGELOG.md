@@ -2,6 +2,13 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.20.1 - 2026-06-12
+
+### Preview Caret Alignment
+
+- Replaced the preview-side cursor marker with an inline black blinking caret inside rendered preview text.
+- Mapped the editor insertion point to the rendered preview text position so split-view cursor feedback follows the actual text.
+
 ## 0.20.0 - 2026-06-12
 
 ### Resource Health & Menu Polish
