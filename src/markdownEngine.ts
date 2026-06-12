@@ -7,6 +7,11 @@ const markdownRenderer = new MarkdownIt({
   typographer: true,
 })
 
+markdownRenderer.validateLink = (url: string) => (
+  /^(?:https?:|mailto:|tel:|file:|blob:|data:image\/)/i.test(url) ||
+  !/^[A-Za-z][A-Za-z0-9+.-]*:/.test(url)
+)
+
 function getTopLevelBlockRanges(markdownValue: string) {
   return markdownRenderer
     .parse(markdownValue, {})
@@ -82,6 +87,6 @@ export function renderMarkdownSource(markdownValue: string) {
 export function sanitizeMarkdownHtml(html: string) {
   return DOMPurify.sanitize(html, {
     ADD_ATTR: ['aria-hidden', 'data-source-end-line', 'data-source-line', 'data-source-start-line'],
-    ALLOWED_URI_REGEXP: /^(?:(?:(?:https?|mailto|tel|file|blob):)|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i,
+    ALLOWED_URI_REGEXP: /^(?:(?:(?:https?|mailto|tel|file|blob):)|data:image\/|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i,
   })
 }

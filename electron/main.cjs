@@ -442,6 +442,42 @@ function getFileName(filePath) {
   return path.basename(filePath)
 }
 
+function getImageMimeType(filePath) {
+  switch (path.extname(filePath).toLowerCase()) {
+    case '.jpg':
+    case '.jpeg':
+      return 'image/jpeg'
+    case '.png':
+      return 'image/png'
+    case '.gif':
+      return 'image/gif'
+    case '.webp':
+      return 'image/webp'
+    case '.svg':
+      return 'image/svg+xml'
+    default:
+      return null
+  }
+}
+
+async function readImageDataUrl(filePath) {
+  const mimeType = getImageMimeType(filePath)
+
+  if (!mimeType) {
+    return null
+  }
+
+  let imageBuffer
+
+  try {
+    imageBuffer = await fs.readFile(filePath)
+  } catch {
+    return null
+  }
+
+  return `data:${mimeType};base64,${imageBuffer.toString('base64')}`
+}
+
 function isMarkdownLikeFile(filePath) {
   return ['.md', '.markdown', '.mdown', '.txt'].includes(path.extname(filePath).toLowerCase())
 }
@@ -618,6 +654,7 @@ ipcMain.handle('openmark:select-image-file', async () => {
     canceled: false,
     filePath,
     fileName: getFileName(filePath),
+    previewSrc: await readImageDataUrl(filePath),
   }
 })
 

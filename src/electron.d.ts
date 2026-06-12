@@ -89,6 +89,7 @@ declare global {
         canceled: boolean
         fileName?: string
         filePath?: string
+        previewSrc?: string | null
       }>
       saveMarkdownFile: (payload: {
         content: string

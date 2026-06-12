@@ -1449,7 +1449,7 @@ function getRelativePath(fromDirectory: string, toPath: string) {
 }
 
 function getImageAltText(fileName: string) {
-  return getBaseName(fileName).replace(/[-_]+/g, ' ').trim() || 'image'
+  return escapeMarkdownImageAlt(getBaseName(fileName).replace(/[-_]+/g, ' '))
 }
 
 function safeDecodeUri(value: string) {
@@ -1540,13 +1540,18 @@ function rewritePreviewImageSources(
   template.content.querySelectorAll('img').forEach((image) => {
     const src = image.getAttribute('src')
 
-    if (!src || isExternalImageSource(src)) {
+    if (!src) {
       return
     }
 
     const decodedSrc = safeDecodeUri(src)
+    const hasRememberedSource = hasRememberedPreviewImage(src, previewImageSources)
 
-    if (hasUrlScheme(decodedSrc) && !isAbsoluteLocalPath(decodedSrc)) {
+    if (!hasRememberedSource && isExternalImageSource(src)) {
+      return
+    }
+
+    if (!hasRememberedSource && hasUrlScheme(decodedSrc) && !isAbsoluteLocalPath(decodedSrc)) {
       return
     }
 
@@ -4400,6 +4405,10 @@ function App() {
       const markdownPath = activeFilePath
         ? getRelativePath(getPathDirectory(activeFilePath), result.filePath)
         : toFileUrl(result.filePath)
+
+      if (result.previewSrc) {
+        rememberPreviewImageSource({ markdownPath, previewSrc: result.previewSrc })
+      }
 
       insertMarkdownImage(markdownPath, result.fileName ?? getPathFileName(result.filePath))
       return

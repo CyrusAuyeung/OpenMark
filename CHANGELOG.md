@@ -2,6 +2,14 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.18.3 - 2026-06-12
+
+### Local Image Preview Fixes
+
+- Fixed local `file:///` image links rendering as raw Markdown instead of preview images.
+- Preserved selected local images as data URLs so preview and PDF export can load them reliably.
+- Sanitized inserted image alt text so bracketed local file names do not break Markdown image syntax.
+
 ## 0.18.2 - 2026-06-11
 
 ### Toolbar Fit Hotfix
