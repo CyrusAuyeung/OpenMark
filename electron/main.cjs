@@ -3,6 +3,7 @@ const { autoUpdater } = require('electron-updater')
 const fs = require('node:fs/promises')
 const os = require('node:os')
 const path = require('node:path')
+const { fileURLToPath } = require('node:url')
 
 const isDev = !app.isPackaged
 const canUseAutoUpdater = !isDev && (process.platform !== 'linux' || Boolean(process.env.APPIMAGE))
@@ -56,6 +57,12 @@ const applicationStrings = {
       toggleLanguage: 'Switch Language',
       settings: 'Settings...',
       edit: 'Edit',
+      undo: 'Undo',
+      redo: 'Redo',
+      cut: 'Cut',
+      copy: 'Copy',
+      paste: 'Paste',
+      selectAll: 'Select All',
       copyMarkdown: 'Copy Markdown',
       copyHtml: 'Copy HTML',
       insertImage: 'Insert Image...',
@@ -63,8 +70,13 @@ const applicationStrings = {
       replace: 'Replace',
       goToLine: 'Go to Line...',
       commandPalette: 'Command Palette',
+      reload: 'Reload',
+      toggleDevTools: 'Developer Tools',
+      close: 'Close Window',
+      quit: 'Quit OpenMark',
       help: 'Help',
       checkForUpdates: 'Check for Updates...',
+      about: 'About OpenMark',
     },
     dialogs: {
       discardChanges: 'Discard changes',
@@ -121,6 +133,12 @@ const applicationStrings = {
       toggleLanguage: '切换语言',
       settings: '设置...',
       edit: '编辑',
+      undo: '撤销',
+      redo: '重做',
+      cut: '剪切',
+      copy: '复制',
+      paste: '粘贴',
+      selectAll: '全选',
       copyMarkdown: '复制 Markdown',
       copyHtml: '复制 HTML',
       insertImage: '插入图片...',
@@ -128,8 +146,13 @@ const applicationStrings = {
       replace: '替换',
       goToLine: '跳转到行...',
       commandPalette: '命令面板',
+      reload: '重新加载',
+      toggleDevTools: '开发者工具',
+      close: '关闭窗口',
+      quit: '退出 OpenMark',
       help: '帮助',
       checkForUpdates: '检查更新...',
+      about: '关于 OpenMark',
     },
     dialogs: {
       discardChanges: '丢弃更改',
@@ -309,6 +332,7 @@ function createWindow() {
     minWidth: 960,
     minHeight: 640,
     title: 'OpenMark',
+    autoHideMenuBar: true,
     backgroundColor: '#f7f8f4',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -321,6 +345,8 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null
   })
+
+  mainWindow.setMenuBarVisibility(false)
 
   mainWindow.webContents.once('did-finish-load', () => {
     sendUpdateStatus(mainWindow)
@@ -378,7 +404,9 @@ function createApplicationMenu() {
         { label: menu.exportHtml, accelerator: 'CmdOrCtrl+E', click: () => sendCommand('export-html') },
         { label: menu.exportPdf, accelerator: 'CmdOrCtrl+Shift+E', click: () => sendCommand('export-pdf') },
         { type: 'separator' },
-        { role: process.platform === 'darwin' ? 'close' : 'quit' },
+        process.platform === 'darwin'
+          ? { label: menu.close, role: 'close' }
+          : { label: menu.quit, role: 'quit' },
       ],
     },
     {
@@ -400,20 +428,20 @@ function createApplicationMenu() {
         },
         { label: menu.settings, accelerator: 'CmdOrCtrl+,', click: () => sendCommand('open-theme-settings') },
         { type: 'separator' },
-        { role: 'reload' },
-        { role: 'toggleDevTools' },
+        { label: menu.reload, role: 'reload' },
+        { label: menu.toggleDevTools, role: 'toggleDevTools' },
       ],
     },
     {
       label: menu.edit,
       submenu: [
-        { role: 'undo' },
-        { role: 'redo' },
+        { label: menu.undo, role: 'undo' },
+        { label: menu.redo, role: 'redo' },
         { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        { role: 'selectAll' },
+        { label: menu.cut, role: 'cut' },
+        { label: menu.copy, role: 'copy' },
+        { label: menu.paste, role: 'paste' },
+        { label: menu.selectAll, role: 'selectAll' },
         { type: 'separator' },
         { label: menu.copyMarkdown, click: () => sendCommand('copy-markdown') },
         { label: menu.copyHtml, click: () => sendCommand('copy-html') },
@@ -432,7 +460,7 @@ function createApplicationMenu() {
       submenu: [
         { label: menu.checkForUpdates, click: () => sendCommand('check-for-updates') },
         { type: 'separator' },
-        { role: 'about' },
+        { label: menu.about, role: 'about' },
       ],
     },
   ]
@@ -482,6 +510,40 @@ async function pathExists(filePath) {
   } catch {
     return false
   }
+}
+
+function safeDecodeUri(value) {
+  try {
+    return decodeURI(value)
+  } catch {
+    return value
+  }
+}
+
+function resolveImageResourcePath(target, documentPath) {
+  const decodedTarget = safeDecodeUri(target.trim())
+
+  if (/^(https?:|data:|blob:)/i.test(decodedTarget)) {
+    return null
+  }
+
+  if (/^file:/i.test(decodedTarget)) {
+    try {
+      return fileURLToPath(decodedTarget)
+    } catch {
+      return null
+    }
+  }
+
+  if (path.isAbsolute(decodedTarget) || /^[A-Za-z]:[\/]/.test(decodedTarget)) {
+    return path.resolve(decodedTarget)
+  }
+
+  if (documentPath) {
+    return path.resolve(path.dirname(documentPath), decodedTarget)
+  }
+
+  return null
 }
 
 async function getAvailableAssetPath(assetDirectoryPath, fileName, sourcePath) {
@@ -739,6 +801,32 @@ ipcMain.handle('openmark:copy-image-to-document-assets', async (_event, payload)
     console.error('Image asset copy failed:', error)
     return { canceled: true, error: getApplicationStrings().errors.assetCopyFailed }
   }
+})
+
+ipcMain.handle('openmark:check-image-resources', async (_event, payload) => {
+  const documentPath = typeof payload?.documentPath === 'string' && payload.documentPath.length > 0
+    ? payload.documentPath
+    : null
+  const targets = Array.isArray(payload?.targets)
+    ? [...new Set(payload.targets.filter((target) => typeof target === 'string' && target.trim().length > 0))].slice(0, 500)
+    : []
+
+  const resources = await Promise.all(targets.map(async (target) => {
+    const filePath = resolveImageResourcePath(target, documentPath)
+
+    if (!filePath) {
+      return { target, exists: false, skipped: true }
+    }
+
+    return {
+      target,
+      filePath,
+      exists: await pathExists(filePath),
+      skipped: false,
+    }
+  }))
+
+  return { resources }
 })
 
 ipcMain.handle('openmark:save-markdown-file', async (_event, payload) => {

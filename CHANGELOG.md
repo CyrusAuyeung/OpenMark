@@ -2,6 +2,14 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.20.0 - 2026-06-12
+
+### Resource Health & Menu Polish
+
+- Added desktop image resource checks for missing local images and absolute local image paths in document diagnostics.
+- Added one-click copy-to-assets repair for existing absolute local image references so saved documents become portable.
+- Replaced the plain native menu row with a styled in-app File/Edit/View/Help menu and localized native menu role labels for Chinese users.
+
 ## 0.19.0 - 2026-06-12
 
 ### Document Asset Management

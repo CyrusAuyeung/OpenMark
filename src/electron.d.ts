@@ -102,6 +102,17 @@ declare global {
         previewSrc?: string | null
         error?: string
       }>
+      checkImageResources: (payload: {
+        documentPath?: string | null
+        targets: string[]
+      }) => Promise<{
+        resources: Array<{
+          target: string
+          exists: boolean
+          skipped?: boolean
+          filePath?: string
+        }>
+      }>
       saveMarkdownFile: (payload: {
         content: string
         filePath?: string | null

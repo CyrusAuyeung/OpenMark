@@ -12,11 +12,11 @@ Get the latest desktop build from the [GitHub Releases page](https://github.com/
 
 | Platform | Recommended package | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.19.0.exe` | Installer build with desktop/start menu shortcuts and update support. |
-| Windows | `OpenMark.0.19.0.exe` | Portable build for trying OpenMark without installation. |
-| macOS | `OpenMark-0.19.0.dmg` | Intel Mac disk image. Currently unsigned and not notarized. |
-| macOS | `OpenMark-0.19.0-arm64.dmg` | Apple Silicon disk image. Currently unsigned and not notarized. |
-| Linux | `openmark-editor_0.19.0_amd64.deb` | Debian/Ubuntu package managed through the system package installer. |
+| Windows | `OpenMark.Setup.0.20.0.exe` | Installer build with desktop/start menu shortcuts and update support. |
+| Windows | `OpenMark.0.20.0.exe` | Portable build for trying OpenMark without installation. |
+| macOS | `OpenMark-0.20.0.dmg` | Intel Mac disk image. Currently unsigned and not notarized. |
+| macOS | `OpenMark-0.20.0-arm64.dmg` | Apple Silicon disk image. Currently unsigned and not notarized. |
+| Linux | `openmark-editor_0.20.0_amd64.deb` | Debian/Ubuntu package managed through the system package installer. |
 
 ## Before Installing
 
@@ -48,11 +48,11 @@ Release maintainers should verify these before publishing a non-draft release:
 
 | 平台 | 推荐安装包 | 说明 |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.19.0.exe` | 安装版，包含桌面/开始菜单快捷方式和更新支持。 |
-| Windows | `OpenMark.0.19.0.exe` | 便携版，适合不安装直接试用。 |
-| macOS | `OpenMark-0.19.0.dmg` | Intel Mac 磁盘镜像，当前未签名、未公证。 |
-| macOS | `OpenMark-0.19.0-arm64.dmg` | Apple Silicon 磁盘镜像，当前未签名、未公证。 |
-| Linux | `openmark-editor_0.19.0_amd64.deb` | Debian/Ubuntu 安装包，通过系统包管理器安装。 |
+| Windows | `OpenMark.Setup.0.20.0.exe` | 安装版，包含桌面/开始菜单快捷方式和更新支持。 |
+| Windows | `OpenMark.0.20.0.exe` | 便携版，适合不安装直接试用。 |
+| macOS | `OpenMark-0.20.0.dmg` | Intel Mac 磁盘镜像，当前未签名、未公证。 |
+| macOS | `OpenMark-0.20.0-arm64.dmg` | Apple Silicon 磁盘镜像，当前未签名、未公证。 |
+| Linux | `openmark-editor_0.20.0_amd64.deb` | Debian/Ubuntu 安装包，通过系统包管理器安装。 |
 
 安装前请注意：
 
@@ -61,4 +61,4 @@ Release maintainers should verify these before publishing a non-draft release:
 - Release 页面上的 `latest.yml`、`latest-mac.yml` 等元数据需要保留，安装器更新检查会用到它们。
 - Linux AppImage 会在 `.deb` 发布路径稳定后继续推进。
 
-打包版本可通过 **Help > Check for Updates...** 或 **Settings > Updates** 检查 GitHub Releases 更新。如果更新区域不可用，请从 Releases 页面手动下载最新版本。
+打包版本可通过 **帮助 > 检查更新** 或 **设置 > 更新** 检查 GitHub Releases 更新。如果更新区域不可用，请从 Releases 页面手动下载最新版本。

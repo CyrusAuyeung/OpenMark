@@ -11,6 +11,7 @@ import {
 import CodeMirror, { type ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import { Compartment } from '@codemirror/state'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
+import { redo, undo } from '@codemirror/commands'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { EditorView, keymap } from '@codemirror/view'
 import {
@@ -159,6 +160,8 @@ type DocumentDiagnosticKind =
   | 'emptyImage'
   | 'unsavedRelativeImage'
   | 'unsupportedImage'
+  | 'absoluteImage'
+  | 'missingImage'
 
 type DocumentDiagnostic = {
   id: string
@@ -166,7 +169,20 @@ type DocumentDiagnostic = {
   lineNumber: number
   lineStart: number
   target: string
+  targetFrom?: number
+  targetTo?: number
+  filePath?: string
+  canCopyToAssets?: boolean
 }
+
+type ImageResourceStatus = {
+  target: string
+  exists: boolean
+  skipped?: boolean
+  filePath?: string
+}
+
+const emptyImageResourceStatuses: Record<string, ImageResourceStatus> = {}
 
 type ReviewMarkerKind = 'todo' | 'fixme' | 'review' | 'note'
 
@@ -303,6 +319,22 @@ type CommandPaletteItem = {
   Icon: LucideIcon
   action: () => void
 }
+
+type AppMenuId = 'file' | 'edit' | 'view' | 'help'
+
+type AppMenuEntry =
+  | {
+      id: string
+      label: string
+      shortcut?: string
+      Icon?: LucideIcon
+      action: () => void
+      disabled?: boolean
+    }
+  | {
+      id: string
+      separator: true
+    }
 
 const draftStorageKey = 'openmark:draft'
 const fileNameStorageKey = 'openmark:file-name'
@@ -1133,6 +1165,29 @@ function normalizeMarkdownReferenceTarget(rawTarget: string) {
   return trimmedTarget.split(/\s+/)[0] ?? ''
 }
 
+function getMarkdownReferenceTargetRange(matchIndex: number, isImage: boolean, altText: string, rawTarget: string) {
+  const rawTargetStart = matchIndex + (isImage ? 1 : 0) + 1 + altText.length + 2
+  const leadingWhitespaceLength = rawTarget.length - rawTarget.trimStart().length
+  const trimmedTarget = rawTarget.trimStart()
+
+  if (trimmedTarget.startsWith('<')) {
+    const endIndex = trimmedTarget.indexOf('>')
+    const safeEndIndex = endIndex > 0 ? endIndex : trimmedTarget.length
+
+    return {
+      targetFrom: rawTargetStart + leadingWhitespaceLength + 1,
+      targetTo: rawTargetStart + leadingWhitespaceLength + safeEndIndex,
+    }
+  }
+
+  const destination = trimmedTarget.split(/\s+/)[0] ?? ''
+
+  return {
+    targetFrom: rawTargetStart + leadingWhitespaceLength,
+    targetTo: rawTargetStart + leadingWhitespaceLength + destination.length,
+  }
+}
+
 function normalizeHeadingLinkTarget(target: string) {
   const hashTarget = target.slice(1)
 
@@ -1164,6 +1219,48 @@ function isExternalResourceTarget(target: string) {
   return /^(https?:|data:|blob:|file:)/i.test(target)
 }
 
+function isRemoteOrEmbeddedResourceTarget(target: string) {
+  return /^(https?:|data:|blob:)/i.test(target)
+}
+
+function isAbsoluteImageReference(target: string) {
+  return isAbsoluteLocalPath(target) || /^file:/i.test(target)
+}
+
+function getImageResourceTargets(
+  markdownValue: string,
+  activeFilePath: string | null,
+  previewImageSources: PreviewImageSource[],
+) {
+  const targets = new Set<string>()
+  const fenceRanges = getMarkdownCodeFenceRanges(markdownValue)
+
+  for (const match of markdownValue.matchAll(markdownReferencePattern)) {
+    const matchIndex = match.index ?? 0
+
+    if (isPositionInRanges(matchIndex, fenceRanges) || match[1] !== '!') {
+      continue
+    }
+
+    const target = normalizeMarkdownReferenceTarget(match[3])
+    const decodedTarget = safeDecodeUri(target)
+
+    if (
+      target.length === 0 ||
+      isRemoteOrEmbeddedResourceTarget(decodedTarget) ||
+      hasRememberedPreviewImage(target, previewImageSources)
+    ) {
+      continue
+    }
+
+    if (activeFilePath || isAbsoluteImageReference(decodedTarget)) {
+      targets.add(target)
+    }
+  }
+
+  return [...targets]
+}
+
 function hasRememberedPreviewImage(target: string, previewImageSources: PreviewImageSource[]) {
   const decodedTarget = safeDecodeUri(target)
 
@@ -1177,6 +1274,7 @@ function getDocumentDiagnostics(
   headingAnchorIds: string[],
   activeFilePath: string | null,
   previewImageSources: PreviewImageSource[],
+  imageResourceStatuses: Record<string, ImageResourceStatus>,
 ): DocumentDiagnostic[] {
   const diagnostics: DocumentDiagnostic[] = []
   const fenceRanges = getMarkdownCodeFenceRanges(markdownValue)
@@ -1190,7 +1288,9 @@ function getDocumentDiagnostics(
     }
 
     const isImage = match[1] === '!'
-    const target = normalizeMarkdownReferenceTarget(match[3])
+    const rawTarget = match[3]
+    const target = normalizeMarkdownReferenceTarget(rawTarget)
+    const targetRange = getMarkdownReferenceTargetRange(matchIndex, isImage, match[2], rawTarget)
     const lineNumber = getLineNumberAtPosition(markdownValue, matchIndex)
     const lineStart = getLineJumpTarget(markdownValue, lineNumber).lineStart
     const idPrefix = `${isImage ? 'image' : 'link'}-${matchIndex}`
@@ -1202,6 +1302,7 @@ function getDocumentDiagnostics(
         lineNumber,
         lineStart,
         target,
+        ...targetRange,
       })
       continue
     }
@@ -1218,6 +1319,7 @@ function getDocumentDiagnostics(
           lineNumber,
           lineStart,
           target,
+          ...targetRange,
         })
       }
 
@@ -1228,6 +1330,32 @@ function getDocumentDiagnostics(
           lineNumber,
           lineStart,
           target,
+          ...targetRange,
+        })
+      }
+
+      const imageResourceStatus = imageResourceStatuses[target] ?? imageResourceStatuses[decodedTarget]
+
+      if (imageResourceStatus && !imageResourceStatus.skipped && !imageResourceStatus.exists) {
+        diagnostics.push({
+          id: `${idPrefix}-missing`,
+          kind: 'missingImage',
+          lineNumber,
+          lineStart,
+          target,
+          filePath: imageResourceStatus.filePath,
+          ...targetRange,
+        })
+      } else if (activeFilePath && isAbsoluteImageReference(decodedTarget)) {
+        diagnostics.push({
+          id: `${idPrefix}-absolute`,
+          kind: 'absoluteImage',
+          lineNumber,
+          lineStart,
+          target,
+          filePath: imageResourceStatus?.filePath,
+          canCopyToAssets: imageResourceStatus?.exists === true && Boolean(imageResourceStatus.filePath),
+          ...targetRange,
         })
       }
 
@@ -1241,6 +1369,7 @@ function getDocumentDiagnostics(
         lineNumber,
         lineStart,
         target,
+        ...targetRange,
       })
       continue
     }
@@ -1252,6 +1381,7 @@ function getDocumentDiagnostics(
         lineNumber,
         lineStart,
         target,
+        ...targetRange,
       })
     }
   }
@@ -2778,7 +2908,9 @@ function App() {
   const [activeSearchRange, setActiveSearchRange] = useState<SearchMatch | null>(null)
   const [tableEditingState, setTableEditingState] = useState<TableEditingState>(defaultTableEditingState)
   const formatMoreRef = useRef<HTMLDivElement | null>(null)
+  const appMenuRef = useRef<HTMLDivElement | null>(null)
   const [isFormatMoreOpen, setIsFormatMoreOpen] = useState(false)
+  const [activeAppMenu, setActiveAppMenu] = useState<AppMenuId | null>(null)
   const [selectionStats, setSelectionStats] = useState<DocumentStats | null>(null)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [commandQuery, setCommandQuery] = useState('')
@@ -2790,6 +2922,7 @@ function App() {
   const [quickOpenQuery, setQuickOpenQuery] = useState('')
   const [activeQuickOpenIndex, setActiveQuickOpenIndex] = useState(0)
   const [previewImageSources, setPreviewImageSources] = useState<PreviewImageSource[]>([])
+  const [imageResourceStatuses, setImageResourceStatuses] = useState<Record<string, ImageResourceStatus>>({})
   const [exportHtml, setExportHtml] = useState('')
   const [isMarkdownPreviewLoading, setIsMarkdownPreviewLoading] = useState(() => initialMarkdownValue.trim().length > 0)
   const [isExportPreviewOpen, setIsExportPreviewOpen] = useState(false)
@@ -2820,9 +2953,19 @@ function App() {
 
   const outline = useMemo(() => getOutline(markdownValue), [markdownValue])
   const headingAnchorIds = useMemo(() => getHeadingAnchorIds(outline), [outline])
+  const imageResourceTargets = useMemo(
+    () => getImageResourceTargets(markdownValue, activeFilePath, previewImageSources),
+    [activeFilePath, markdownValue, previewImageSources],
+  )
   const documentDiagnostics = useMemo(
-    () => getDocumentDiagnostics(markdownValue, headingAnchorIds, activeFilePath, previewImageSources),
-    [activeFilePath, headingAnchorIds, markdownValue, previewImageSources],
+    () => getDocumentDiagnostics(
+      markdownValue,
+      headingAnchorIds,
+      activeFilePath,
+      previewImageSources,
+      imageResourceTargets.length > 0 ? imageResourceStatuses : emptyImageResourceStatuses,
+    ),
+    [activeFilePath, headingAnchorIds, imageResourceStatuses, imageResourceTargets.length, markdownValue, previewImageSources],
   )
   const reviewMarkers = useMemo(
     () => getReviewMarkers(markdownValue),
@@ -3290,6 +3433,58 @@ function App() {
       action: () => { void handleCheckForUpdates() },
     },
   ]
+  const appMenuLabels: Record<AppMenuId, string> = {
+    file: t.groups.file,
+    edit: t.groups.edit,
+    view: t.groups.view,
+    help: t.groups.help,
+  }
+  const appMenus: Record<AppMenuId, AppMenuEntry[]> = {
+    file: [
+      { id: 'new-document', label: t.commands.newDocument, shortcut: 'Ctrl+N', Icon: FilePlus2, action: handleNewDocument },
+      { id: 'open-document', label: t.commands.openMarkdownFile, shortcut: 'Ctrl+O', Icon: FolderOpen, action: () => { void handleOpenDocument() } },
+      { id: 'open-workspace-folder', label: t.commands.openWorkspaceFolder, Icon: FolderOpen, action: () => { void handleSelectWorkspaceFolder() }, disabled: !window.openmark },
+      { id: 'file-save-separator', separator: true },
+      { id: 'save-document', label: t.commands.saveDocument, shortcut: 'Ctrl+S', Icon: Save, action: () => { void handleSaveMarkdown() } },
+      { id: 'save-document-as', label: t.commands.saveDocumentAs, shortcut: 'Ctrl+Shift+S', Icon: Save, action: () => { void handleSaveMarkdown({ forceDialog: true }) } },
+      { id: 'file-export-separator', separator: true },
+      { id: 'preview-export', label: t.commands.previewExport, Icon: Eye, action: openExportPreview },
+      { id: 'export-html', label: t.commands.exportHtml, shortcut: 'Ctrl+E', Icon: Download, action: () => { void handleExportHtml() } },
+      { id: 'export-pdf', label: t.commands.exportPdf, shortcut: 'Ctrl+Shift+E', Icon: FileDown, action: () => { void handleExportPdf() } },
+    ],
+    edit: [
+      { id: 'undo', label: t.appMenu.undo, shortcut: 'Ctrl+Z', Icon: RotateCcw, action: () => runDocumentEditCommand('undo') },
+      { id: 'redo', label: t.appMenu.redo, shortcut: 'Ctrl+Y', Icon: RefreshCw, action: () => runDocumentEditCommand('redo') },
+      { id: 'edit-clipboard-separator', separator: true },
+      { id: 'cut', label: t.appMenu.cut, shortcut: 'Ctrl+X', action: () => runDocumentEditCommand('cut') },
+      { id: 'copy', label: t.appMenu.copy, shortcut: 'Ctrl+C', Icon: Copy, action: () => runDocumentEditCommand('copy') },
+      { id: 'paste', label: t.appMenu.paste, shortcut: 'Ctrl+V', action: () => runDocumentEditCommand('paste') },
+      { id: 'select-all', label: t.appMenu.selectAll, shortcut: 'Ctrl+A', Icon: FileText, action: () => runDocumentEditCommand('selectAll') },
+      { id: 'edit-copy-separator', separator: true },
+      { id: 'copy-markdown', label: t.commands.copyMarkdown, Icon: Copy, action: () => { void handleCopyMarkdown() } },
+      { id: 'copy-html', label: t.commands.copyHtml, Icon: Copy, action: () => { void handleCopyHtml() } },
+      { id: 'edit-insert-separator', separator: true },
+      { id: 'insert-image', label: t.commands.insertImage, Icon: ImagePlus, action: () => { void handleInsertImage() } },
+      { id: 'find-document', label: t.commands.findInDocument, shortcut: 'Ctrl+F', Icon: SearchIcon, action: () => openSearchBar('find') },
+      { id: 'replace-document', label: t.commands.replaceInDocument, shortcut: 'Ctrl+H', Icon: Replace, action: () => openSearchBar('replace') },
+      { id: 'go-to-line', label: t.commands.goToLine, shortcut: 'Ctrl+G', Icon: ListOrdered, action: openGoToLineDialog },
+      { id: 'open-command-palette', label: t.toolbar.commandPalette, shortcut: 'Ctrl+Shift+P', Icon: CommandIcon, action: openCommandPalette },
+    ],
+    view: [
+      { id: 'write-mode', label: t.commands.switchToWriteMode, shortcut: 'Ctrl+1', Icon: Type, action: () => setMode('write') },
+      { id: 'split-mode', label: t.commands.switchToSplitMode, shortcut: 'Ctrl+2', Icon: Columns2, action: () => setMode('split') },
+      { id: 'preview-mode', label: t.commands.switchToPreviewMode, shortcut: 'Ctrl+3', Icon: Eye, action: () => setMode('preview') },
+      { id: 'view-settings-separator', separator: true },
+      { id: 'toggle-theme', label: t.commands.toggleTheme, shortcut: 'Ctrl+Shift+L', Icon: theme === 'dark' ? Sun : Moon, action: toggleTheme },
+      { id: 'switch-language', label: t.commands.switchLanguage, Icon: Languages, action: toggleLocale },
+      { id: 'theme-settings', label: t.commands.openSettings, shortcut: 'Ctrl+,', Icon: Settings2, action: openThemeSettings },
+    ],
+    help: [
+      { id: 'check-for-updates', label: t.commands.checkForUpdates, Icon: RefreshCw, action: () => { openThemeSettings(); void handleCheckForUpdates() } },
+      { id: 'help-command-separator', separator: true },
+      { id: 'open-command-palette', label: t.toolbar.commandPalette, shortcut: 'Ctrl+Shift+P', Icon: CommandIcon, action: openCommandPalette },
+    ],
+  }
   const normalizedCommandQuery = commandQuery.trim().toLowerCase()
   const filteredCommandPaletteItems = normalizedCommandQuery.length === 0
     ? commandPaletteItems
@@ -3517,6 +3712,35 @@ function App() {
   useEffect(() => {
     previewImageSourcesRef.current = previewImageSources
   }, [previewImageSources])
+
+  useEffect(() => {
+    if (!window.openmark || imageResourceTargets.length === 0) {
+      return undefined
+    }
+
+    let isMounted = true
+
+    window.openmark.checkImageResources({
+      documentPath: activeFilePath,
+      targets: imageResourceTargets,
+    }).then((result) => {
+      if (!isMounted) {
+        return
+      }
+
+      setImageResourceStatuses(Object.fromEntries(
+        result.resources.map((resource) => [resource.target, resource]),
+      ))
+    }).catch(() => {
+      if (isMounted) {
+        setImageResourceStatuses({})
+      }
+    })
+
+    return () => {
+      isMounted = false
+    }
+  }, [activeFilePath, imageResourceTargets])
 
   useEffect(() => {
     let isCurrentRender = true
@@ -3771,6 +3995,34 @@ function App() {
       window.removeEventListener('keydown', handleKeyDown, { capture: true })
     }
   }, [isFormatMoreOpen])
+
+  useEffect(() => {
+    if (!activeAppMenu) {
+      return
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && appMenuRef.current?.contains(event.target)) {
+        return
+      }
+
+      setActiveAppMenu(null)
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setActiveAppMenu(null)
+      }
+    }
+
+    window.addEventListener('pointerdown', handlePointerDown, { capture: true })
+    window.addEventListener('keydown', handleKeyDown, { capture: true })
+
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown, { capture: true })
+      window.removeEventListener('keydown', handleKeyDown, { capture: true })
+    }
+  }, [activeAppMenu])
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -4754,6 +5006,54 @@ ${getExportStyleCss(exportStyle)}
     })
   }
 
+  function runDocumentEditCommand(command: 'undo' | 'redo' | 'cut' | 'copy' | 'paste' | 'selectAll') {
+    const editorView = getEditorView()
+
+    if (command === 'undo' || command === 'redo') {
+      if (editorView) {
+        const didRun = command === 'undo' ? undo(editorView) : redo(editorView)
+
+        if (didRun) {
+          editorView.focus()
+        }
+      }
+
+      return
+    }
+
+    if (command === 'selectAll' && editorView) {
+      editorView.dispatch({
+        selection: { anchor: 0, head: editorView.state.doc.length },
+        scrollIntoView: true,
+      })
+      editorView.focus()
+      return
+    }
+
+    if (editorView) {
+      editorView.focus()
+    }
+
+    document.execCommand(command)
+  }
+
+  function toggleAppMenu(menuId: AppMenuId) {
+    setActiveAppMenu((currentMenuId) => (currentMenuId === menuId ? null : menuId))
+  }
+
+  function closeAppMenu() {
+    setActiveAppMenu(null)
+  }
+
+  function runAppMenuEntry(entry: AppMenuEntry) {
+    if ('separator' in entry || entry.disabled) {
+      return
+    }
+
+    closeAppMenu()
+    entry.action()
+  }
+
   function openThemeSettings() {
     setIsThemeSettingsOpen(true)
   }
@@ -4846,6 +5146,47 @@ ${getExportStyleCss(exportStyle)}
 
   function closeFormatMoreMenu() {
     setIsFormatMoreOpen(false)
+  }
+
+  async function handleCopyDiagnosticImageToAssets(diagnostic: DocumentDiagnostic) {
+    if (!window.openmark || !activeFilePath || !diagnostic.filePath || diagnostic.targetFrom === undefined || diagnostic.targetTo === undefined) {
+      return
+    }
+
+    try {
+      const assetResult = await window.openmark.copyImageToDocumentAssets({
+        sourcePath: diagnostic.filePath,
+        documentPath: activeFilePath,
+      })
+
+      if (!assetResult || assetResult.canceled || !assetResult.relativePath) {
+        showDocumentOperationStatus('error', assetResult?.error ?? t.alerts.imageAssetCopyFailed)
+        return
+      }
+
+      const editorView = getEditorView()
+      const targetFrom = diagnostic.targetFrom
+      const targetTo = diagnostic.targetTo
+
+      if (editorView) {
+        editorView.dispatch({
+          changes: { from: targetFrom, to: targetTo, insert: assetResult.relativePath },
+          selection: { anchor: targetFrom + assetResult.relativePath.length },
+          scrollIntoView: true,
+        })
+        editorView.focus()
+      } else {
+        setMarkdownValue((currentValue) => `${currentValue.slice(0, targetFrom)}${assetResult.relativePath}${currentValue.slice(targetTo)}`)
+      }
+
+      if (assetResult.previewSrc) {
+        rememberPreviewImageSource({ markdownPath: assetResult.relativePath, previewSrc: assetResult.previewSrc })
+      }
+
+      showDocumentOperationStatus('success', formatTranslation(t.status.repairedImageAsset, { path: assetResult.relativePath }))
+    } catch {
+      showDocumentOperationStatus('error', t.alerts.imageAssetCopyFailed)
+    }
   }
 
   function focusCommandInput() {
@@ -5651,16 +5992,102 @@ ${getExportStyleCss(exportStyle)}
     )
   }
 
+  function renderAppMenu() {
+    const menuIds: AppMenuId[] = ['file', 'edit', 'view', 'help']
+
+    return (
+      <nav className="app-menu" aria-label={t.appMenu.menuBar} ref={appMenuRef}>
+        {menuIds.map((menuId) => {
+          const label = appMenuLabels[menuId]
+          const isOpen = activeAppMenu === menuId
+
+          return (
+            <div className="app-menu-group" key={menuId}>
+              {isOpen ? (
+                <button
+                  type="button"
+                  className="app-menu-trigger active"
+                  aria-haspopup="menu"
+                  aria-expanded="true"
+                  aria-label={formatTranslation(t.appMenu.openMenu, { menu: label })}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onMouseEnter={() => {
+                    if (activeAppMenu) {
+                      setActiveAppMenu(menuId)
+                    }
+                  }}
+                  onClick={() => toggleAppMenu(menuId)}
+                >
+                  <span>{label}</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="app-menu-trigger"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  aria-label={formatTranslation(t.appMenu.openMenu, { menu: label })}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onMouseEnter={() => {
+                    if (activeAppMenu) {
+                      setActiveAppMenu(menuId)
+                    }
+                  }}
+                  onClick={() => toggleAppMenu(menuId)}
+                >
+                  <span>{label}</span>
+                </button>
+              )}
+              {isOpen && (
+                <div className="app-menu-popover" role="menu">
+                  {appMenus[menuId].map((entry) => {
+                    if ('separator' in entry) {
+                      return <div key={entry.id} className="app-menu-separator" role="separator"></div>
+                    }
+
+                    const Icon = entry.Icon
+
+                    return (
+                      <button
+                        type="button"
+                        key={entry.id}
+                        className="app-menu-item"
+                        role="menuitem"
+                        disabled={entry.disabled}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => runAppMenuEntry(entry)}
+                      >
+                        <span className="app-menu-item-label">
+                          {Icon ? <Icon size={15} aria-hidden="true" /> : <span className="app-menu-item-icon-spacer"></span>}
+                          <span>{entry.label}</span>
+                        </span>
+                        {entry.shortcut && <kbd>{entry.shortcut}</kbd>}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </nav>
+    )
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div className="brand" aria-label="OpenMark">
-          <div className="brand-mark" aria-hidden="true">
-            <OpenMarkLogo size={25} />
+        <div className="topbar-left">
+          <div className="brand" aria-label="OpenMark">
+            <div className="brand-mark" aria-hidden="true">
+              <OpenMarkLogo size={25} />
+            </div>
+            <div className="brand-copy">
+              <span className="brand-title">OpenMark</span>
+            </div>
           </div>
-          <div className="brand-copy">
-            <span className="brand-title">OpenMark</span>
-          </div>
+
+          {renderAppMenu()}
         </div>
 
         <div className="toolbar" role="toolbar" aria-label={t.toolbar.editorToolbar}>
@@ -6048,24 +6475,36 @@ ${getExportStyleCss(exportStyle)}
                 <ol className="diagnostics-list">
                   {documentDiagnostics.map((diagnostic) => (
                     <li key={diagnostic.id}>
-                      <button
-                        type="button"
-                        className="diagnostic-button"
-                        onPointerDown={(event) => {
-                          event.preventDefault()
-                          jumpToDocumentDiagnostic(diagnostic)
-                        }}
-                        onClick={(event) => {
-                          if (event.detail === 0) {
+                      <div className="diagnostic-card">
+                        <button
+                          type="button"
+                          className="diagnostic-button"
+                          onPointerDown={(event) => {
+                            event.preventDefault()
                             jumpToDocumentDiagnostic(diagnostic)
-                          }
-                        }}
-                      >
-                        <span className="diagnostic-line">
-                          {formatTranslation(t.diagnostics.line, { line: String(diagnostic.lineNumber) })}
-                        </span>
-                        <span>{formatTranslation(t.diagnostics.messages[diagnostic.kind], { target: diagnostic.target || t.diagnostics.emptyTarget })}</span>
-                      </button>
+                          }}
+                          onClick={(event) => {
+                            if (event.detail === 0) {
+                              jumpToDocumentDiagnostic(diagnostic)
+                            }
+                          }}
+                        >
+                          <span className="diagnostic-line">
+                            {formatTranslation(t.diagnostics.line, { line: String(diagnostic.lineNumber) })}
+                          </span>
+                          <span>{formatTranslation(t.diagnostics.messages[diagnostic.kind], { target: diagnostic.target || t.diagnostics.emptyTarget })}</span>
+                        </button>
+                        {diagnostic.canCopyToAssets && (
+                          <button
+                            type="button"
+                            className="diagnostic-action"
+                            onClick={() => { void handleCopyDiagnosticImageToAssets(diagnostic) }}
+                          >
+                            <ImagePlus size={14} aria-hidden="true" />
+                            <span>{t.diagnostics.copyToAssets}</span>
+                          </button>
+                        )}
+                      </div>
                     </li>
                   ))}
                 </ol>
