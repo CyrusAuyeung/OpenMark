@@ -2203,7 +2203,7 @@ body.is-resizing-split * {
   font-size: 19px;
 }
 
-.markdown-preview [data-outline-index] {
+.markdown-preview [data-preview-source-jump='true'] {
   border-radius: 6px;
   cursor: pointer;
   transition:
@@ -2217,11 +2217,11 @@ body.is-resizing-split * {
   box-shadow: none;
 }
 
-.markdown-preview [data-outline-index]:hover {
+.markdown-preview [data-preview-source-jump='true']:hover {
   background: var(--accent-soft);
 }
 
-.markdown-preview [data-outline-index]:focus-visible {
+.markdown-preview [data-preview-source-jump='true']:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 3px;
 }

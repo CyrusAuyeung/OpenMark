@@ -2,6 +2,14 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.22.0 - 2026-06-14
+
+### Preview-to-Editor Navigation
+
+- Added source-aware preview clicks so headings, paragraphs, lists, code blocks, tables, and preserved blank lines can jump back to their Markdown source lines.
+- Estimated the target source line inside multi-line preview blocks from the click position for more precise navigation.
+- Kept preview links and native controls working normally while adding keyboard focus support for source-mapped preview blocks.
+
 ## 0.21.1 - 2026-06-12
 
 ### Editing Parity Hotfix

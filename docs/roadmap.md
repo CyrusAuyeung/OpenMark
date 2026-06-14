@@ -153,3 +153,10 @@
 - Make bold and italic toolbar actions toggle formatted selections off ✅
 - Hide active-line highlighting while a text selection is visible ✅
 - Normalize combined bold/italic marker toggles for repeated asterisk runs ✅
+
+## Milestone 21: Preview-to-Editor Navigation
+
+- Add source-aware preview clicks for headings, paragraphs, lists, code blocks, tables, and preserved blank lines ✅
+- Estimate the clicked source line inside multi-line preview blocks ✅
+- Support keyboard activation on source-mapped preview blocks ✅
+- Preserve normal link behavior inside the preview ✅

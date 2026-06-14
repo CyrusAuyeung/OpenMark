@@ -2,14 +2,15 @@
 
 ## Summary
 
-OpenMark 0.21.1 focuses on editing parity hotfix. It includes Hid the active-line background while text is selected so selecting one line no longer makes another line look highlighted and Normalized bold and italic toggles for combined or repeated asterisk markers, including `***text***` and long marker runs.
+OpenMark 0.22.0 focuses on preview-to-editor navigation. It includes source-aware preview clicks so headings, paragraphs, lists, code blocks, tables, and preserved blank lines can jump back to their Markdown source lines, Estimated the target source line inside multi-line preview blocks from the click position for more precise navigation, and Kept preview links and native controls working normally while adding keyboard focus support for source-mapped preview blocks.
 
 ## Highlights
 
-### Editing Parity Hotfix
+### Preview-to-Editor Navigation
 
-- Hid the active-line background while text is selected so selecting one line no longer makes another line look highlighted.
-- Normalized bold and italic toggles for combined or repeated asterisk markers, including `***text***` and long marker runs.
+- Added source-aware preview clicks so headings, paragraphs, lists, code blocks, tables, and preserved blank lines can jump back to their Markdown source lines.
+- Estimated the target source line inside multi-line preview blocks from the click position for more precise navigation.
+- Kept preview links and native controls working normally while adding keyboard focus support for source-mapped preview blocks.
 
 ## Downloads
 
@@ -17,11 +18,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.21.1.exe` | Recommended installer. |
-| Windows | `OpenMark.0.21.1.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.21.1.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.21.1-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.21.1_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.22.0.exe` | Recommended installer. |
+| Windows | `OpenMark.0.22.0.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.22.0.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.22.0-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.22.0_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -55,5 +56,5 @@ Keep these auto-update metadata files attached when generated:
 
 ## Full Changelog
 
-- Release date: 2026-06-12
-- Tag: v0.21.1
+- Release date: 2026-06-14
+- Tag: v0.22.0

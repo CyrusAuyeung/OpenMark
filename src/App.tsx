@@ -145,6 +145,12 @@ type LineJumpTarget = {
   lineStart: number
 }
 
+type PreviewSourceRange = {
+  element: HTMLElement
+  startLine: number
+  endLine: number
+}
+
 type DocumentStats = {
   words: number
   characters: number
@@ -1721,6 +1727,26 @@ function addPreviewHeadingNavigation(html: string, outline: OutlineItem[], headi
   return template.innerHTML
 }
 
+function addPreviewSourceNavigation(html: string) {
+  if (!/data-source-(line|start-line)/i.test(html)) {
+    return html
+  }
+
+  const template = document.createElement('template')
+  template.innerHTML = html
+  const sourceBlocks = Array.from(template.content.querySelectorAll<HTMLElement>('[data-source-line], [data-source-start-line]'))
+
+  sourceBlocks.forEach((block) => {
+    block.setAttribute('data-preview-source-jump', 'true')
+
+    if (!block.classList.contains('markdown-blank-line')) {
+      block.setAttribute('tabindex', block.getAttribute('tabindex') ?? '0')
+    }
+  })
+
+  return template.innerHTML
+}
+
 function isSearchWordCharacter(character: string) {
   return /^[A-Za-z0-9_]$/.test(character)
 }
@@ -1823,7 +1849,36 @@ function getPreviewSourceRanges(previewScroller: HTMLElement) {
     return Number.isFinite(startLine) && Number.isFinite(endLine)
       ? { element, startLine, endLine }
       : null
-  }).filter((range): range is { element: HTMLElement; startLine: number; endLine: number } => range !== null)
+  }).filter((range): range is PreviewSourceRange => range !== null)
+}
+
+function getPreviewSourceRange(element: HTMLElement): PreviewSourceRange | null {
+  const sourceLine = Number(element.dataset.sourceLine)
+
+  if (Number.isFinite(sourceLine)) {
+    return { element, startLine: sourceLine, endLine: sourceLine }
+  }
+
+  const startLine = Number(element.dataset.sourceStartLine)
+  const endLine = Number(element.dataset.sourceEndLine)
+
+  return Number.isFinite(startLine) && Number.isFinite(endLine)
+    ? { element, startLine, endLine }
+    : null
+}
+
+function getPreviewSourceLineAtClientY(range: PreviewSourceRange, clientY?: number) {
+  if (clientY === undefined || range.endLine <= range.startLine) {
+    return range.startLine
+  }
+
+  const blockRect = range.element.getBoundingClientRect()
+  const lineCount = range.endLine - range.startLine + 1
+  const clickRatio = blockRect.height <= 0
+    ? 0
+    : Math.min(Math.max((clientY - blockRect.top) / blockRect.height, 0), 0.999)
+
+  return range.startLine + Math.floor(clickRatio * lineCount)
 }
 
 function getSourceOffsetAtLineColumn(markdownValue: string, lineNumber: number, column: number) {
@@ -3154,10 +3209,12 @@ function App() {
     [markdownValue],
   )
   const renderedHtml = useMemo(
-    () => addPreviewHeadingNavigation(
-      exportHtml,
-      outline,
-      headingAnchorIds,
+    () => addPreviewSourceNavigation(
+      addPreviewHeadingNavigation(
+        exportHtml,
+        outline,
+        headingAnchorIds,
+      ),
     ),
     [exportHtml, headingAnchorIds, outline],
   )
@@ -5495,6 +5552,27 @@ ${getExportStyleCss(exportStyle)}
     jumpToDocumentLine({ lineNumber: reviewMarker.lineNumber, lineStart: reviewMarker.lineStart })
   }
 
+  function jumpToPreviewSource(range: PreviewSourceRange, clientY?: number) {
+    const lineNumber = getPreviewSourceLineAtClientY(range, clientY)
+    const target = getLineJumpTarget(markdownValue, lineNumber)
+
+    pendingLineJumpRef.current = target
+    setActiveOutlineLine(target.lineNumber)
+
+    if (mode === 'preview') {
+      setMode('split')
+      return true
+    }
+
+    const didJump = jumpToEditorLine(target)
+
+    if (didJump) {
+      pendingLineJumpRef.current = null
+    }
+
+    return didJump
+  }
+
   function handleGoToLineSubmit(event: ReactFormEvent<HTMLFormElement>) {
     event.preventDefault()
 
@@ -5974,17 +6052,23 @@ ${getExportStyleCss(exportStyle)}
   }
 
   function handlePreviewClick(event: ReactMouseEvent<HTMLElement>) {
-    const heading = (event.target as HTMLElement).closest<HTMLElement>('[data-outline-index]')
+    const eventTarget = event.target as HTMLElement
 
-    if (!heading) {
+    if (eventTarget.closest('a, button, input, textarea, select, summary')) {
       return
     }
 
-    const outlineIndex = Number(heading.dataset.outlineIndex)
-    const item = Number.isInteger(outlineIndex) ? outline[outlineIndex] : undefined
+    const sourceBlock = eventTarget.closest<HTMLElement>('[data-preview-source-jump="true"]')
 
-    if (item) {
-      handleOutlineJump(getOutlineJumpTarget(item, outlineIndex))
+    if (!sourceBlock || !event.currentTarget.contains(sourceBlock)) {
+      return
+    }
+
+    const sourceRange = getPreviewSourceRange(sourceBlock)
+
+    if (sourceRange) {
+      event.preventDefault()
+      jumpToPreviewSource(sourceRange, event.clientY)
     }
   }
 
@@ -5993,18 +6077,17 @@ ${getExportStyleCss(exportStyle)}
       return
     }
 
-    const heading = (event.target as HTMLElement).closest<HTMLElement>('[data-outline-index]')
+    const sourceBlock = (event.target as HTMLElement).closest<HTMLElement>('[data-preview-source-jump="true"]')
 
-    if (!heading) {
+    if (!sourceBlock || !event.currentTarget.contains(sourceBlock)) {
       return
     }
 
-    event.preventDefault()
-    const outlineIndex = Number(heading.dataset.outlineIndex)
-    const item = Number.isInteger(outlineIndex) ? outline[outlineIndex] : undefined
+    const sourceRange = getPreviewSourceRange(sourceBlock)
 
-    if (item) {
-      handleOutlineJump(getOutlineJumpTarget(item, outlineIndex))
+    if (sourceRange) {
+      event.preventDefault()
+      jumpToPreviewSource(sourceRange)
     }
   }
 
