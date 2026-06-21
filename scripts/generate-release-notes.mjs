@@ -160,6 +160,7 @@ function buildReleaseNotes(targetVersion, expectedTag, releaseDate, sections) {
     '## Verification Checklist',
     '',
     '- [ ] `npm run lint`',
+    '- [ ] `npm test`',
     '- [ ] `npm run release:notes -- --check`',
     '- [ ] `npm run release:check`',
     '- [ ] `npm run build`',

@@ -167,3 +167,13 @@
 - Show file, line, and highlighted context for content matches ✅
 - Open matching workspace files and jump to the matched source line ✅
 - Keep search bounded with file-count, file-size, and result limits ✅
+
+## Milestone 23: Regression Test Foundation
+
+- Add Vitest and jsdom test runner for renderer and pure helper regressions done
+- Run the test suite in CI with lint, release checks, build, and budget checks done
+- Cover Markdown rendering metadata and sanitization done
+- Cover workspace content search matching and preview clipping done
+- Cover inline and block Markdown formatting helper behavior done
+- Cover table parsing, rendering, and row/column edit actions done
+- Refresh vulnerable dependency lockfile entries and keep npm audit clean done

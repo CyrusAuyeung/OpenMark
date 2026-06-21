@@ -2,6 +2,18 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.24.0 - 2026-06-21
+
+### Regression Test Foundation
+
+- Added Vitest and jsdom test coverage for the Markdown pipeline, workspace content search, Markdown formatting, and table editing helpers.
+- Added CI test execution so pull requests and main-branch pushes now run lint, tests, release metadata checks, build, and build budget checks together.
+- Split workspace search matching and Markdown formatting/table edit rules into pure helper modules so high-risk editor behavior can be tested without launching Electron or CodeMirror.
+
+### Security & Maintenance
+
+- Upgraded DOMPurify and refreshed vulnerable development dependency lockfile entries so `npm audit` reports zero known vulnerabilities.
+
 ## 0.23.0 - 2026-06-21
 
 ### Workspace Content Search
