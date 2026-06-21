@@ -2,6 +2,14 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.25.0 - 2026-06-21
+
+### Editing Helper Regression Coverage
+
+- Pure Markdown formatting helper coverage for list continuation, task checkbox toggling, plain-text paste cleanup, and URL paste-to-link rules.
+- Regression coverage for continuing bullet, ordered, and task lists, exiting empty list items, and toggling task checkboxes across mixed selected lines.
+- Paste helper coverage for BOM, zero-width, non-breaking-space, line-separator, and CRLF cleanup, plus selected-text URL paste link creation.
+
 ## 0.24.0 - 2026-06-21
 
 ### Regression Test Foundation

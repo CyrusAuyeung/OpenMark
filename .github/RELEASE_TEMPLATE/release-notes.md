@@ -2,19 +2,15 @@
 
 ## Summary
 
-OpenMark 0.24.0 focuses on regression test foundation and security & maintenance. It includes Vitest and jsdom test coverage for the Markdown pipeline, workspace content search, Markdown formatting, and table editing helpers, CI test execution so pull requests and main-branch pushes now run lint, tests, release metadata checks, build, and build budget checks together, and split workspace search matching and Markdown formatting/table edit rules into pure helper modules so high-risk editor behavior can be tested without launching Electron or CodeMirror.
+OpenMark 0.25.0 focuses on editing helper regression coverage. It includes pure Markdown formatting helper coverage for list continuation, task checkbox toggling, plain-text paste cleanup, and URL paste-to-link rules, regression coverage for continuing bullet, ordered, and task lists, exiting empty list items, and toggling task checkboxes across mixed selected lines, and paste helper coverage for BOM, zero-width, non-breaking-space, line-separator, and CRLF cleanup, plus selected-text URL paste link creation.
 
 ## Highlights
 
-### Regression Test Foundation
+### Editing Helper Regression Coverage
 
-- Added Vitest and jsdom test coverage for the Markdown pipeline, workspace content search, Markdown formatting, and table editing helpers.
-- Added CI test execution so pull requests and main-branch pushes now run lint, tests, release metadata checks, build, and build budget checks together.
-- Split workspace search matching and Markdown formatting/table edit rules into pure helper modules so high-risk editor behavior can be tested without launching Electron or CodeMirror.
-
-### Security & Maintenance
-
-- Upgraded DOMPurify and refreshed vulnerable development dependency lockfile entries so `npm audit` reports zero known vulnerabilities.
+- Pure Markdown formatting helper coverage for list continuation, task checkbox toggling, plain-text paste cleanup, and URL paste-to-link rules.
+- Regression coverage for continuing bullet, ordered, and task lists, exiting empty list items, and toggling task checkboxes across mixed selected lines.
+- Paste helper coverage for BOM, zero-width, non-breaking-space, line-separator, and CRLF cleanup, plus selected-text URL paste link creation.
 
 ## Downloads
 
@@ -22,11 +18,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.24.0.exe` | Recommended installer. |
-| Windows | `OpenMark.0.24.0.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.24.0.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.24.0-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.24.0_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.25.0.exe` | Recommended installer. |
+| Windows | `OpenMark.0.25.0.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.25.0.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.25.0-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.25.0_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -62,4 +58,4 @@ Keep these auto-update metadata files attached when generated:
 ## Full Changelog
 
 - Release date: 2026-06-21
-- Tag: v0.24.0
+- Tag: v0.25.0

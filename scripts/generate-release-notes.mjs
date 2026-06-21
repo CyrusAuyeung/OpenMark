@@ -200,7 +200,7 @@ function toSummaryFocusText(sectionName) {
 }
 
 function toSummaryPhrase(item) {
-  return item
+  return lowerSummaryInitial(item
     .replace(/^Added\s+/i, '')
     .replace(/^Fixed\s+/i, 'fixes for ')
     .replace(/^Split\s+/i, 'split ')
@@ -213,7 +213,13 @@ function toSummaryPhrase(item) {
     .replace(/^Surfaced\s+/i, 'visibility into ')
     .replace(/^Improved\s+/i, 'improvements to ')
     .replace(/^Refined\s+/i, 'refinements to ')
-    .replace(/\.$/, '')
+    .replace(/\.$/, ''))
+}
+
+function lowerSummaryInitial(value) {
+  return value.replace(/^([A-Z])([a-z])/, (_match, firstLetter, secondLetter) => (
+    `${firstLetter.toLowerCase()}${secondLetter}`
+  ))
 }
 
 function getAssetRows(targetVersion) {

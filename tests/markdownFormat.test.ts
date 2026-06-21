@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import {
+  createMarkdownLinkFromPaste,
   createMarkdownTable,
   formatBlockLine,
   getDelimitedInlineFormatEdit,
+  getMarkdownListContinuationEdit,
+  getMarkdownListMatch,
+  getMarkdownPasteEdit,
+  getSinglePastedUrl,
+  getTaskCheckboxToggleChanges,
   getTableEditActionResult,
   getTableColumnIndex,
+  normalizePastedPlainText,
   renderMarkdownTableRows,
   splitTableCells,
 } from '../src/markdownFormat'
@@ -48,6 +55,22 @@ function applyChanges(markdownValue: string, changes: MarkdownTextChange | Markd
     .reduce((nextValue, change) => (
       `${nextValue.slice(0, change.from)}${change.insert}${nextValue.slice(change.to)}`
     ), markdownValue)
+}
+
+function getMarkdownLines(markdownValue: string) {
+  let offset = 0
+
+  return markdownValue.split('\n').map((text) => {
+    const line = {
+      from: offset,
+      to: offset + text.length,
+      text,
+    }
+
+    offset += text.length + 1
+
+    return line
+  })
 }
 
 function applyDelimitedFormat(
@@ -160,6 +183,136 @@ describe('getDelimitedInlineFormatEdit', () => {
       '**plain**',
       { anchor: 2, head: 7 },
     )
+  })
+})
+
+describe('getMarkdownListContinuationEdit', () => {
+  it('continues bullet, ordered, and task list markers', () => {
+    const bulletEdit = getMarkdownListContinuationEdit({
+      selection: { from: 6, to: 6 },
+      line: { from: 0, to: 6, text: '- item' },
+    })
+    const orderedEdit = getMarkdownListContinuationEdit({
+      selection: { from: 9, to: 9 },
+      line: { from: 0, to: 9, text: '  9) Step' },
+    })
+    const taskEdit = getMarkdownListContinuationEdit({
+      selection: { from: 10, to: 10 },
+      line: { from: 0, to: 10, text: '- [x] Done' },
+    })
+
+    expect(bulletEdit).toEqual({
+      changes: { from: 6, to: 6, insert: '\n- ' },
+      selection: { anchor: 9 },
+    })
+    expect(orderedEdit).toEqual({
+      changes: { from: 9, to: 9, insert: '\n  10) ' },
+      selection: { anchor: 16 },
+    })
+    expect(taskEdit).toEqual({
+      changes: { from: 10, to: 10, insert: '\n- [ ] ' },
+      selection: { anchor: 17 },
+    })
+  })
+
+  it('removes the list marker from an empty list item', () => {
+    const edit = getMarkdownListContinuationEdit({
+      selection: { from: 4, to: 4 },
+      line: { from: 0, to: 4, text: '  - ' },
+    })
+
+    expect(edit).toEqual({
+      changes: { from: 0, to: 4, insert: '  ' },
+      selection: { anchor: 2 },
+    })
+  })
+
+  it('does not handle non-list lines or expanded selections', () => {
+    expect(getMarkdownListMatch('Plain text')).toBeNull()
+    expect(getMarkdownListContinuationEdit({
+      selection: { from: 0, to: 4 },
+      line: { from: 0, to: 6, text: '- item' },
+    })).toBeNull()
+  })
+})
+
+describe('getTaskCheckboxToggleChanges', () => {
+  it('toggles task checkbox markers across selected lines', () => {
+    const markdownValue = [
+      '- [ ] One',
+      'plain',
+      '  * [X] Two',
+      '+ [x] Three',
+    ].join('\n')
+    const changes = getTaskCheckboxToggleChanges(getMarkdownLines(markdownValue))
+
+    expect(changes).toEqual([
+      { from: 3, to: 4, insert: 'x' },
+      { from: 21, to: 22, insert: ' ' },
+      { from: 31, to: 32, insert: ' ' },
+    ])
+    expect(applyChanges(markdownValue, changes ?? [])).toBe([
+      '- [x] One',
+      'plain',
+      '  * [ ] Two',
+      '+ [ ] Three',
+    ].join('\n'))
+  })
+
+  it('returns null when no task checkbox markers are present', () => {
+    expect(getTaskCheckboxToggleChanges(getMarkdownLines('- item\nplain'))).toBeNull()
+  })
+})
+
+describe('getMarkdownPasteEdit', () => {
+  it('normalizes plain text pasted from rich sources', () => {
+    const clipboardText = '\uFEFFOne\u200B\u00A0two\r\nthree\u2028four'
+
+    expect(normalizePastedPlainText(clipboardText)).toBe('One two\nthree\nfour')
+    expect(getMarkdownPasteEdit({
+      clipboardText,
+      selection: { from: 2, to: 5 },
+      selectedText: 'old',
+    })).toEqual({
+      changes: { from: 2, to: 5, insert: 'One two\nthree\nfour' },
+      selection: { anchor: 20 },
+    })
+  })
+
+  it('wraps selected text as a Markdown link when a single web URL is pasted', () => {
+    const edit = getMarkdownPasteEdit({
+      clipboardText: ' https://example.com/a?b=<c> ',
+      selection: { from: 0, to: 5 },
+      selectedText: 'Label ] text',
+    })
+
+    expect(createMarkdownLinkFromPaste('Label ] text', 'https://example.com/a?b=<c>')).toBe(
+      '[Label \\] text](<https://example.com/a?b=%3Cc%3E>)',
+    )
+    expect(edit).toEqual({
+      changes: {
+        from: 0,
+        to: 5,
+        insert: '[Label \\] text](<https://example.com/a?b=%3Cc%3E>)',
+      },
+      selection: { anchor: 50 },
+    })
+  })
+
+  it('keeps default paste behavior for unchanged text and empty-selection URLs', () => {
+    expect(getSinglePastedUrl('https://example.com')).toBe('https://example.com')
+    expect(getSinglePastedUrl('mailto:test@example.com')).toBeNull()
+    expect(getSinglePastedUrl('https://example.com with-space')).toBeNull()
+    expect(getMarkdownPasteEdit({
+      clipboardText: 'plain text',
+      selection: { from: 0, to: 0 },
+      selectedText: '',
+    })).toBeNull()
+    expect(getMarkdownPasteEdit({
+      clipboardText: 'https://example.com',
+      selection: { from: 0, to: 0 },
+      selectedText: '',
+    })).toBeNull()
   })
 })
 

@@ -78,7 +78,10 @@ import {
   createMarkdownTable,
   formatBlockLine,
   getDelimitedInlineFormatEdit,
+  getMarkdownListContinuationEdit,
+  getMarkdownPasteEdit,
   getRenderedTableCellOffset,
+  getTaskCheckboxToggleChanges,
   getTableEditActionResult,
   getTableColumnIndex,
   isMarkdownTableRow,
@@ -312,12 +315,6 @@ type MarkdownPlaceholderCatalog = TranslationCatalog['markdownPlaceholders']
 
 type ReviewMarkerTranslationCatalog = TranslationCatalog['review']
 
-type MarkdownListMatch = {
-  indent: string
-  marker: string
-  body: string
-}
-
 type CommandPaletteItem = {
   id: string
   label: string
@@ -383,11 +380,6 @@ const imageFileExtensions = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']
 const exportDescriptionMaxLength = 180
 const libraryItemSelector = '[data-library-item="true"]'
 const libraryRowSelector = '[data-library-row="true"]'
-const taskListLinePattern = /^(\s*)([-*+])\s+\[([ xX])\]\s*(.*)$/
-const bulletListLinePattern = /^(\s*)([-*+])\s+(.*)$/
-const orderedListLinePattern = /^(\s*)(\d+)([.)])\s+(.*)$/
-const zeroWidthPasteCharactersPattern = /[\u200B-\u200D\uFEFF]/g
-const supportedPasteUrlProtocols = new Set(['http:', 'https:'])
 const safeLinkProtocols = new Set(['http:', 'https:', 'mailto:', 'tel:', 'file:'])
 const markdownReferencePattern = /(!?)\[([^\]\n]*)\]\(([^)\n]*)\)/g
 const reviewMarkerTokenPattern = 'TODO|FIXME|REVIEW|NOTE|待办|修正|审阅|备注'
@@ -2575,72 +2567,25 @@ function applyHorizontalRuleFormat(view: EditorView) {
   return true
 }
 
-function getMarkdownListMatch(line: string): MarkdownListMatch | null {
-  const taskMatch = line.match(taskListLinePattern)
-
-  if (taskMatch) {
-    return {
-      indent: taskMatch[1],
-      marker: `${taskMatch[2]} [ ]`,
-      body: taskMatch[4],
-    }
-  }
-
-  const orderedMatch = line.match(orderedListLinePattern)
-
-  if (orderedMatch) {
-    return {
-      indent: orderedMatch[1],
-      marker: `${Number(orderedMatch[2]) + 1}${orderedMatch[3]}`,
-      body: orderedMatch[4],
-    }
-  }
-
-  const bulletMatch = line.match(bulletListLinePattern)
-
-  if (bulletMatch) {
-    return {
-      indent: bulletMatch[1],
-      marker: bulletMatch[2],
-      body: bulletMatch[3],
-    }
-  }
-
-  return null
-}
-
 function continueMarkdownList(view: EditorView) {
   const selection = view.state.selection.main
-
-  if (!selection.empty) {
-    return false
-  }
-
   const line = view.state.doc.lineAt(selection.from)
-  const lineText = line.text
-  const listMatch = getMarkdownListMatch(lineText)
+  const edit = getMarkdownListContinuationEdit({
+    selection: { from: selection.from, to: selection.to },
+    line: {
+      from: line.from,
+      to: line.to,
+      text: line.text,
+    },
+  })
 
-  if (!listMatch) {
+  if (!edit) {
     return false
   }
-
-  if (listMatch.body.trim().length === 0) {
-    const anchor = line.from + listMatch.indent.length
-
-    view.dispatch({
-      changes: { from: line.from, to: line.to, insert: listMatch.indent },
-      selection: { anchor },
-      scrollIntoView: true,
-    })
-
-    return true
-  }
-
-  const insertText = `\n${listMatch.indent}${listMatch.marker} `
 
   view.dispatch({
-    changes: { from: selection.from, to: selection.to, insert: insertText },
-    selection: { anchor: selection.from + insertText.length },
+    changes: edit.changes,
+    selection: edit.selection,
     scrollIntoView: true,
   })
 
@@ -2652,25 +2597,20 @@ function toggleTaskCheckbox(view: EditorView) {
   const lineEndPosition = selection.empty ? selection.to : Math.max(selection.from, selection.to - 1)
   const fromLine = view.state.doc.lineAt(selection.from)
   const toLine = view.state.doc.lineAt(lineEndPosition)
-  const changes: Array<{ from: number, to: number, insert: string }> = []
+  const lines = []
 
   for (let lineNumber = fromLine.number; lineNumber <= toLine.number; lineNumber += 1) {
     const line = view.state.doc.line(lineNumber)
-    const taskMatch = line.text.match(/^(\s*[-*+]\s+\[)([ xX])(\]\s*)/)
-
-    if (!taskMatch) {
-      continue
-    }
-
-    const checkboxPosition = line.from + taskMatch[1].length
-    changes.push({
-      from: checkboxPosition,
-      to: checkboxPosition + 1,
-      insert: taskMatch[2].trim().length === 0 ? 'x' : ' ',
+    lines.push({
+      from: line.from,
+      to: line.to,
+      text: line.text,
     })
   }
 
-  if (changes.length === 0) {
+  const changes = getTaskCheckboxToggleChanges(lines)
+
+  if (!changes) {
     return false
   }
 
@@ -2678,53 +2618,6 @@ function toggleTaskCheckbox(view: EditorView) {
   view.focus()
 
   return true
-}
-
-function normalizePastedPlainText(text: string) {
-  return text
-    .replace(/^\uFEFF/, '')
-    .replace(zeroWidthPasteCharactersPattern, '')
-    .replace(/\u00A0/g, ' ')
-    .replace(/[\u2028\u2029]/g, '\n')
-    .replace(/\r\n?/g, '\n')
-}
-
-function getSinglePastedUrl(text: string) {
-  const trimmedText = text.trim()
-
-  if (trimmedText.length === 0 || /\s/.test(trimmedText)) {
-    return null
-  }
-
-  try {
-    const parsedUrl = new URL(trimmedText)
-    return supportedPasteUrlProtocols.has(parsedUrl.protocol) ? trimmedText : null
-  } catch {
-    return null
-  }
-}
-
-function escapeMarkdownLinkText(text: string) {
-  return text.replace(/([\\\]])/g, '\\$1').replace(/\s+/g, ' ').trim()
-}
-
-function formatMarkdownLinkDestination(url: string) {
-  return `<${url.replace(/</g, '%3C').replace(/>/g, '%3E')}>`
-}
-
-function createMarkdownLinkFromPaste(label: string, url: string) {
-  return `[${escapeMarkdownLinkText(label) || url}](${formatMarkdownLinkDestination(url)})`
-}
-
-function insertPastedText(view: EditorView, text: string) {
-  const selection = view.state.selection.main
-
-  view.dispatch({
-    changes: { from: selection.from, to: selection.to, insert: text },
-    selection: { anchor: selection.from + text.length },
-    scrollIntoView: true,
-  })
-  view.focus()
 }
 
 function handleMarkdownPaste(event: ClipboardEvent, view: EditorView) {
@@ -2735,19 +2628,20 @@ function handleMarkdownPaste(event: ClipboardEvent, view: EditorView) {
   }
 
   const selection = view.state.selection.main
-  const normalizedText = normalizePastedPlainText(clipboardText)
-  const pastedUrl = getSinglePastedUrl(normalizedText)
+  const edit = getMarkdownPasteEdit({
+    clipboardText,
+    selection: { from: selection.from, to: selection.to },
+    selectedText: selection.empty ? '' : view.state.sliceDoc(selection.from, selection.to),
+  })
 
-  if (pastedUrl && !selection.empty) {
-    const selectedText = view.state.sliceDoc(selection.from, selection.to)
+  if (edit) {
     event.preventDefault()
-    insertPastedText(view, createMarkdownLinkFromPaste(selectedText, pastedUrl))
-    return true
-  }
-
-  if (normalizedText !== clipboardText) {
-    event.preventDefault()
-    insertPastedText(view, normalizedText)
+    view.dispatch({
+      changes: edit.changes,
+      selection: edit.selection,
+      scrollIntoView: true,
+    })
+    view.focus()
     return true
   }
 

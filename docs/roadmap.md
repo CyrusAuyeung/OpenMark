@@ -177,3 +177,10 @@
 - Cover inline and block Markdown formatting helper behavior done
 - Cover table parsing, rendering, and row/column edit actions done
 - Refresh vulnerable dependency lockfile entries and keep npm audit clean done
+
+## Milestone 24: Editing Helper Regression Coverage
+
+- Move list continuation rules into pure Markdown formatting helpers done
+- Move task checkbox toggling rules into pure Markdown formatting helpers done
+- Move plain-text paste cleanup and URL paste-to-link rules into pure helpers done
+- Cover list continuation, empty-list exit, task checkbox toggling, and paste cleanup/link creation with regression tests done

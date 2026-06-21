@@ -32,6 +32,18 @@ export type MarkdownTextEdit = {
   }
 }
 
+export type MarkdownTextLine = {
+  from: number
+  to: number
+  text: string
+}
+
+export type MarkdownListMatch = {
+  indent: string
+  marker: string
+  body: string
+}
+
 export type MarkdownTableContext = {
   from: number
   to: number
@@ -48,6 +60,13 @@ export type MarkdownTableEditResult = {
   activeColumnIndex: number
   columnCount: number
 }
+
+const taskListLinePattern = /^(\s*)([-*+])\s+\[([ xX])\]\s*(.*)$/
+const bulletListLinePattern = /^(\s*)([-*+])\s+(.*)$/
+const orderedListLinePattern = /^(\s*)(\d+)([.)])\s+(.*)$/
+const taskCheckboxPattern = /^(\s*[-*+]\s+\[)([ xX])(\]\s*)/
+const zeroWidthPasteCharactersPattern = /[\u200B-\u200D\uFEFF]/g
+const supportedPasteUrlProtocols = new Set(['http:', 'https:'])
 
 function countEdgeMarkerRun(text: string, direction: 'start' | 'end') {
   let markerCount = 0
@@ -137,6 +156,167 @@ export function getDelimitedInlineFormatEdit({
     changes: { from: selection.from, to: selection.to, insert: insertText },
     selection: { anchor, head },
   }
+}
+
+export function getMarkdownListMatch(line: string): MarkdownListMatch | null {
+  const taskMatch = line.match(taskListLinePattern)
+
+  if (taskMatch) {
+    return {
+      indent: taskMatch[1],
+      marker: `${taskMatch[2]} [ ]`,
+      body: taskMatch[4],
+    }
+  }
+
+  const orderedMatch = line.match(orderedListLinePattern)
+
+  if (orderedMatch) {
+    return {
+      indent: orderedMatch[1],
+      marker: `${Number(orderedMatch[2]) + 1}${orderedMatch[3]}`,
+      body: orderedMatch[4],
+    }
+  }
+
+  const bulletMatch = line.match(bulletListLinePattern)
+
+  if (bulletMatch) {
+    return {
+      indent: bulletMatch[1],
+      marker: bulletMatch[2],
+      body: bulletMatch[3],
+    }
+  }
+
+  return null
+}
+
+export function getMarkdownListContinuationEdit({
+  selection,
+  line,
+}: {
+  selection: MarkdownTextSelection
+  line: MarkdownTextLine
+}): MarkdownTextEdit | null {
+  if (selection.from !== selection.to) {
+    return null
+  }
+
+  const listMatch = getMarkdownListMatch(line.text)
+
+  if (!listMatch) {
+    return null
+  }
+
+  if (listMatch.body.trim().length === 0) {
+    const anchor = line.from + listMatch.indent.length
+
+    return {
+      changes: { from: line.from, to: line.to, insert: listMatch.indent },
+      selection: { anchor },
+    }
+  }
+
+  const insertText = `\n${listMatch.indent}${listMatch.marker} `
+
+  return {
+    changes: { from: selection.from, to: selection.to, insert: insertText },
+    selection: { anchor: selection.from + insertText.length },
+  }
+}
+
+export function getTaskCheckboxToggleChanges(lines: MarkdownTextLine[]) {
+  const changes: MarkdownTextChange[] = []
+
+  lines.forEach((line) => {
+    const taskMatch = line.text.match(taskCheckboxPattern)
+
+    if (!taskMatch) {
+      return
+    }
+
+    const checkboxPosition = line.from + taskMatch[1].length
+    changes.push({
+      from: checkboxPosition,
+      to: checkboxPosition + 1,
+      insert: taskMatch[2].trim().length === 0 ? 'x' : ' ',
+    })
+  })
+
+  return changes.length > 0 ? changes : null
+}
+
+export function normalizePastedPlainText(text: string) {
+  return text
+    .replace(/^\uFEFF/, '')
+    .replace(zeroWidthPasteCharactersPattern, '')
+    .replace(/\u00A0/g, ' ')
+    .replace(/[\u2028\u2029]/g, '\n')
+    .replace(/\r\n?/g, '\n')
+}
+
+export function getSinglePastedUrl(text: string) {
+  const trimmedText = text.trim()
+
+  if (trimmedText.length === 0 || /\s/.test(trimmedText)) {
+    return null
+  }
+
+  try {
+    const parsedUrl = new URL(trimmedText)
+    return supportedPasteUrlProtocols.has(parsedUrl.protocol) ? trimmedText : null
+  } catch {
+    return null
+  }
+}
+
+function escapeMarkdownLinkText(text: string) {
+  return text.replace(/([\\\]])/g, '\\$1').replace(/\s+/g, ' ').trim()
+}
+
+function formatMarkdownLinkDestination(url: string) {
+  return `<${url.replace(/</g, '%3C').replace(/>/g, '%3E')}>`
+}
+
+export function createMarkdownLinkFromPaste(label: string, url: string) {
+  return `[${escapeMarkdownLinkText(label) || url}](${formatMarkdownLinkDestination(url)})`
+}
+
+export function getMarkdownPasteEdit({
+  clipboardText,
+  selection,
+  selectedText,
+}: {
+  clipboardText: string
+  selection: MarkdownTextSelection
+  selectedText: string
+}): MarkdownTextEdit | null {
+  if (clipboardText.length === 0) {
+    return null
+  }
+
+  const normalizedText = normalizePastedPlainText(clipboardText)
+  const pastedUrl = getSinglePastedUrl(normalizedText)
+  const hasSelection = selection.from !== selection.to
+
+  if (pastedUrl && hasSelection) {
+    const insert = createMarkdownLinkFromPaste(selectedText, pastedUrl)
+
+    return {
+      changes: { from: selection.from, to: selection.to, insert },
+      selection: { anchor: selection.from + insert.length },
+    }
+  }
+
+  if (normalizedText !== clipboardText) {
+    return {
+      changes: { from: selection.from, to: selection.to, insert: normalizedText },
+      selection: { anchor: selection.from + normalizedText.length },
+    }
+  }
+
+  return null
 }
 
 export function splitTableCells(line: string) {
