@@ -4,6 +4,10 @@ const fs = require('node:fs/promises')
 const os = require('node:os')
 const path = require('node:path')
 const { fileURLToPath } = require('node:url')
+const {
+  findWorkspaceSearchMatchesInContent,
+  isMarkdownLikeFile,
+} = require('./workspaceSearch.cjs')
 
 const isDev = !app.isPackaged
 const canUseAutoUpdater = !isDev && (process.platform !== 'linux' || Boolean(process.env.APPIMAGE))
@@ -13,7 +17,6 @@ let applicationLocale = 'en'
 const workspaceFileLimit = 120
 const workspaceSearchResultLimit = 80
 const workspaceSearchMaxFileSizeBytes = 1024 * 1024
-const workspaceSearchLinePreviewLength = 240
 const ignoredWorkspaceDirectories = new Set([
   '.git',
   '.next',
@@ -587,42 +590,8 @@ async function readImageDataUrl(filePath) {
   return `data:${mimeType};base64,${imageBuffer.toString('base64')}`
 }
 
-function isMarkdownLikeFile(filePath) {
-  return ['.md', '.markdown', '.mdown', '.txt'].includes(path.extname(filePath).toLowerCase())
-}
-
 function getFolderName(folderPath) {
   return path.basename(folderPath) || folderPath
-}
-
-function getWorkspaceSearchLinePreview(line, matchIndex, matchLength) {
-  if (line.length <= workspaceSearchLinePreviewLength) {
-    return {
-      lineText: line,
-      matchStart: matchIndex,
-      matchEnd: matchIndex + matchLength,
-    }
-  }
-
-  const matchEnd = matchIndex + matchLength
-  const idealStart = Math.max(0, matchIndex - 80)
-  const maxStart = Math.max(0, line.length - workspaceSearchLinePreviewLength)
-  let previewStart = Math.min(idealStart, maxStart)
-  let previewEnd = Math.min(line.length, previewStart + workspaceSearchLinePreviewLength)
-
-  if (matchEnd > previewEnd) {
-    previewEnd = Math.min(line.length, matchEnd + 80)
-    previewStart = Math.max(0, previewEnd - workspaceSearchLinePreviewLength)
-  }
-
-  const prefix = previewStart > 0 ? '...' : ''
-  const suffix = previewEnd < line.length ? '...' : ''
-
-  return {
-    lineText: `${prefix}${line.slice(previewStart, previewEnd)}${suffix}`,
-    matchStart: prefix.length + matchIndex - previewStart,
-    matchEnd: prefix.length + matchEnd - previewStart,
-  }
 }
 
 async function listWorkspaceFolder(folderPath) {
@@ -747,7 +716,6 @@ async function searchWorkspaceFolder(payload) {
     return workspaceResult
   }
 
-  const normalizedQuery = query.toLowerCase()
   const matches = []
   const matchedFilePaths = new Set()
   let searchedFileCount = 0
@@ -776,29 +744,11 @@ async function searchWorkspaceFolder(payload) {
 
     searchedFileCount += 1
 
-    const lines = content.split(/\r\n|\r|\n/)
+    const fileMatches = findWorkspaceSearchMatchesInContent(file, content, query)
 
-    for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
-      const line = lines[lineIndex]
-      const matchIndex = line.toLowerCase().indexOf(normalizedQuery)
-
-      if (matchIndex < 0) {
-        continue
-      }
-
-      const preview = getWorkspaceSearchLinePreview(line, matchIndex, query.length)
-
-      matches.push({
-        filePath: file.filePath,
-        fileName: file.fileName,
-        relativePath: file.relativePath,
-        modifiedAt: file.modifiedAt,
-        lineNumber: lineIndex + 1,
-        lineText: preview.lineText,
-        matchStart: preview.matchStart,
-        matchEnd: preview.matchEnd,
-      })
-      matchedFilePaths.add(file.filePath)
+    for (const match of fileMatches) {
+      matches.push(match)
+      matchedFilePaths.add(match.filePath)
 
       if (matches.length >= workspaceSearchResultLimit) {
         truncated = true
