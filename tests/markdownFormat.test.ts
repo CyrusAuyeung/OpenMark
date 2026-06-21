@@ -3,11 +3,13 @@ import {
   createMarkdownTable,
   formatBlockLine,
   getDelimitedInlineFormatEdit,
+  getTableEditActionResult,
   getTableColumnIndex,
   renderMarkdownTableRows,
   splitTableCells,
 } from '../src/markdownFormat'
 import type { MarkdownTextChange, MarkdownTextEdit } from '../src/markdownFormat'
+import type { MarkdownTableContext, MarkdownTableEditResult } from '../src/markdownFormat'
 
 const placeholders = {
   heading: 'Heading',
@@ -74,6 +76,33 @@ function expectEditResult(
 ) {
   expect(actual.markdownValue).toBe(expectedMarkdownValue)
   expect(actual.selection).toEqual(expectedSelection)
+}
+
+function createTableContext(
+  rows: string[][],
+  overrides: Partial<MarkdownTableContext> = {},
+): MarkdownTableContext {
+  return {
+    from: 0,
+    to: 0,
+    rows,
+    separatorIndex: 1,
+    activeRowIndex: 2,
+    activeColumnIndex: 0,
+    columnCount: Math.max(2, ...rows.map((row) => row.length)),
+    ...overrides,
+  }
+}
+
+function renderTableEditResult(context: MarkdownTableContext, result: MarkdownTableEditResult | null) {
+  if (!result) {
+    return null
+  }
+
+  return {
+    ...result,
+    table: renderMarkdownTableRows(result.rows, context.separatorIndex, result.columnCount),
+  }
 }
 
 describe('getDelimitedInlineFormatEdit', () => {
@@ -191,5 +220,168 @@ describe('createMarkdownTable', () => {
     expect(getTableColumnIndex('| Name | Role |', 2, 2)).toBe(0)
     expect(getTableColumnIndex('| Name | Role |', 9, 2)).toBe(1)
     expect(getTableColumnIndex('| Name | Role |', 100, 2)).toBe(1)
+  })
+})
+
+describe('getTableEditActionResult', () => {
+  it('formats existing table rows without moving the active cell', () => {
+    const context = createTableContext([
+      ['Name', 'Role'],
+      ['bad', ':---:'],
+      ['Ada'],
+    ], { activeRowIndex: 2, activeColumnIndex: 1 })
+
+    expect(renderTableEditResult(context, getTableEditActionResult(context, 'format'))).toEqual({
+      rows: [
+        ['Name', 'Role'],
+        ['---', ':---:'],
+        ['Ada', ' '],
+      ],
+      activeRowIndex: 2,
+      activeColumnIndex: 1,
+      columnCount: 2,
+      table: [
+        '| Name | Role |',
+        '| --- | :---: |',
+        '| Ada |   |',
+      ].join('\n'),
+    })
+  })
+
+  it('inserts a blank row below the active body row', () => {
+    const context = createTableContext([
+      ['Name', 'Role'],
+      ['---', '---'],
+      ['Ada', 'Writer'],
+    ])
+
+    expect(renderTableEditResult(context, getTableEditActionResult(context, 'insert-row-below'))).toEqual({
+      rows: [
+        ['Name', 'Role'],
+        ['---', '---'],
+        ['Ada', 'Writer'],
+        [' ', ' '],
+      ],
+      activeRowIndex: 3,
+      activeColumnIndex: 0,
+      columnCount: 2,
+      table: [
+        '| Name | Role |',
+        '| --- | --- |',
+        '| Ada | Writer |',
+        '|   |   |',
+      ].join('\n'),
+    })
+  })
+
+  it('inserts a blank row below the separator when the active row is the header or separator', () => {
+    const context = createTableContext([
+      ['Name', 'Role'],
+      ['---', '---'],
+      ['Ada', 'Writer'],
+    ], { activeRowIndex: 0 })
+
+    const result = getTableEditActionResult(context, 'insert-row-below')
+
+    expect(result?.rows).toEqual([
+      ['Name', 'Role'],
+      ['---', '---'],
+      [' ', ' '],
+      ['Ada', 'Writer'],
+    ])
+    expect(result?.activeRowIndex).toBe(2)
+  })
+
+  it('deletes body rows while keeping the active row index in range', () => {
+    const context = createTableContext([
+      ['Name', 'Role'],
+      ['---', '---'],
+      ['Ada', 'Writer'],
+      ['Grace', 'Reviewer'],
+    ], { activeRowIndex: 3 })
+
+    expect(renderTableEditResult(context, getTableEditActionResult(context, 'delete-row'))).toEqual({
+      rows: [
+        ['Name', 'Role'],
+        ['---', '---'],
+        ['Ada', 'Writer'],
+      ],
+      activeRowIndex: 2,
+      activeColumnIndex: 0,
+      columnCount: 2,
+      table: [
+        '| Name | Role |',
+        '| --- | --- |',
+        '| Ada | Writer |',
+      ].join('\n'),
+    })
+  })
+
+  it('does not delete header or separator rows', () => {
+    const context = createTableContext([
+      ['Name', 'Role'],
+      ['---', '---'],
+      ['Ada', 'Writer'],
+    ], { activeRowIndex: 1 })
+
+    expect(getTableEditActionResult(context, 'delete-row')).toBeNull()
+  })
+
+  it('inserts a blank column to the right of the active column', () => {
+    const context = createTableContext([
+      ['Name', 'Role'],
+      ['---', '---'],
+      ['Ada', 'Writer'],
+    ], { activeColumnIndex: 0 })
+
+    expect(renderTableEditResult(context, getTableEditActionResult(context, 'insert-column-right'))).toEqual({
+      rows: [
+        ['Name', ' ', 'Role'],
+        ['---', '---', '---'],
+        ['Ada', ' ', 'Writer'],
+      ],
+      activeRowIndex: 2,
+      activeColumnIndex: 1,
+      columnCount: 3,
+      table: [
+        '| Name |   | Role |',
+        '| --- | --- | --- |',
+        '| Ada |   | Writer |',
+      ].join('\n'),
+    })
+  })
+
+  it('deletes columns when more than two columns remain', () => {
+    const context = createTableContext([
+      ['Name', 'Role', 'Status'],
+      ['---', '---', '---'],
+      ['Ada', 'Writer', 'Done'],
+    ], { activeColumnIndex: 1 })
+
+    expect(renderTableEditResult(context, getTableEditActionResult(context, 'delete-column'))).toEqual({
+      rows: [
+        ['Name', 'Status'],
+        ['---', '---'],
+        ['Ada', 'Done'],
+      ],
+      activeRowIndex: 2,
+      activeColumnIndex: 1,
+      columnCount: 2,
+      table: [
+        '| Name | Status |',
+        '| --- | --- |',
+        '| Ada | Done |',
+      ].join('\n'),
+    })
+  })
+
+  it('does not delete columns from a two-column table', () => {
+    const context = createTableContext([
+      ['Name', 'Role'],
+      ['---', '---'],
+      ['Ada', 'Writer'],
+    ])
+
+    expect(getTableEditActionResult(context, 'delete-column')).toBeNull()
   })
 })

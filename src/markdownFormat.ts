@@ -2,6 +2,7 @@ export type InlineFormat = 'bold' | 'italic' | 'link'
 export type BlockFormat = 'heading-2' | 'bullet-list' | 'ordered-list' | 'task-list' | 'quote' | 'code-block' | 'table' | 'horizontal-rule'
 export type MarkdownFormat = InlineFormat | BlockFormat
 export type LineBlockFormat = Exclude<BlockFormat, 'code-block' | 'table' | 'horizontal-rule'>
+export type TableEditAction = 'format' | 'insert-row-below' | 'delete-row' | 'insert-column-right' | 'delete-column'
 
 export type MarkdownPlaceholderCatalog = {
   heading: string
@@ -29,6 +30,23 @@ export type MarkdownTextEdit = {
     anchor: number
     head?: number
   }
+}
+
+export type MarkdownTableContext = {
+  from: number
+  to: number
+  rows: string[][]
+  separatorIndex: number
+  activeRowIndex: number
+  activeColumnIndex: number
+  columnCount: number
+}
+
+export type MarkdownTableEditResult = {
+  rows: string[][]
+  activeRowIndex: number
+  activeColumnIndex: number
+  columnCount: number
 }
 
 function countEdgeMarkerRun(text: string, direction: 'start' | 'end') {
@@ -229,6 +247,55 @@ export function getRenderedTableCellOffset(
   }
 
   return offset
+}
+
+export function getTableEditActionResult(
+  context: MarkdownTableContext,
+  action: TableEditAction,
+): MarkdownTableEditResult | null {
+  const rows = normalizeTableRows(context.rows, context.separatorIndex, context.columnCount)
+  let activeRowIndex = context.activeRowIndex
+  let activeColumnIndex = context.activeColumnIndex
+
+  if (action === 'insert-row-below') {
+    const insertAfterIndex = activeRowIndex <= context.separatorIndex ? context.separatorIndex : activeRowIndex
+    rows.splice(insertAfterIndex + 1, 0, Array.from({ length: context.columnCount }, () => ' '))
+    activeRowIndex = insertAfterIndex + 1
+  }
+
+  if (action === 'delete-row') {
+    if (activeRowIndex <= context.separatorIndex) {
+      return null
+    }
+
+    rows.splice(activeRowIndex, 1)
+    activeRowIndex = Math.min(activeRowIndex, rows.length - 1)
+  }
+
+  if (action === 'insert-column-right') {
+    rows.forEach((row, rowIndex) => {
+      row.splice(activeColumnIndex + 1, 0, rowIndex === context.separatorIndex ? '---' : ' ')
+    })
+    activeColumnIndex += 1
+  }
+
+  if (action === 'delete-column') {
+    if (context.columnCount <= 2) {
+      return null
+    }
+
+    rows.forEach((row) => row.splice(activeColumnIndex, 1))
+    activeColumnIndex = Math.min(activeColumnIndex, context.columnCount - 2)
+  }
+
+  const columnCount = Math.max(2, ...rows.map((row) => row.length))
+
+  return {
+    rows,
+    activeRowIndex,
+    activeColumnIndex,
+    columnCount,
+  }
 }
 
 function stripListMarker(line: string) {

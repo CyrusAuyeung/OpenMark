@@ -79,6 +79,7 @@ import {
   formatBlockLine,
   getDelimitedInlineFormatEdit,
   getRenderedTableCellOffset,
+  getTableEditActionResult,
   getTableColumnIndex,
   isMarkdownTableRow,
   isTableSeparatorRow,
@@ -86,7 +87,7 @@ import {
   renderMarkdownTableRows,
   splitTableCells,
 } from './markdownFormat'
-import type { BlockFormat, InlineFormat, MarkdownFormat } from './markdownFormat'
+import type { BlockFormat, InlineFormat, MarkdownFormat, MarkdownTableContext, TableEditAction } from './markdownFormat'
 
 type MarkdownEngineModule = typeof import('./markdownEngine')
 type EditorSearchToolsModule = typeof import('./editorSearchTools')
@@ -126,7 +127,6 @@ type ViewMode = 'write' | 'split' | 'preview'
 type ThemeMode = 'light' | 'dark'
 type ThemePreference = ThemeMode | 'system'
 type SidebarTab = 'document' | 'outline' | 'recent' | 'workspace'
-type TableEditAction = 'format' | 'insert-row-below' | 'delete-row' | 'insert-column-right' | 'delete-column'
 type TableTranslationKey = 'formatTable' | 'addRowBelow' | 'deleteRow' | 'addColumnRight' | 'deleteColumn'
 type ClipboardCopyKind = 'markdown' | 'html'
 type ExportStyle = 'reader' | 'compact' | 'manuscript'
@@ -298,16 +298,6 @@ type SearchResult = SearchMatch & {
   contextBefore: string
   matchText: string
   contextAfter: string
-}
-
-type MarkdownTableContext = {
-  from: number
-  to: number
-  rows: string[][]
-  separatorIndex: number
-  activeRowIndex: number
-  activeColumnIndex: number
-  columnCount: number
 }
 
 type TableEditingState = {
@@ -2528,42 +2518,13 @@ function applyTableEditAction(view: EditorView, action: TableEditAction) {
     return false
   }
 
-  const rows = normalizeTableRows(context.rows, context.separatorIndex, context.columnCount)
-  let activeRowIndex = context.activeRowIndex
-  let activeColumnIndex = context.activeColumnIndex
+  const result = getTableEditActionResult(context, action)
 
-  if (action === 'insert-row-below') {
-    const insertAfterIndex = activeRowIndex <= context.separatorIndex ? context.separatorIndex : activeRowIndex
-    rows.splice(insertAfterIndex + 1, 0, Array.from({ length: context.columnCount }, () => ' '))
-    activeRowIndex = insertAfterIndex + 1
+  if (!result) {
+    return false
   }
 
-  if (action === 'delete-row') {
-    if (activeRowIndex <= context.separatorIndex) {
-      return false
-    }
-
-    rows.splice(activeRowIndex, 1)
-    activeRowIndex = Math.min(activeRowIndex, rows.length - 1)
-  }
-
-  if (action === 'insert-column-right') {
-    rows.forEach((row, rowIndex) => {
-      row.splice(activeColumnIndex + 1, 0, rowIndex === context.separatorIndex ? '---' : ' ')
-    })
-    activeColumnIndex += 1
-  }
-
-  if (action === 'delete-column') {
-    if (context.columnCount <= 2) {
-      return false
-    }
-
-    rows.forEach((row) => row.splice(activeColumnIndex, 1))
-    activeColumnIndex = Math.min(activeColumnIndex, context.columnCount - 2)
-  }
-
-  return dispatchTableUpdate(view, context, rows, activeRowIndex, activeColumnIndex)
+  return dispatchTableUpdate(view, context, result.rows, result.activeRowIndex, result.activeColumnIndex)
 }
 
 function applyTableFormat(view: EditorView, placeholders: MarkdownPlaceholderCatalog) {
