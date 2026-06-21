@@ -74,6 +74,8 @@ import {
   isLocalePreference,
   translations,
 } from './i18n'
+import { getDelimitedInlineFormatEdit } from './markdownFormat'
+import type { BlockFormat, InlineFormat, MarkdownFormat } from './markdownFormat'
 
 type MarkdownEngineModule = typeof import('./markdownEngine')
 type EditorSearchToolsModule = typeof import('./editorSearchTools')
@@ -113,9 +115,6 @@ type ViewMode = 'write' | 'split' | 'preview'
 type ThemeMode = 'light' | 'dark'
 type ThemePreference = ThemeMode | 'system'
 type SidebarTab = 'document' | 'outline' | 'recent' | 'workspace'
-type InlineFormat = 'bold' | 'italic' | 'link'
-type BlockFormat = 'heading-2' | 'bullet-list' | 'ordered-list' | 'task-list' | 'quote' | 'code-block' | 'table' | 'horizontal-rule'
-type MarkdownFormat = InlineFormat | BlockFormat
 type TableEditAction = 'format' | 'insert-row-below' | 'delete-row' | 'insert-column-right' | 'delete-column'
 type TableTranslationKey = 'formatTable' | 'addRowBelow' | 'deleteRow' | 'addColumnRight' | 'deleteColumn'
 type ClipboardCopyKind = 'markdown' | 'html'
@@ -2325,22 +2324,6 @@ function restartCaretBlinkAnimations(previewCursorMarker: HTMLElement, editorVie
   })
 }
 
-function countEdgeMarkerRun(text: string, direction: 'start' | 'end') {
-  let markerCount = 0
-  const startIndex = direction === 'start' ? 0 : text.length - 1
-  const step = direction === 'start' ? 1 : -1
-
-  for (let index = startIndex; index >= 0 && index < text.length; index += step) {
-    if (text[index] !== '*') {
-      break
-    }
-
-    markerCount += 1
-  }
-
-  return markerCount
-}
-
 function countAdjacentMarkerRun(view: EditorView, position: number, direction: 'before' | 'after') {
   let markerCount = 0
   const step = direction === 'before' ? -1 : 1
@@ -2358,74 +2341,20 @@ function countAdjacentMarkerRun(view: EditorView, position: number, direction: '
   return markerCount
 }
 
-function getInlineStyleMarker(hasBold: boolean, hasItalic: boolean) {
-  return '*'.repeat((hasBold ? 2 : 0) + (hasItalic ? 1 : 0))
-}
-
-function getToggledInlineStyleMarker(leftMarkerRun: number, rightMarkerRun: number, delimiter: '*' | '**') {
-  const hasBold = leftMarkerRun >= 2 && rightMarkerRun >= 2
-  const hasItalic = leftMarkerRun % 2 === 1 && rightMarkerRun % 2 === 1
-
-  return getInlineStyleMarker(
-    delimiter === '**' ? !hasBold : hasBold,
-    delimiter === '*' ? !hasItalic : hasItalic,
-  )
-}
-
 function toggleDelimitedInlineFormat(view: EditorView, delimiter: '*' | '**') {
   const selection = view.state.selection.main
   const selectedText = view.state.sliceDoc(selection.from, selection.to)
-  const selectedLeftMarkerRun = countEdgeMarkerRun(selectedText, 'start')
-  const selectedRightMarkerRun = countEdgeMarkerRun(selectedText, 'end')
-  const selectionIncludesMarkers = selectedLeftMarkerRun > 0 &&
-    selectedRightMarkerRun > 0 &&
-    selectedText.length > selectedLeftMarkerRun + selectedRightMarkerRun
-
-  if (selectionIncludesMarkers) {
-    const marker = getToggledInlineStyleMarker(selectedLeftMarkerRun, selectedRightMarkerRun, delimiter)
-    const unwrappedText = selectedText.slice(selectedLeftMarkerRun, selectedText.length - selectedRightMarkerRun)
-    const insertText = `${marker}${unwrappedText}${marker}`
-
-    view.dispatch({
-      changes: { from: selection.from, to: selection.to, insert: insertText },
-      selection: { anchor: selection.from + marker.length, head: selection.from + marker.length + unwrappedText.length },
-      scrollIntoView: true,
-    })
-    view.focus()
-
-    return true
-  }
-
-  const leftOuterMarkerRun = countAdjacentMarkerRun(view, selection.from, 'before')
-  const rightOuterMarkerRun = countAdjacentMarkerRun(view, selection.to, 'after')
-  const hasOuterMarkers = leftOuterMarkerRun > 0 && rightOuterMarkerRun > 0
-
-  if (hasOuterMarkers) {
-    const marker = getToggledInlineStyleMarker(leftOuterMarkerRun, rightOuterMarkerRun, delimiter)
-
-    view.dispatch({
-      changes: [
-        { from: selection.from - leftOuterMarkerRun, to: selection.from, insert: marker },
-        { from: selection.to, to: selection.to + rightOuterMarkerRun, insert: marker },
-      ],
-      selection: {
-        anchor: selection.from - leftOuterMarkerRun + marker.length,
-        head: selection.to - leftOuterMarkerRun + marker.length,
-      },
-      scrollIntoView: true,
-    })
-    view.focus()
-
-    return true
-  }
-
-  const insertText = `${delimiter}${selectedText}${delimiter}`
-  const anchor = selection.from + delimiter.length
-  const head = anchor + selectedText.length
+  const edit = getDelimitedInlineFormatEdit({
+    selection,
+    selectedText,
+    leftOuterMarkerRun: countAdjacentMarkerRun(view, selection.from, 'before'),
+    rightOuterMarkerRun: countAdjacentMarkerRun(view, selection.to, 'after'),
+    delimiter,
+  })
 
   view.dispatch({
-    changes: { from: selection.from, to: selection.to, insert: insertText },
-    selection: { anchor, head },
+    changes: edit.changes,
+    selection: edit.selection,
     scrollIntoView: true,
   })
   view.focus()
