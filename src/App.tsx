@@ -74,7 +74,18 @@ import {
   isLocalePreference,
   translations,
 } from './i18n'
-import { getDelimitedInlineFormatEdit } from './markdownFormat'
+import {
+  createMarkdownTable,
+  formatBlockLine,
+  getDelimitedInlineFormatEdit,
+  getRenderedTableCellOffset,
+  getTableColumnIndex,
+  isMarkdownTableRow,
+  isTableSeparatorRow,
+  normalizeTableRows,
+  renderMarkdownTableRows,
+  splitTableCells,
+} from './markdownFormat'
 import type { BlockFormat, InlineFormat, MarkdownFormat } from './markdownFormat'
 
 type MarkdownEngineModule = typeof import('./markdownEngine')
@@ -2424,88 +2435,6 @@ function applyCodeBlockFormat(view: EditorView) {
   return true
 }
 
-function splitTableCells(line: string) {
-  const trimmedLine = line.trim()
-
-  if (trimmedLine.includes('|')) {
-    return trimmedLine
-      .replace(/^\|/, '')
-      .replace(/\|$/, '')
-      .split('|')
-      .map((cell) => cell.trim())
-  }
-
-  if (trimmedLine.includes('\t')) {
-    return trimmedLine.split('\t').map((cell) => cell.trim())
-  }
-
-  if (trimmedLine.includes(',')) {
-    return trimmedLine.split(',').map((cell) => cell.trim())
-  }
-
-  return [trimmedLine]
-}
-
-function renderTableRow(cells: string[], columnCount: number) {
-  const normalizedCells = Array.from({ length: columnCount }, (_item, index) => cells[index]?.trim() || ' ')
-  return `| ${normalizedCells.join(' | ')} |`
-}
-
-function isTableSeparatorCell(cell: string) {
-  return /^:?-{3,}:?$/.test(cell.trim())
-}
-
-function isMarkdownTableRow(line: string) {
-  return line.includes('|') && splitTableCells(line).length >= 2
-}
-
-function isTableSeparatorRow(line: string) {
-  const cells = splitTableCells(line)
-
-  return cells.length >= 2 && cells.every(isTableSeparatorCell)
-}
-
-function normalizeTableCells(cells: string[], columnCount: number) {
-  return Array.from({ length: columnCount }, (_item, index) => cells[index]?.trim() || ' ')
-}
-
-function normalizeTableSeparatorCells(cells: string[], columnCount: number) {
-  return Array.from({ length: columnCount }, (_item, index) => {
-    const cell = cells[index]?.trim() ?? ''
-
-    return isTableSeparatorCell(cell) ? cell : '---'
-  })
-}
-
-function renderTableSeparatorRow(cells: string[], columnCount: number) {
-  return `| ${normalizeTableSeparatorCells(cells, columnCount).join(' | ')} |`
-}
-
-function normalizeTableRows(rows: string[][], separatorIndex: number, columnCount: number) {
-  return rows.map((row, rowIndex) => (
-    rowIndex === separatorIndex
-      ? normalizeTableSeparatorCells(row, columnCount)
-      : normalizeTableCells(row, columnCount)
-  ))
-}
-
-function renderMarkdownTableRows(rows: string[][], separatorIndex: number, columnCount: number) {
-  return rows.map((row, rowIndex) => (
-    rowIndex === separatorIndex
-      ? renderTableSeparatorRow(row, columnCount)
-      : renderTableRow(row, columnCount)
-  )).join('\n')
-}
-
-function getTableColumnIndex(line: string, cursorOffset: number, columnCount: number) {
-  const prefix = line.slice(0, Math.max(0, cursorOffset))
-  const pipeCount = [...prefix].filter((character) => character === '|').length
-  const startsWithPipe = line.trimStart().startsWith('|')
-  const columnIndex = startsWithPipe ? pipeCount - 1 : pipeCount
-
-  return Math.max(0, Math.min(columnIndex, columnCount - 1))
-}
-
 function getMarkdownTableContext(view: EditorView): MarkdownTableContext | null {
   const selection = view.state.selection.main
   const activeLine = view.state.doc.lineAt(selection.from)
@@ -2548,34 +2477,6 @@ function getMarkdownTableContext(view: EditorView): MarkdownTableContext | null 
     activeColumnIndex,
     columnCount,
   }
-}
-
-function getRenderedTableCellOffset(
-  rows: string[][],
-  separatorIndex: number,
-  columnCount: number,
-  rowIndex: number,
-  columnIndex: number,
-) {
-  const safeRowIndex = Math.max(0, Math.min(rowIndex, rows.length - 1))
-  const safeColumnIndex = Math.max(0, Math.min(columnIndex, columnCount - 1))
-  const normalizedRows = normalizeTableRows(rows, separatorIndex, columnCount)
-  let offset = 0
-
-  for (let index = 0; index < safeRowIndex; index += 1) {
-    offset += (index === separatorIndex
-      ? renderTableSeparatorRow(normalizedRows[index], columnCount)
-      : renderTableRow(normalizedRows[index], columnCount)
-    ).length + 1
-  }
-
-  offset += 2
-
-  for (let index = 0; index < safeColumnIndex; index += 1) {
-    offset += normalizedRows[safeRowIndex][index].length + 3
-  }
-
-  return offset
 }
 
 function getTableEditingState(view: EditorView): TableEditingState {
@@ -2665,33 +2566,6 @@ function applyTableEditAction(view: EditorView, action: TableEditAction) {
   return dispatchTableUpdate(view, context, rows, activeRowIndex, activeColumnIndex)
 }
 
-function createMarkdownTable(selectedText: string, placeholders: MarkdownPlaceholderCatalog) {
-  const selectedLines = selectedText
-    .split(/\r\n|\r|\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-
-  if (selectedLines.length > 0) {
-    const rows = selectedLines.map(splitTableCells)
-    const columnCount = Math.max(2, ...rows.map((row) => row.length))
-    const separator = renderTableRow(Array.from({ length: columnCount }, () => '---'), columnCount)
-
-    return [
-      renderTableRow(rows[0], columnCount),
-      separator,
-      ...rows.slice(1).map((row) => renderTableRow(row, columnCount)),
-    ].join('\n')
-  }
-
-  const columnCount = Math.max(2, placeholders.tableHeaders.length)
-
-  return [
-    renderTableRow(placeholders.tableHeaders, columnCount),
-    renderTableRow(Array.from({ length: columnCount }, () => '---'), columnCount),
-    ...placeholders.tableRows.map((row) => renderTableRow(row, columnCount)),
-  ].join('\n')
-}
-
 function applyTableFormat(view: EditorView, placeholders: MarkdownPlaceholderCatalog) {
   const selection = view.state.selection.main
   const selectedText = view.state.sliceDoc(selection.from, selection.to)
@@ -2738,10 +2612,6 @@ function applyHorizontalRuleFormat(view: EditorView) {
   view.focus()
 
   return true
-}
-
-function stripListMarker(line: string) {
-  return line.replace(/^(-\s+\[[ xX]\]\s+|[-*+]\s+|\d+\.\s+)/, '')
 }
 
 function getMarkdownListMatch(line: string): MarkdownListMatch | null {
@@ -2921,39 +2791,6 @@ function handleMarkdownPaste(event: ClipboardEvent, view: EditorView) {
   }
 
   return false
-}
-
-function formatBlockLine(
-  line: string,
-  index: number,
-  format: Exclude<BlockFormat, 'code-block' | 'table' | 'horizontal-rule'>,
-  placeholders: MarkdownPlaceholderCatalog,
-) {
-  const trimmedLine = line.trimStart()
-  const indent = line.slice(0, line.length - trimmedLine.length)
-
-  if (format === 'heading-2') {
-    const body = trimmedLine.replace(/^#{1,6}\s*/, '')
-    return `${indent}## ${body || placeholders.heading}`
-  }
-
-  if (format === 'bullet-list') {
-    const body = stripListMarker(trimmedLine)
-    return `${indent}- ${body || placeholders.listItem}`
-  }
-
-  if (format === 'ordered-list') {
-    const body = stripListMarker(trimmedLine)
-    return `${indent}${index + 1}. ${body || placeholders.listItem}`
-  }
-
-  if (format === 'task-list') {
-    const body = stripListMarker(trimmedLine)
-    return `${indent}- [ ] ${body || placeholders.taskItem}`
-  }
-
-  const body = trimmedLine.replace(/^>\s?/, '')
-  return `${indent}> ${body || placeholders.quote}`
 }
 
 function applyBlockFormat(view: EditorView, format: BlockFormat, placeholders: MarkdownPlaceholderCatalog) {

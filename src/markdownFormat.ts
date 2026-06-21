@@ -1,6 +1,16 @@
 export type InlineFormat = 'bold' | 'italic' | 'link'
 export type BlockFormat = 'heading-2' | 'bullet-list' | 'ordered-list' | 'task-list' | 'quote' | 'code-block' | 'table' | 'horizontal-rule'
 export type MarkdownFormat = InlineFormat | BlockFormat
+export type LineBlockFormat = Exclude<BlockFormat, 'code-block' | 'table' | 'horizontal-rule'>
+
+export type MarkdownPlaceholderCatalog = {
+  heading: string
+  listItem: string
+  taskItem: string
+  quote: string
+  tableHeaders: string[]
+  tableRows: string[][]
+}
 
 export type MarkdownTextSelection = {
   from: number
@@ -109,4 +119,178 @@ export function getDelimitedInlineFormatEdit({
     changes: { from: selection.from, to: selection.to, insert: insertText },
     selection: { anchor, head },
   }
+}
+
+export function splitTableCells(line: string) {
+  const trimmedLine = line.trim()
+
+  if (trimmedLine.includes('|')) {
+    return trimmedLine
+      .replace(/^\|/, '')
+      .replace(/\|$/, '')
+      .split('|')
+      .map((cell) => cell.trim())
+  }
+
+  if (trimmedLine.includes('\t')) {
+    return trimmedLine.split('\t').map((cell) => cell.trim())
+  }
+
+  if (trimmedLine.includes(',')) {
+    return trimmedLine.split(',').map((cell) => cell.trim())
+  }
+
+  return [trimmedLine]
+}
+
+export function renderTableRow(cells: string[], columnCount: number) {
+  const normalizedCells = Array.from({ length: columnCount }, (_item, index) => cells[index]?.trim() || ' ')
+  return `| ${normalizedCells.join(' | ')} |`
+}
+
+function isTableSeparatorCell(cell: string) {
+  return /^:?-{3,}:?$/.test(cell.trim())
+}
+
+export function isMarkdownTableRow(line: string) {
+  return line.includes('|') && splitTableCells(line).length >= 2
+}
+
+export function isTableSeparatorRow(line: string) {
+  const cells = splitTableCells(line)
+
+  return cells.length >= 2 && cells.every(isTableSeparatorCell)
+}
+
+function normalizeTableCells(cells: string[], columnCount: number) {
+  return Array.from({ length: columnCount }, (_item, index) => cells[index]?.trim() || ' ')
+}
+
+function normalizeTableSeparatorCells(cells: string[], columnCount: number) {
+  return Array.from({ length: columnCount }, (_item, index) => {
+    const cell = cells[index]?.trim() ?? ''
+
+    return isTableSeparatorCell(cell) ? cell : '---'
+  })
+}
+
+function renderTableSeparatorRow(cells: string[], columnCount: number) {
+  return `| ${normalizeTableSeparatorCells(cells, columnCount).join(' | ')} |`
+}
+
+export function normalizeTableRows(rows: string[][], separatorIndex: number, columnCount: number) {
+  return rows.map((row, rowIndex) => (
+    rowIndex === separatorIndex
+      ? normalizeTableSeparatorCells(row, columnCount)
+      : normalizeTableCells(row, columnCount)
+  ))
+}
+
+export function renderMarkdownTableRows(rows: string[][], separatorIndex: number, columnCount: number) {
+  return rows.map((row, rowIndex) => (
+    rowIndex === separatorIndex
+      ? renderTableSeparatorRow(row, columnCount)
+      : renderTableRow(row, columnCount)
+  )).join('\n')
+}
+
+export function getTableColumnIndex(line: string, cursorOffset: number, columnCount: number) {
+  const prefix = line.slice(0, Math.max(0, cursorOffset))
+  const pipeCount = [...prefix].filter((character) => character === '|').length
+  const startsWithPipe = line.trimStart().startsWith('|')
+  const columnIndex = startsWithPipe ? pipeCount - 1 : pipeCount
+
+  return Math.max(0, Math.min(columnIndex, columnCount - 1))
+}
+
+export function getRenderedTableCellOffset(
+  rows: string[][],
+  separatorIndex: number,
+  columnCount: number,
+  rowIndex: number,
+  columnIndex: number,
+) {
+  const safeRowIndex = Math.max(0, Math.min(rowIndex, rows.length - 1))
+  const safeColumnIndex = Math.max(0, Math.min(columnIndex, columnCount - 1))
+  const normalizedRows = normalizeTableRows(rows, separatorIndex, columnCount)
+  let offset = 0
+
+  for (let index = 0; index < safeRowIndex; index += 1) {
+    offset += (index === separatorIndex
+      ? renderTableSeparatorRow(normalizedRows[index], columnCount)
+      : renderTableRow(normalizedRows[index], columnCount)
+    ).length + 1
+  }
+
+  offset += 2
+
+  for (let index = 0; index < safeColumnIndex; index += 1) {
+    offset += normalizedRows[safeRowIndex][index].length + 3
+  }
+
+  return offset
+}
+
+function stripListMarker(line: string) {
+  return line.replace(/^(-\s+\[[ xX]\]\s+|[-*+]\s+|\d+\.\s+)/, '')
+}
+
+export function formatBlockLine(
+  line: string,
+  index: number,
+  format: LineBlockFormat,
+  placeholders: MarkdownPlaceholderCatalog,
+) {
+  const trimmedLine = line.trimStart()
+  const indent = line.slice(0, line.length - trimmedLine.length)
+
+  if (format === 'heading-2') {
+    const body = trimmedLine.replace(/^#{1,6}\s*/, '')
+    return `${indent}## ${body || placeholders.heading}`
+  }
+
+  if (format === 'bullet-list') {
+    const body = stripListMarker(trimmedLine)
+    return `${indent}- ${body || placeholders.listItem}`
+  }
+
+  if (format === 'ordered-list') {
+    const body = stripListMarker(trimmedLine)
+    return `${indent}${index + 1}. ${body || placeholders.listItem}`
+  }
+
+  if (format === 'task-list') {
+    const body = stripListMarker(trimmedLine)
+    return `${indent}- [ ] ${body || placeholders.taskItem}`
+  }
+
+  const body = trimmedLine.replace(/^>\s?/, '')
+  return `${indent}> ${body || placeholders.quote}`
+}
+
+export function createMarkdownTable(selectedText: string, placeholders: MarkdownPlaceholderCatalog) {
+  const selectedLines = selectedText
+    .split(/\r\n|\r|\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  if (selectedLines.length > 0) {
+    const rows = selectedLines.map(splitTableCells)
+    const columnCount = Math.max(2, ...rows.map((row) => row.length))
+    const separator = renderTableRow(Array.from({ length: columnCount }, () => '---'), columnCount)
+
+    return [
+      renderTableRow(rows[0], columnCount),
+      separator,
+      ...rows.slice(1).map((row) => renderTableRow(row, columnCount)),
+    ].join('\n')
+  }
+
+  const columnCount = Math.max(2, placeholders.tableHeaders.length)
+
+  return [
+    renderTableRow(placeholders.tableHeaders, columnCount),
+    renderTableRow(Array.from({ length: columnCount }, () => '---'), columnCount),
+    ...placeholders.tableRows.map((row) => renderTableRow(row, columnCount)),
+  ].join('\n')
 }
