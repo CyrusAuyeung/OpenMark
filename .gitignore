@@ -12,6 +12,7 @@ dist
 dist-ssr
 release
 *.local
+CODEX_HANDOFF.md
 
 # Editor directories and files
 .vscode/*
