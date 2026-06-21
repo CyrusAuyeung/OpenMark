@@ -93,6 +93,13 @@ import {
   markdownEditorPasteHandlers,
   toggleTaskCheckbox,
 } from './markdownEditorCommands'
+import {
+  addPreviewSourceNavigation,
+  getPreviewSourceLineAtClientY,
+  getPreviewSourceRangeFromTarget,
+  getPreviewSourceRanges,
+  type PreviewSourceRange,
+} from './previewSourceNavigation'
 
 type MarkdownEngineModule = typeof import('./markdownEngine')
 type EditorSearchToolsModule = typeof import('./editorSearchTools')
@@ -158,12 +165,6 @@ type OutlineJumpTarget = OutlineItem & {
 type LineJumpTarget = {
   lineNumber: number
   lineStart: number
-}
-
-type PreviewSourceRange = {
-  element: HTMLElement
-  startLine: number
-  endLine: number
 }
 
 type DocumentStats = {
@@ -1721,26 +1722,6 @@ function addPreviewHeadingNavigation(html: string, outline: OutlineItem[], headi
   return template.innerHTML
 }
 
-function addPreviewSourceNavigation(html: string) {
-  if (!/data-source-(line|start-line)/i.test(html)) {
-    return html
-  }
-
-  const template = document.createElement('template')
-  template.innerHTML = html
-  const sourceBlocks = Array.from(template.content.querySelectorAll<HTMLElement>('[data-source-line], [data-source-start-line]'))
-
-  sourceBlocks.forEach((block) => {
-    block.setAttribute('data-preview-source-jump', 'true')
-
-    if (!block.classList.contains('markdown-blank-line')) {
-      block.setAttribute('tabindex', block.getAttribute('tabindex') ?? '0')
-    }
-  })
-
-  return template.innerHTML
-}
-
 function isSearchWordCharacter(character: string) {
   return /^[A-Za-z0-9_]$/.test(character)
 }
@@ -1823,56 +1804,6 @@ function areEditorPositionsEqual(left: EditorPositionState, right: EditorPositio
     left.column === right.column &&
     left.offset === right.offset &&
     left.progress === right.progress
-}
-
-function getPreviewSourceRanges(previewScroller: HTMLElement) {
-  const markdownPreview = previewScroller.querySelector<HTMLElement>('.markdown-preview')
-  const previewBlocks = Array.from(markdownPreview?.children ?? [])
-    .filter((element): element is HTMLElement => element instanceof HTMLElement)
-
-  return previewBlocks.map((element) => {
-    const sourceLine = Number(element.dataset.sourceLine)
-
-    if (Number.isFinite(sourceLine)) {
-      return { element, startLine: sourceLine, endLine: sourceLine }
-    }
-
-    const startLine = Number(element.dataset.sourceStartLine)
-    const endLine = Number(element.dataset.sourceEndLine)
-
-    return Number.isFinite(startLine) && Number.isFinite(endLine)
-      ? { element, startLine, endLine }
-      : null
-  }).filter((range): range is PreviewSourceRange => range !== null)
-}
-
-function getPreviewSourceRange(element: HTMLElement): PreviewSourceRange | null {
-  const sourceLine = Number(element.dataset.sourceLine)
-
-  if (Number.isFinite(sourceLine)) {
-    return { element, startLine: sourceLine, endLine: sourceLine }
-  }
-
-  const startLine = Number(element.dataset.sourceStartLine)
-  const endLine = Number(element.dataset.sourceEndLine)
-
-  return Number.isFinite(startLine) && Number.isFinite(endLine)
-    ? { element, startLine, endLine }
-    : null
-}
-
-function getPreviewSourceLineAtClientY(range: PreviewSourceRange, clientY?: number) {
-  if (clientY === undefined || range.endLine <= range.startLine) {
-    return range.startLine
-  }
-
-  const blockRect = range.element.getBoundingClientRect()
-  const lineCount = range.endLine - range.startLine + 1
-  const clickRatio = blockRect.height <= 0
-    ? 0
-    : Math.min(Math.max((clientY - blockRect.top) / blockRect.height, 0), 0.999)
-
-  return range.startLine + Math.floor(clickRatio * lineCount)
 }
 
 function getSourceOffsetAtLineColumn(markdownValue: string, lineNumber: number, column: number) {
@@ -5747,19 +5678,7 @@ ${getExportStyleCss(exportStyle)}
   }
 
   function handlePreviewClick(event: ReactMouseEvent<HTMLElement>) {
-    const eventTarget = event.target as HTMLElement
-
-    if (eventTarget.closest('a, button, input, textarea, select, summary')) {
-      return
-    }
-
-    const sourceBlock = eventTarget.closest<HTMLElement>('[data-preview-source-jump="true"]')
-
-    if (!sourceBlock || !event.currentTarget.contains(sourceBlock)) {
-      return
-    }
-
-    const sourceRange = getPreviewSourceRange(sourceBlock)
+    const sourceRange = getPreviewSourceRangeFromTarget(event.target, event.currentTarget)
 
     if (sourceRange) {
       event.preventDefault()
@@ -5772,13 +5691,7 @@ ${getExportStyleCss(exportStyle)}
       return
     }
 
-    const sourceBlock = (event.target as HTMLElement).closest<HTMLElement>('[data-preview-source-jump="true"]')
-
-    if (!sourceBlock || !event.currentTarget.contains(sourceBlock)) {
-      return
-    }
-
-    const sourceRange = getPreviewSourceRange(sourceBlock)
+    const sourceRange = getPreviewSourceRangeFromTarget(event.target, event.currentTarget)
 
     if (sourceRange) {
       event.preventDefault()

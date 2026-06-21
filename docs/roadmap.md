@@ -198,3 +198,11 @@
 - Cover next, previous, and wrapped match selection behavior in real EditorView state done
 - Cover replace-current and replace-all behavior through the editor search tool wrappers done
 - Cover case-sensitive, whole-word, and no-match search/replace behavior done
+
+## Milestone 27: Preview Source Navigation Hardening
+
+- Move preview source navigation helpers out of App.tsx for focused regression testing done
+- Cover source ranges for headings, blank lines, blockquotes, nested lists, tables, and fenced code blocks done
+- Cover click-height source line estimation for multi-line preview blocks done
+- Preserve link and native-control behavior while resolving source-jump targets done
+- Reject invalid preview source metadata instead of allowing line-zero jumps done

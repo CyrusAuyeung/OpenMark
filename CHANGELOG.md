@@ -2,6 +2,14 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.28.0 - 2026-06-22
+
+### Preview Source Navigation Hardening
+
+- Shared preview source navigation helpers now live in `src/previewSourceNavigation.ts` so click targeting, source range parsing, and line estimation can be tested outside `App.tsx`.
+- Regression tests now cover source range extraction for headings, preserved blank lines, blockquotes, nested lists, tables, and fenced code blocks rendered from real Markdown.
+- Preview source navigation now rejects invalid source metadata and keeps links and native controls from being intercepted by source-jump handling.
+
 ## 0.27.0 - 2026-06-21
 
 ### Search And Replace Integration Tests

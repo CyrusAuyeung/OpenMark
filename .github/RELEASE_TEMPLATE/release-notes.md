@@ -2,15 +2,15 @@
 
 ## Summary
 
-OpenMark 0.27.0 focuses on search and replace integration tests. It includes CodeMirror search regression tests now cover applying literal search query options to real search extension state, search movement tests now cover next, previous, and wrapped match selection behavior in real `EditorView` state, and replace tests now cover replace-current, replace-all, case-sensitive matching, whole-word matching, and no-match stability.
+OpenMark 0.28.0 focuses on preview source navigation hardening. It includes shared preview source navigation helpers now live in `src/previewSourceNavigation.ts` so click targeting, source range parsing, and line estimation can be tested outside `App.tsx`, regression tests now cover source range extraction for headings, preserved blank lines, blockquotes, nested lists, tables, and fenced code blocks rendered from real Markdown, and preview source navigation now rejects invalid source metadata and keeps links and native controls from being intercepted by source-jump handling.
 
 ## Highlights
 
-### Search And Replace Integration Tests
+### Preview Source Navigation Hardening
 
-- CodeMirror search regression tests now cover applying literal search query options to real search extension state.
-- Search movement tests now cover next, previous, and wrapped match selection behavior in real `EditorView` state.
-- Replace tests now cover replace-current, replace-all, case-sensitive matching, whole-word matching, and no-match stability.
+- Shared preview source navigation helpers now live in `src/previewSourceNavigation.ts` so click targeting, source range parsing, and line estimation can be tested outside `App.tsx`.
+- Regression tests now cover source range extraction for headings, preserved blank lines, blockquotes, nested lists, tables, and fenced code blocks rendered from real Markdown.
+- Preview source navigation now rejects invalid source metadata and keeps links and native controls from being intercepted by source-jump handling.
 
 ## Downloads
 
@@ -18,11 +18,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.27.0.exe` | Recommended installer. |
-| Windows | `OpenMark.0.27.0.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.27.0.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.27.0-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.27.0_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.28.0.exe` | Recommended installer. |
+| Windows | `OpenMark.0.28.0.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.28.0.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.28.0-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.28.0_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -57,5 +57,5 @@ Keep these auto-update metadata files attached when generated:
 
 ## Full Changelog
 
-- Release date: 2026-06-21
-- Tag: v0.27.0
+- Release date: 2026-06-22
+- Tag: v0.28.0
