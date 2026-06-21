@@ -2,6 +2,14 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.23.0 - 2026-06-21
+
+### Workspace Content Search
+
+- Added desktop workspace content search for Markdown and text files with file, line, and highlighted context results.
+- Added click-to-open search results so matching workspace files open and jump to the matched source line.
+- Added bounded result, file-size, and existing workspace file-count limits so local folders stay responsive.
+
 ## 0.22.0 - 2026-06-14
 
 ### Preview-to-Editor Navigation

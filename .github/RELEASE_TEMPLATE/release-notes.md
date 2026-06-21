@@ -2,15 +2,15 @@
 
 ## Summary
 
-OpenMark 0.22.0 focuses on preview-to-editor navigation. It includes source-aware preview clicks so headings, paragraphs, lists, code blocks, tables, and preserved blank lines can jump back to their Markdown source lines, Estimated the target source line inside multi-line preview blocks from the click position for more precise navigation, and Kept preview links and native controls working normally while adding keyboard focus support for source-mapped preview blocks.
+OpenMark 0.23.0 focuses on workspace content search. It includes desktop workspace content search for Markdown and text files with file, line, and highlighted context results, click-to-open search results so matching workspace files open and jump to the matched source line, and bounded result, file-size, and existing workspace file-count limits so local folders stay responsive.
 
 ## Highlights
 
-### Preview-to-Editor Navigation
+### Workspace Content Search
 
-- Added source-aware preview clicks so headings, paragraphs, lists, code blocks, tables, and preserved blank lines can jump back to their Markdown source lines.
-- Estimated the target source line inside multi-line preview blocks from the click position for more precise navigation.
-- Kept preview links and native controls working normally while adding keyboard focus support for source-mapped preview blocks.
+- Added desktop workspace content search for Markdown and text files with file, line, and highlighted context results.
+- Added click-to-open search results so matching workspace files open and jump to the matched source line.
+- Added bounded result, file-size, and existing workspace file-count limits so local folders stay responsive.
 
 ## Downloads
 
@@ -18,11 +18,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.22.0.exe` | Recommended installer. |
-| Windows | `OpenMark.0.22.0.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.22.0.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.22.0-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.22.0_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.23.0.exe` | Recommended installer. |
+| Windows | `OpenMark.0.23.0.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.23.0.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.23.0-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.23.0_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -56,5 +56,5 @@ Keep these auto-update metadata files attached when generated:
 
 ## Full Changelog
 
-- Release date: 2026-06-14
-- Tag: v0.22.0
+- Release date: 2026-06-21
+- Tag: v0.23.0

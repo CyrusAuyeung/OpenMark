@@ -160,3 +160,10 @@
 - Estimate the clicked source line inside multi-line preview blocks ✅
 - Support keyboard activation on source-mapped preview blocks ✅
 - Preserve normal link behavior inside the preview ✅
+
+## Milestone 22: Workspace Content Search
+
+- Add desktop workspace content search for Markdown and text files ✅
+- Show file, line, and highlighted context for content matches ✅
+- Open matching workspace files and jump to the matched source line ✅
+- Keep search bounded with file-count, file-size, and result limits ✅
