@@ -2,15 +2,15 @@
 
 ## Summary
 
-OpenMark 0.26.0 focuses on CodeMirror editing integration tests. It includes shared CodeMirror list continuation, task checkbox, and paste command wiring now lives in `src/markdownEditorCommands.ts`, regression tests now run the configured CodeMirror Enter and task-toggle keybindings against real `EditorView` state, and paste integration tests now dispatch DOM paste events through the configured CodeMirror handler for selected-text URL links, paste cleanup, and normal plain-text fallback.
+OpenMark 0.27.0 focuses on search and replace integration tests. It includes CodeMirror search regression tests now cover applying literal search query options to real search extension state, search movement tests now cover next, previous, and wrapped match selection behavior in real `EditorView` state, and replace tests now cover replace-current, replace-all, case-sensitive matching, whole-word matching, and no-match stability.
 
 ## Highlights
 
-### CodeMirror Editing Integration Tests
+### Search And Replace Integration Tests
 
-- Shared CodeMirror list continuation, task checkbox, and paste command wiring now lives in `src/markdownEditorCommands.ts`.
-- Regression tests now run the configured CodeMirror Enter and task-toggle keybindings against real `EditorView` state.
-- Paste integration tests now dispatch DOM paste events through the configured CodeMirror handler for selected-text URL links, paste cleanup, and normal plain-text fallback.
+- CodeMirror search regression tests now cover applying literal search query options to real search extension state.
+- Search movement tests now cover next, previous, and wrapped match selection behavior in real `EditorView` state.
+- Replace tests now cover replace-current, replace-all, case-sensitive matching, whole-word matching, and no-match stability.
 
 ## Downloads
 
@@ -18,11 +18,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.26.0.exe` | Recommended installer. |
-| Windows | `OpenMark.0.26.0.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.26.0.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.26.0-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.26.0_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.27.0.exe` | Recommended installer. |
+| Windows | `OpenMark.0.27.0.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.27.0.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.27.0-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.27.0_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -58,4 +58,4 @@ Keep these auto-update metadata files attached when generated:
 ## Full Changelog
 
 - Release date: 2026-06-21
-- Tag: v0.26.0
+- Tag: v0.27.0

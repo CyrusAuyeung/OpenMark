@@ -2,6 +2,14 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.27.0 - 2026-06-21
+
+### Search And Replace Integration Tests
+
+- CodeMirror search regression tests now cover applying literal search query options to real search extension state.
+- Search movement tests now cover next, previous, and wrapped match selection behavior in real `EditorView` state.
+- Replace tests now cover replace-current, replace-all, case-sensitive matching, whole-word matching, and no-match stability.
+
 ## 0.26.0 - 2026-06-21
 
 ### CodeMirror Editing Integration Tests

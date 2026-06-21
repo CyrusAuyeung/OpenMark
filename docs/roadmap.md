@@ -191,3 +191,10 @@
 - Cover configured Enter list continuation keybindings against real EditorView state done
 - Cover configured task checkbox shortcut behavior against real EditorView state done
 - Cover configured DOM paste handling for selected-text URL links, paste cleanup, and normal plain-text fallback done
+
+## Milestone 26: Search And Replace Integration Tests
+
+- Cover CodeMirror search query option wiring against real search extension state done
+- Cover next, previous, and wrapped match selection behavior in real EditorView state done
+- Cover replace-current and replace-all behavior through the editor search tool wrappers done
+- Cover case-sensitive, whole-word, and no-match search/replace behavior done
