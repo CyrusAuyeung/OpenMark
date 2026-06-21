@@ -3091,9 +3091,11 @@ function App() {
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const commandInputRef = useRef<HTMLInputElement | null>(null)
   const quickOpenInputRef = useRef<HTMLInputElement | null>(null)
+  const workspaceContentSearchInputRef = useRef<HTMLInputElement | null>(null)
   const lineNumberInputRef = useRef<HTMLInputElement | null>(null)
   const exportPreviewFrameRef = useRef<HTMLIFrameElement | null>(null)
   const previewImageSourcesRef = useRef<PreviewImageSource[]>([])
+  const workspaceContentSearchRequestIdRef = useRef(0)
   const initialRecoverySnapshot = useMemo(loadRecoverySnapshot, [])
   const initialMarkdownValue = useMemo(() => loadStoredValue(draftStorageKey, ''), [])
   const initialEditorSessionState = useMemo(loadEditorSessionState, [])
@@ -3138,6 +3140,14 @@ function App() {
   const [outlineQuery, setOutlineQuery] = useState('')
   const [recentFileQuery, setRecentFileQuery] = useState('')
   const [workspaceFileQuery, setWorkspaceFileQuery] = useState('')
+  const [workspaceContentQuery, setWorkspaceContentQuery] = useState('')
+  const [workspaceContentSearchTerm, setWorkspaceContentSearchTerm] = useState('')
+  const [workspaceContentMatches, setWorkspaceContentMatches] = useState<OpenMarkWorkspaceSearchMatch[]>([])
+  const [workspaceContentMatchedFileCount, setWorkspaceContentMatchedFileCount] = useState(0)
+  const [workspaceContentSearchedFileCount, setWorkspaceContentSearchedFileCount] = useState(0)
+  const [isWorkspaceContentSearchLoading, setIsWorkspaceContentSearchLoading] = useState(false)
+  const [isWorkspaceContentSearchTruncated, setIsWorkspaceContentSearchTruncated] = useState(false)
+  const [workspaceContentSearchError, setWorkspaceContentSearchError] = useState<string | null>(null)
   const [workspaceSortMode, setWorkspaceSortMode] = useState<WorkspaceSortMode>(loadWorkspaceSortMode)
   const [replaceTerm, setReplaceTerm] = useState('')
   const [isSearchCaseSensitive, setIsSearchCaseSensitive] = useState(false)
@@ -3345,6 +3355,15 @@ function App() {
   const activeWorkspaceFile = activeFilePath && workspaceFolder
     ? workspaceFolder.files.find((item) => item.filePath === activeFilePath)
     : undefined
+  const hasWorkspaceContentSearch = workspaceContentSearchTerm.length > 0
+  const workspaceContentSearchSummary = formatTranslation(t.workspace.contentSearchSummary, {
+    count: String(workspaceContentMatches.length),
+    files: String(workspaceContentMatchedFileCount),
+    searched: String(workspaceContentSearchedFileCount),
+  })
+  const workspaceContentSearchTruncatedLabel = formatTranslation(t.workspace.contentSearchTruncated, {
+    count: String(workspaceContentMatches.length),
+  })
   const sidebarTabs: Array<{ value: SidebarTab; label: string; detail: string }> = [
     { value: 'document', label: t.sidebar.document, detail: hasUnsavedChanges ? t.document.unsaved : t.document.saved },
     { value: 'workspace', label: t.sidebar.workspace, detail: workspaceFolder ? String(workspaceFolder.files.length) : '-' },
@@ -3605,6 +3624,14 @@ function App() {
       Icon: SearchIcon,
       keywords: ['quick', 'open', 'file', 'markdown', 'recent', 'workspace'],
       action: openQuickOpen,
+    },
+    {
+      id: 'search-workspace-content',
+      label: t.workspace.searchContentInput,
+      group: t.groups.workspace,
+      Icon: SearchIcon,
+      keywords: ['search', 'content', 'text', 'workspace', 'markdown'],
+      action: openWorkspaceContentSearch,
     },
     {
       id: 'recent-panel',
@@ -4269,7 +4296,7 @@ function App() {
         pendingLineJumpRef.current = null
       }
     })
-  }, [mode])
+  }, [markdownValue, mode])
 
   useEffect(() => {
     if (!window.openmark) {
@@ -4664,6 +4691,7 @@ function App() {
       truncated: result.truncated === true,
     })
     setWorkspaceFileQuery('')
+    clearWorkspaceContentSearch()
     setWorkspaceError(null)
     setActiveSidebarTab('workspace')
   }
@@ -4705,11 +4733,137 @@ function App() {
   function clearWorkspaceFolder() {
     setWorkspaceFolder(null)
     setWorkspaceFileQuery('')
+    clearWorkspaceContentSearch()
     setWorkspaceError(null)
+  }
+
+  function clearWorkspaceContentSearch() {
+    workspaceContentSearchRequestIdRef.current += 1
+    setWorkspaceContentQuery('')
+    setWorkspaceContentSearchTerm('')
+    setWorkspaceContentMatches([])
+    setWorkspaceContentMatchedFileCount(0)
+    setWorkspaceContentSearchedFileCount(0)
+    setIsWorkspaceContentSearchTruncated(false)
+    setWorkspaceContentSearchError(null)
+    setIsWorkspaceContentSearchLoading(false)
+  }
+
+  async function handleWorkspaceContentSearchSubmit(event: ReactFormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!window.openmark || !workspaceFolder) {
+      return
+    }
+
+    const query = workspaceContentQuery.trim()
+
+    if (query.length === 0) {
+      clearWorkspaceContentSearch()
+      return
+    }
+
+    setWorkspaceContentSearchTerm(query)
+    setIsWorkspaceContentSearchLoading(true)
+    setWorkspaceContentSearchError(null)
+    const requestId = workspaceContentSearchRequestIdRef.current + 1
+    workspaceContentSearchRequestIdRef.current = requestId
+
+    try {
+      const result = await window.openmark.searchWorkspaceFiles({
+        folderPath: workspaceFolder.folderPath,
+        query,
+      })
+
+      if (requestId !== workspaceContentSearchRequestIdRef.current) {
+        return
+      }
+
+      if (result.canceled) {
+        setWorkspaceContentSearchError(result.error ?? t.alerts.workspaceContentSearchFailed)
+        setWorkspaceContentMatches([])
+        setWorkspaceContentMatchedFileCount(0)
+        setWorkspaceContentSearchedFileCount(0)
+        setIsWorkspaceContentSearchTruncated(false)
+        return
+      }
+
+      setWorkspaceContentMatches(result.matches ?? [])
+      setWorkspaceContentMatchedFileCount(result.matchedFileCount ?? 0)
+      setWorkspaceContentSearchedFileCount(result.searchedFileCount ?? 0)
+      setIsWorkspaceContentSearchTruncated(result.truncated === true)
+    } catch {
+      if (requestId !== workspaceContentSearchRequestIdRef.current) {
+        return
+      }
+
+      setWorkspaceContentSearchError(t.alerts.workspaceContentSearchFailed)
+      setWorkspaceContentMatches([])
+      setWorkspaceContentMatchedFileCount(0)
+      setWorkspaceContentSearchedFileCount(0)
+      setIsWorkspaceContentSearchTruncated(false)
+    } finally {
+      if (requestId === workspaceContentSearchRequestIdRef.current) {
+        setIsWorkspaceContentSearchLoading(false)
+      }
+    }
   }
 
   async function handleOpenWorkspaceFile(filePath: string) {
     await handleOpenRecentFile(filePath)
+  }
+
+  async function handleOpenWorkspaceContentMatch(match: OpenMarkWorkspaceSearchMatch) {
+    if (match.filePath === activeFilePath) {
+      jumpToDocumentLine(getLineJumpTarget(markdownValue, match.lineNumber))
+      return
+    }
+
+    if (!confirmDiscardChanges(t.alerts.openAnotherDocument)) {
+      return
+    }
+
+    let result
+
+    try {
+      result = await window.openmark?.openRecentFile(match.filePath)
+    } catch {
+      markFileMissing(match.filePath)
+      showOpenFailedStatus(t.alerts.recentFileOpenFailed)
+      return
+    }
+
+    if (!result || result.canceled || typeof result.content !== 'string' || !result.fileName) {
+      if (result?.error) {
+        markFileMissing(match.filePath)
+        showOpenFailedStatus(result.error)
+      } else if (result && !result.canceled) {
+        showOpenFailedStatus(t.alerts.recentFileOpenFailed)
+      }
+      return
+    }
+
+    const target = getLineJumpTarget(result.content, match.lineNumber)
+
+    pendingLineJumpRef.current = target
+    setActiveOutlineLine(target.lineNumber)
+    setActiveSidebarTab('document')
+    if (mode === 'preview') {
+      setMode('split')
+    }
+    applyOpenedDocument(result.content, result.fileName, result.filePath ?? null, result.modifiedAt ?? null)
+  }
+
+  function focusWorkspaceContentSearchInput() {
+    window.requestAnimationFrame(() => {
+      workspaceContentSearchInputRef.current?.focus()
+      workspaceContentSearchInputRef.current?.select()
+    })
+  }
+
+  function openWorkspaceContentSearch() {
+    setActiveSidebarTab('workspace')
+    focusWorkspaceContentSearchInput()
   }
 
   function focusQuickOpenInput() {
@@ -6226,6 +6380,58 @@ ${getExportStyleCss(exportStyle)}
     )
   }
 
+  function renderWorkspaceContentMatches() {
+    if (!hasWorkspaceContentSearch) {
+      return null
+    }
+
+    if (workspaceContentMatches.length === 0) {
+      return <p className="muted panel-state">{t.workspace.noContentMatches}</p>
+    }
+
+    return (
+      <div
+        className="workspace-content-results"
+        aria-label={t.workspace.contentSearchResults}
+        onKeyDown={handleLibraryListKeyDown}
+      >
+        {workspaceContentMatches.map((match, index) => {
+          const matchStart = Math.max(0, Math.min(match.matchStart, match.lineText.length))
+          const matchEnd = Math.max(matchStart, Math.min(match.matchEnd, match.lineText.length))
+          const contextBefore = match.lineText.slice(0, matchStart)
+          const matchText = match.lineText.slice(matchStart, matchEnd)
+          const contextAfter = match.lineText.slice(matchEnd)
+          const lineLabel = formatTranslation(t.workspace.contentSearchLine, {
+            file: match.relativePath,
+            line: String(match.lineNumber),
+          })
+
+          return (
+            <button
+              type="button"
+              className="workspace-content-result"
+              key={`${match.filePath}-${match.lineNumber}-${match.matchStart}-${index}`}
+              data-library-item="true"
+              data-library-row="true"
+              onClick={() => { void handleOpenWorkspaceContentMatch(match) }}
+              title={lineLabel}
+            >
+              <span className="workspace-content-result-heading">
+                <span>{match.relativePath}</span>
+                <small>{formatTranslation(t.diagnostics.line, { line: String(match.lineNumber) })}</small>
+              </span>
+              <span className="workspace-content-result-context">
+                {contextBefore}
+                <mark>{matchText || workspaceContentSearchTerm}</mark>
+                {contextAfter}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
+
   function renderAppMenu() {
     const menuIds: AppMenuId[] = ['file', 'edit', 'view', 'help']
 
@@ -6904,6 +7110,47 @@ ${getExportStyleCss(exportStyle)}
                             </button>
                           )}
                         </label>
+                        <form className="workspace-content-search-form" onSubmit={handleWorkspaceContentSearchSubmit}>
+                          <label className="workspace-search workspace-content-search-field">
+                            <SearchIcon size={15} aria-hidden="true" />
+                            <input
+                              ref={workspaceContentSearchInputRef}
+                              type="search"
+                              value={workspaceContentQuery}
+                              onChange={(event) => {
+                                const nextQuery = event.target.value
+
+                                setWorkspaceContentQuery(nextQuery)
+
+                                if (nextQuery.length === 0) {
+                                  clearWorkspaceContentSearch()
+                                }
+                              }}
+                              placeholder={t.workspace.searchContentPlaceholder}
+                              aria-label={t.workspace.searchContentInput}
+                              spellCheck={false}
+                            />
+                            {workspaceContentQuery.length > 0 && (
+                              <button
+                                type="button"
+                                className="workspace-search-clear"
+                                onClick={clearWorkspaceContentSearch}
+                                title={t.workspace.clearContentSearch}
+                                aria-label={t.workspace.clearContentSearch}
+                              >
+                                <X size={14} />
+                              </button>
+                            )}
+                          </label>
+                          <button
+                            type="submit"
+                            className="workspace-content-search-button"
+                            disabled={isWorkspaceContentSearchLoading || workspaceContentQuery.trim().length === 0}
+                          >
+                            <SearchIcon size={14} aria-hidden="true" />
+                            <span>{t.workspace.searchContent}</span>
+                          </button>
+                        </form>
                         <div className="workspace-sort-control" role="group" aria-label={t.workspace.sortFiles}>
                           {workspaceSortOptions.map(({ value, Icon }) => {
                             const label = t.workspace.sortModes[value]
@@ -6926,6 +7173,17 @@ ${getExportStyleCss(exportStyle)}
                       </div>
                       {workspaceError && <p className="muted panel-state panel-state-warning" role="alert">{workspaceError}</p>}
                       {isWorkspaceLoading && <p className="muted panel-state" role="status">{t.workspace.loading}</p>}
+                      {isWorkspaceContentSearchLoading && <p className="muted panel-state" role="status">{t.workspace.contentSearchLoading}</p>}
+                      {workspaceContentSearchError && <p className="muted panel-state panel-state-warning" role="alert">{workspaceContentSearchError}</p>}
+                      {hasWorkspaceContentSearch && !isWorkspaceContentSearchLoading && !workspaceContentSearchError && (
+                        <section className="workspace-content-section" aria-label={t.workspace.contentSearchResults}>
+                          <div className="workspace-content-summary">
+                            <span>{workspaceContentSearchSummary}</span>
+                            {isWorkspaceContentSearchTruncated && <small>{workspaceContentSearchTruncatedLabel}</small>}
+                          </div>
+                          {renderWorkspaceContentMatches()}
+                        </section>
+                      )}
                       {workspaceFolder.truncated && <p className="muted panel-state panel-state-warning">{t.workspace.truncated}</p>}
                       {workspaceFolder.files.length > 0
                         ? filteredWorkspaceFiles.length > 0

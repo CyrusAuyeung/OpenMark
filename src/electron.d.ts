@@ -65,6 +65,26 @@ declare global {
     error?: string
   }
 
+  type OpenMarkWorkspaceSearchMatch = {
+    filePath: string
+    fileName: string
+    relativePath: string
+    modifiedAt: number
+    lineNumber: number
+    lineText: string
+    matchStart: number
+    matchEnd: number
+  }
+
+  type OpenMarkWorkspaceSearchResult = {
+    canceled: boolean
+    matches?: OpenMarkWorkspaceSearchMatch[]
+    searchedFileCount?: number
+    matchedFileCount?: number
+    truncated?: boolean
+    error?: string
+  }
+
   interface Window {
     openmark?: {
       openMarkdownFile: () => Promise<{
@@ -85,6 +105,10 @@ declare global {
       }>
       selectWorkspaceFolder: () => Promise<OpenMarkWorkspaceFolderResult>
       readWorkspaceFolder: (folderPath: string) => Promise<OpenMarkWorkspaceFolderResult>
+      searchWorkspaceFiles: (payload: {
+        folderPath: string
+        query: string
+      }) => Promise<OpenMarkWorkspaceSearchResult>
       selectImageFile: () => Promise<{
         canceled: boolean
         fileName?: string

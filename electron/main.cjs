@@ -11,6 +11,9 @@ let mainWindow = null
 let hasScheduledInitialUpdateCheck = false
 let applicationLocale = 'en'
 const workspaceFileLimit = 120
+const workspaceSearchResultLimit = 80
+const workspaceSearchMaxFileSizeBytes = 1024 * 1024
+const workspaceSearchLinePreviewLength = 240
 const ignoredWorkspaceDirectories = new Set([
   '.git',
   '.next',
@@ -592,6 +595,36 @@ function getFolderName(folderPath) {
   return path.basename(folderPath) || folderPath
 }
 
+function getWorkspaceSearchLinePreview(line, matchIndex, matchLength) {
+  if (line.length <= workspaceSearchLinePreviewLength) {
+    return {
+      lineText: line,
+      matchStart: matchIndex,
+      matchEnd: matchIndex + matchLength,
+    }
+  }
+
+  const matchEnd = matchIndex + matchLength
+  const idealStart = Math.max(0, matchIndex - 80)
+  const maxStart = Math.max(0, line.length - workspaceSearchLinePreviewLength)
+  let previewStart = Math.min(idealStart, maxStart)
+  let previewEnd = Math.min(line.length, previewStart + workspaceSearchLinePreviewLength)
+
+  if (matchEnd > previewEnd) {
+    previewEnd = Math.min(line.length, matchEnd + 80)
+    previewStart = Math.max(0, previewEnd - workspaceSearchLinePreviewLength)
+  }
+
+  const prefix = previewStart > 0 ? '...' : ''
+  const suffix = previewEnd < line.length ? '...' : ''
+
+  return {
+    lineText: `${prefix}${line.slice(previewStart, previewEnd)}${suffix}`,
+    matchStart: prefix.length + matchIndex - previewStart,
+    matchEnd: prefix.length + matchEnd - previewStart,
+  }
+}
+
 async function listWorkspaceFolder(folderPath) {
   let folderStats
 
@@ -691,6 +724,102 @@ async function readMarkdownFile(filePath) {
   }
 }
 
+async function searchWorkspaceFolder(payload) {
+  const folderPath = typeof payload?.folderPath === 'string' && payload.folderPath.length > 0 ? payload.folderPath : null
+  const query = typeof payload?.query === 'string' ? payload.query.trim() : ''
+
+  if (!folderPath) {
+    return { canceled: true, error: getApplicationStrings().errors.invalidFolderPath }
+  }
+
+  if (query.length === 0) {
+    return {
+      canceled: false,
+      matches: [],
+      searchedFileCount: 0,
+      truncated: false,
+    }
+  }
+
+  const workspaceResult = await listWorkspaceFolder(folderPath)
+
+  if (workspaceResult.canceled || !Array.isArray(workspaceResult.files)) {
+    return workspaceResult
+  }
+
+  const normalizedQuery = query.toLowerCase()
+  const matches = []
+  const matchedFilePaths = new Set()
+  let searchedFileCount = 0
+  let truncated = workspaceResult.truncated === true
+
+  for (const file of workspaceResult.files) {
+    let fileStats
+
+    try {
+      fileStats = await fs.stat(file.filePath)
+    } catch {
+      continue
+    }
+
+    if (!fileStats.isFile() || fileStats.size > workspaceSearchMaxFileSizeBytes) {
+      continue
+    }
+
+    let content
+
+    try {
+      content = await fs.readFile(file.filePath, 'utf8')
+    } catch {
+      continue
+    }
+
+    searchedFileCount += 1
+
+    const lines = content.split(/\r\n|\r|\n/)
+
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+      const line = lines[lineIndex]
+      const matchIndex = line.toLowerCase().indexOf(normalizedQuery)
+
+      if (matchIndex < 0) {
+        continue
+      }
+
+      const preview = getWorkspaceSearchLinePreview(line, matchIndex, query.length)
+
+      matches.push({
+        filePath: file.filePath,
+        fileName: file.fileName,
+        relativePath: file.relativePath,
+        modifiedAt: file.modifiedAt,
+        lineNumber: lineIndex + 1,
+        lineText: preview.lineText,
+        matchStart: preview.matchStart,
+        matchEnd: preview.matchEnd,
+      })
+      matchedFilePaths.add(file.filePath)
+
+      if (matches.length >= workspaceSearchResultLimit) {
+        truncated = true
+        break
+      }
+    }
+
+    if (matches.length >= workspaceSearchResultLimit) {
+      break
+    }
+  }
+
+  return {
+    canceled: false,
+    matches,
+    searchedFileCount,
+    matchedFileCount: matchedFilePaths.size,
+    truncated,
+  }
+}
+
 ipcMain.handle('openmark:open-markdown-file', async () => {
   const { dialogs, fileTypes } = getApplicationStrings()
   const result = await dialog.showOpenDialog({
@@ -738,6 +867,8 @@ ipcMain.handle('openmark:read-workspace-folder', async (_event, folderPath) => {
 
   return listWorkspaceFolder(folderPath)
 })
+
+ipcMain.handle('openmark:search-workspace-files', async (_event, payload) => searchWorkspaceFolder(payload))
 
 ipcMain.handle('openmark:select-image-file', async () => {
   const { dialogs, fileTypes } = getApplicationStrings()
