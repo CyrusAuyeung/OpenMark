@@ -2,15 +2,15 @@
 
 ## Summary
 
-OpenMark 0.25.0 focuses on editing helper regression coverage. It includes pure Markdown formatting helper coverage for list continuation, task checkbox toggling, plain-text paste cleanup, and URL paste-to-link rules, regression coverage for continuing bullet, ordered, and task lists, exiting empty list items, and toggling task checkboxes across mixed selected lines, and paste helper coverage for BOM, zero-width, non-breaking-space, line-separator, and CRLF cleanup, plus selected-text URL paste link creation.
+OpenMark 0.26.0 focuses on CodeMirror editing integration tests. It includes shared CodeMirror list continuation, task checkbox, and paste command wiring now lives in `src/markdownEditorCommands.ts`, regression tests now run the configured CodeMirror Enter and task-toggle keybindings against real `EditorView` state, and paste integration tests now dispatch DOM paste events through the configured CodeMirror handler for selected-text URL links, paste cleanup, and normal plain-text fallback.
 
 ## Highlights
 
-### Editing Helper Regression Coverage
+### CodeMirror Editing Integration Tests
 
-- Pure Markdown formatting helper coverage for list continuation, task checkbox toggling, plain-text paste cleanup, and URL paste-to-link rules.
-- Regression coverage for continuing bullet, ordered, and task lists, exiting empty list items, and toggling task checkboxes across mixed selected lines.
-- Paste helper coverage for BOM, zero-width, non-breaking-space, line-separator, and CRLF cleanup, plus selected-text URL paste link creation.
+- Shared CodeMirror list continuation, task checkbox, and paste command wiring now lives in `src/markdownEditorCommands.ts`.
+- Regression tests now run the configured CodeMirror Enter and task-toggle keybindings against real `EditorView` state.
+- Paste integration tests now dispatch DOM paste events through the configured CodeMirror handler for selected-text URL links, paste cleanup, and normal plain-text fallback.
 
 ## Downloads
 
@@ -18,11 +18,11 @@ Choose the package for your operating system from the assets below.
 
 | Platform | Asset | Notes |
 | --- | --- | --- |
-| Windows | `OpenMark.Setup.0.25.0.exe` | Recommended installer. |
-| Windows | `OpenMark.0.25.0.exe` | Portable app. |
-| macOS Intel | `OpenMark-0.25.0.dmg` | Unsigned/not notarized for now. |
-| macOS Apple Silicon | `OpenMark-0.25.0-arm64.dmg` | Unsigned/not notarized for now. |
-| Linux Debian/Ubuntu | `openmark-editor_0.25.0_amd64.deb` | System package install. |
+| Windows | `OpenMark.Setup.0.26.0.exe` | Recommended installer. |
+| Windows | `OpenMark.0.26.0.exe` | Portable app. |
+| macOS Intel | `OpenMark-0.26.0.dmg` | Unsigned/not notarized for now. |
+| macOS Apple Silicon | `OpenMark-0.26.0-arm64.dmg` | Unsigned/not notarized for now. |
+| Linux Debian/Ubuntu | `openmark-editor_0.26.0_amd64.deb` | System package install. |
 
 Keep these auto-update metadata files attached when generated:
 
@@ -58,4 +58,4 @@ Keep these auto-update metadata files attached when generated:
 ## Full Changelog
 
 - Release date: 2026-06-21
-- Tag: v0.25.0
+- Tag: v0.26.0

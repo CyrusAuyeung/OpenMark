@@ -184,3 +184,10 @@
 - Move task checkbox toggling rules into pure Markdown formatting helpers done
 - Move plain-text paste cleanup and URL paste-to-link rules into pure helpers done
 - Cover list continuation, empty-list exit, task checkbox toggling, and paste cleanup/link creation with regression tests done
+
+## Milestone 25: CodeMirror Editing Integration Tests
+
+- Move CodeMirror list, task, and paste command wiring into a shared editor command module done
+- Cover configured Enter list continuation keybindings against real EditorView state done
+- Cover configured task checkbox shortcut behavior against real EditorView state done
+- Cover configured DOM paste handling for selected-text URL links, paste cleanup, and normal plain-text fallback done

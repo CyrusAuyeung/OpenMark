@@ -196,6 +196,7 @@ function getSummary(targetVersion, sections) {
 function toSummaryFocusText(sectionName) {
   return sectionName
     .toLowerCase()
+    .replace(/\bcodemirror\b/g, 'CodeMirror')
     .replace(/\bui\b/g, 'UI')
 }
 

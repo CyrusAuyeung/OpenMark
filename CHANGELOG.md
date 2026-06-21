@@ -2,6 +2,14 @@
 
 All notable changes to OpenMark will be documented in this file.
 
+## 0.26.0 - 2026-06-21
+
+### CodeMirror Editing Integration Tests
+
+- Shared CodeMirror list continuation, task checkbox, and paste command wiring now lives in `src/markdownEditorCommands.ts`.
+- Regression tests now run the configured CodeMirror Enter and task-toggle keybindings against real `EditorView` state.
+- Paste integration tests now dispatch DOM paste events through the configured CodeMirror handler for selected-text URL links, paste cleanup, and normal plain-text fallback.
+
 ## 0.25.0 - 2026-06-21
 
 ### Editing Helper Regression Coverage
